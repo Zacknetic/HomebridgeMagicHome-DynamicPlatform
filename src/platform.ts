@@ -1,15 +1,16 @@
+/* eslint-disable linebreak-style */
 import { APIEvent } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { ExamplePlatformAccessory } from './platformAccessory';
+import { ZackneticMagichomePlatformAccessory } from './platformAccessory';
 
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
  * parse the user config and discover/register accessories with Homebridge.
  */
-export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
+export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
   public readonly Service = this.api.hap.Service;
   public readonly Characteristic = this.api.hap.Characteristic;
 
@@ -41,9 +42,6 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
   configureAccessory(accessory: PlatformAccessory) {
     this.log.info('Restoring accessory from cache:', accessory.displayName);
 
-    // create the accessory handler
-    // this is imported from `platformAccessory.ts`
-    new ExamplePlatformAccessory(this, accessory);
 
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
@@ -61,14 +59,16 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     // or a user-defined array in the platform config.
     const exampleDevices = [
       {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
+        uniqueId: 'ABCD',
+        displayName: 'Bedroom',
+        ipAddress: '192.168.1.25',
       },
       {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
+        uniqueId: '1234',
+        displayName: 'Bathroom',
+        ipAddress: '192.168.1.4', 
       },
-    ];
+    ]; 
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of exampleDevices) {
@@ -76,23 +76,26 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
-
+      const uuid = this.api.hap.uuid.generate(device.uniqueId);
+      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);  
       // check that the device has not already been registered by checking the
       // cached devices we stored in the `configureAccessory` method above
-      if (!this.accessories.find(accessory => accessory.UUID === uuid)) {
-        this.log.info('Registering new accessory:', device.exampleDisplayName);
+      if (!existingAccessory) { 
+        this.log.info('Registering new accessory:', device.displayName); 
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.exampleDisplayName, uuid);
+        const accessory = new this.api.platformAccessory(device.displayName, uuid);
+        this.accessories.find(accessory => accessory.UUID === uuid);
+        accessory.context.ip = device.ipAddress;
+        this.log.info('Discovered IP', accessory.context.ip);
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
+        accessory.context.device = device; 
 
         // create the accessory handler
         // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
+        new ZackneticMagichomePlatformAccessory(this, accessory);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -102,8 +105,33 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-      }
+        
+
+      // otherwise the device has already been registered and needs
+      // to ensure the ip address (or other custom variables) is still identical
+      } else {
+
+        this.log.info('Regisering cached accessory:', device.displayName);
+
+        // test if the existing cached accessory ip address matches the discovered
+        // accessory ip address
+        if (existingAccessory.context.ip !== device.ipAddress) {
+
+          this.log.info('IP Address discrepancy found for accessory:' , device.displayName);
+          this.log.info('Expected ip address: ', existingAccessory.context.ip);
+          this.log.info('Discovered ip address: ', device.ipAddress);
+
+          // overwrite the ip address of the existing accessory to the newly disovered ip address
+          existingAccessory.context.ip = device.ipAddress;
+          this.log.info('Ip address reassigned to: ', existingAccessory.context.ip);
+        }
+        
+        // create the accessory handler
+        new ZackneticMagichomePlatformAccessory(this, existingAccessory);  
+
+      } 
     }
 
   }
 }
+ 

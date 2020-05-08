@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "Zacknetic-Magichome-Platform",
   "pluginType": "platform",
   "singular": true,
   "schema": {

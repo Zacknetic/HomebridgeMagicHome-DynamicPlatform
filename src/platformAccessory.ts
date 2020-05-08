@@ -1,14 +1,15 @@
+/* eslint-disable linebreak-style */
 import { CharacteristicEventTypes } from 'homebridge';
 import type { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
 
-import { ExampleHomebridgePlatform } from './platform';
+import { ZackneticMagichomePlatform } from './platform';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class ExamplePlatformAccessory {
+export class ZackneticMagichomePlatformAccessory {
   private service: Service;
 
   /**
@@ -21,7 +22,7 @@ export class ExamplePlatformAccessory {
   }
 
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
+    private readonly platform: ZackneticMagichomePlatform,
     private readonly accessory: PlatformAccessory,
   ) {
 
