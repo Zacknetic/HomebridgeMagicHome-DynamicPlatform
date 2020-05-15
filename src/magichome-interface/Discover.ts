@@ -4,7 +4,7 @@ const BROADCAST_ADDR = '255.255.255.255';
 const BROADCAST_PORT = 48899;
 const BROADCAST_MAGIC_STRING = 'HF-A11ASSISTHREAD';
 
-class Discovery {
+export class Discover {
   static scan(timeout = 500) {
 
     return new Promise((resolve, reject) => {
@@ -24,8 +24,8 @@ class Discovery {
           return;
         }
 
-        const [host, id, model] = parts;
-        clients.push({ host, id, model });
+        const [ipAddress, uniqueId, modelNumber] = parts;
+        clients.push({ ipAddress, uniqueId, modelNumber });
       });
 
       socket.on('listening', () => {
@@ -42,5 +42,3 @@ class Discovery {
     });
   }
 }
-
-export default Discovery;

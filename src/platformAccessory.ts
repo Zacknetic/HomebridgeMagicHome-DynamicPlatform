@@ -2,12 +2,20 @@
 /* eslint-disable eqeqeq */
 /* eslint-disable linebreak-style */
 import { CharacteristicEventTypes } from 'homebridge';
-import type { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
-
+import type { Service, PlatformConfig, PlatformAccessory, CharacteristicValue, CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
 import { ZackneticMagichomePlatform } from './platform';
-import { LightController } from './magichome-interface/lightController';
-import { Utilities } from './utilities';
+import { Transport } from './magichome-interface/transport';
+import { runInThisContext } from 'vm';
 
+
+
+const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
+const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
+const COMMAND_QUERY_STATE = [0x81, 0x8a, 0x8b];
+
+const COMMAND_POWER_ON_SUCCESS = [0xf0, 0x71, 0x23, 0x84];
+const COMMAND_POWER_OFF_SUCCESS = [0xf0, 0x71, 0x24, 0x85];
 
 
 /**
@@ -17,22 +25,22 @@ import { Utilities } from './utilities';
  */ 
 export class ZackneticMagichomePlatformAccessory {
   private service: Service;
-  private utilities!: Utilities;
-  private lightStates = {
+  private transport = new Transport(this.accessory.context.cachedIPAddress);
+  private lightState = {
     HSL: { Hue: 255, Saturation: 100, Luminance: 50 },
     WarmWhite: 0,
     ColdWhite: 0,
-    On: false,
+    On: true,
     Brightness: 100,
   }
 
-  lightController = new LightController(this.accessory, this.platform);
-
+  private colorWhiteThreshold = this.config.colorWhiteThreshold;
   constructor(
     private readonly platform: ZackneticMagichomePlatform,
     private readonly accessory: PlatformAccessory,
+    public readonly config: PlatformConfig,
   ) {
-
+    
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Magic Home')
@@ -76,13 +84,17 @@ export class ZackneticMagichomePlatformAccessory {
       .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
       .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
+    // this.service.getCharacteristic(this.platform.Characteristic.Identify)
+    //.on(CharacteristicEventTypes.SET, this.identifyLight.bind(this));       // SET - bind to the 'Identify` method below
+
     // EXAMPLE ONLY
     // Example showing how to update the state of a Characteristic asynchronously instead
     // of using the `on('get')` handlers.
     //
     // Here we change update the brightness to a random value every 5 seconds using 
     // the `updateCharacteristic` method.
-    setInterval(() => {
+ 
+    /*   setInterval(() => {
       // assign the current brightness a random value between 0 and 100
       const currentBrightness = Math.floor(Math.random() * 100);
 
@@ -90,19 +102,19 @@ export class ZackneticMagichomePlatformAccessory {
       this.service.updateCharacteristic(this.platform.Characteristic.Brightness, currentBrightness);
 
       this.platform.log.debug('Pushed updated current Brightness state to HomeKit:', currentBrightness);
-    }, 10000);
+    }, 10000);*/
   }
 
   /**
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, changing the Hue
    */
-  setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  identifyLight(value: CharacteristicValue, callback: CharacteristicSetCallback) {
 
     // implement your own code to set the brightness
-    this.lightStates.HSL.Hue = value as number;
+    this.lightState.HSL.Hue = 300 as number;
 
-    this.setState();
+    this.setColor();
 
     this.platform.log.debug('Set Characteristic Hue -> ', value);
 
@@ -114,12 +126,29 @@ export class ZackneticMagichomePlatformAccessory {
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, changing the Hue
    */
-  setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
 
     // implement your own code to set the brightness
-    this.lightStates.HSL.Saturation = value as number;
+    this.lightState.HSL.Hue = value as number;
 
-    this.setState();
+    await this.setColor();
+
+    this.platform.log.debug('Set Characteristic Hue -> ', value);
+
+    // you must call the callback function
+    callback(null);
+  }
+
+  /**
+   * Handle "SET" requests from HomeKit
+   * These are sent when the user changes the state of an accessory, for example, changing the Hue
+   */
+  async setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+
+    // implement your own code to set the brightness
+    this.lightState.HSL.Saturation = value as number;
+
+    await this.setColor();
 
     this.platform.log.debug('Set Characteristic Saturation -> ', value);
 
@@ -131,12 +160,12 @@ export class ZackneticMagichomePlatformAccessory {
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, changing the Hue
    */
-  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
 
     // implement your own code to set the brightness
-    this.lightStates.Brightness = value as number;
+    this.lightState.Brightness = value as number;
 
-    this.setState();
+    await this.setColor();
 
     this.platform.log.debug('Set Characteristic Brightness -> ', value);
 
@@ -150,9 +179,10 @@ export class ZackneticMagichomePlatformAccessory {
    */
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
 
-    // implement your own code to turn your device on/off 
-    this.lightStates.On = value as boolean;
 
+    this.lightState.On = value as boolean;
+    this.send(this.lightState.On ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+ 
     this.platform.log.debug('Set Characteristic On ->', value);
 
     // you must call the callback function
@@ -162,7 +192,7 @@ export class ZackneticMagichomePlatformAccessory {
   getHue(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
-    const hue = this.lightStates.HSL.Hue;
+    const hue = this.lightState.HSL.Hue;
     
     //update state with actual values asynchronously
     this.getState();
@@ -178,7 +208,7 @@ export class ZackneticMagichomePlatformAccessory {
   getSaturation(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
-    const saturation = this.lightStates.HSL.Saturation;
+    const saturation = this.lightState.HSL.Saturation;
     
     //update state with actual values asynchronously
     this.getState();
@@ -194,7 +224,7 @@ export class ZackneticMagichomePlatformAccessory {
   getBrightness(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
-    const brightness = this.lightStates.Brightness;
+    const brightness = this.lightState.Brightness;
     
     //update state with actual values asynchronously
     this.getState();
@@ -223,7 +253,7 @@ export class ZackneticMagichomePlatformAccessory {
   getOn(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
-    const isOn = this.lightStates.On;
+    const isOn = this.lightState.On;
 
     //update state with actual values asynchronously
     this.getState();
@@ -237,43 +267,76 @@ export class ZackneticMagichomePlatformAccessory {
   }
 
   async getState() {
-
-
-    const state = await this.lightController.state();
-    /*
+   
+    this.platform.log.debug('Getting state for accessory:', this.accessory.context.displayName);
+    const state = await this.transport.getState();
+    
     const { red, green, blue } = state.color;
-    const [h, s, l] = this.utilities.convertrgbhsl(red, green, blue);
+    const [h, s, l] = convertRGBtoHSL(red, green, blue);
     const hsl = { Hue: h, Saturation: s, Luminance: l };
-    this.lightStates.On = state.isOn;
-    this.lightStates.HSL.Hue = hsl.Hue;
-    this.lightStates.HSL.Saturation = hsl.Saturation;
-    this.lightStates.HSL.Luminance = hsl.Luminance;
-    this.lightStates.WarmWhite = state.warmWhite;
-    this.lightStates.ColdWhite = state.coldWhite;
 
+    this.lightState.On = state.isOn;
+    this.lightState.HSL.Hue = hsl.Hue;
+    this.lightState.HSL.Saturation = hsl.Saturation;
+    this.lightState.HSL.Luminance = hsl.Luminance;
+    this.lightState.WarmWhite = state.warmWhite;
+    this.lightState.ColdWhite = state.coldWhite;
+    this.accessory.context.lightVersion = state.lightVersion;
+    this.platform.log.debug('Light version:', this.accessory.context.lightVersion);
     
     this.service.updateCharacteristic(this.platform.Characteristic.On, state.isOn);
    
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, hsl.Hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation, hsl.Saturation);
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness, hsl.Luminance);
- */
+ 
 
   }
 
-  setState() {
-    if ( this.accessory.context.device.lightVersion == 8 || this.accessory.context.device.lightVersion == 9) {
-      this.platform.log.debug('Setting state for light version: ', this.accessory.context.device.lightVersion, ' was successful.');
-      //  this.setRGBWBulb();
-    } else if (this. accessory.context.device.lightVersion == 7 || this. accessory.context.device.lightVersion == 5) {
-      this.platform.log.debug('Setting state for light version: ', this.accessory.context.device.lightVersion, ' was successful.');
-      // this.setRGBWWBulb();
-    } else if (this. accessory.context.device.lightVersion == 3) {
-      this.platform.log.debug('Setting state for light version: ', this.accessory.context.device.lightVersion, ' was successful.');
-      //  this.setRGBWWStrip();
+ 
+  async setColor() {
+    const hsl = this.lightState.HSL;
+    const brightness = this.lightState.Brightness;
+    
+    let mask = 0xF0;
+    if (this.lightState.HSL.Saturation < this.colorWhiteThreshold) {
+      mask = 0xF0;
     } else {
-      this.platform.log.debug('Unknown light version:', this.accessory.context.device.lightVersion, '. Color failed to send.');
+      mask = 0x0F;
     }
+
+    if (this.accessory.context.lightVersion == 3 && this.config.simultaniousStripControllerColorWhite) {
+      mask = 0xFF;
+    }
+
+
+    const [red, green, blue] = convertHSLtoRGB([hsl.Hue, hsl.Saturation, hsl.Luminance]);
+
+
+    const r = Math.round(((clamp(red, 0, 255) / 100) * brightness));
+    const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
+    const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
+    const ww = Math.round(((clamp(this.lightState.WarmWhite, 0, 255)/ 100) * brightness));
+    const cw = Math.round(((clamp(this.lightState.ColdWhite, 0, 255)/ 100) * brightness));
+
+
+
+    this.platform.log.debug('colors', red, green, blue);
+
+
+
+    if (this.accessory.context.lightVersion == 8 || this.accessory.context.lightVersion == 9) {
+      this.send([0x31, r, g, b, ww, mask, 0x0F]);
+    } else { 
+      this.send([0x31, r, g, b, ww, cw, mask, 0x0F]);
+    }
+   
+  }
+
+  async send(command: number[]) {
+    this.platform.log.debug('Light version:', this.accessory.context.lightVersion);
+    const buffer = Buffer.from(command);
+    return await this.transport.send(buffer);
   }
 
 }

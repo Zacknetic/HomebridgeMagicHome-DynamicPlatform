@@ -1,12 +1,13 @@
 /* eslint-disable linebreak-style */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { APIEvent, AccessoryEventTypes } from 'homebridge';
+import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { ZackneticMagichomePlatformAccessory } from './platformAccessory';
-//import { LightController } from './magichome-interface/lightController';
+import { Discover } from './magichome-interface/Discover';
+import { Transport } from './magichome-interface/transport';
 
 /**
  * HomebridgePlatform
@@ -60,18 +61,19 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
-  discoverDevices() {
-
+  async discoverDevices() {
+    const devices: any = await Discover.scan();
+    // devices.map(device => new LightAccessory(device, homebridge));
     // EXAMPLE ONLY
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
     const exampleDevices = [
       {
-        uniqueId: '1234',
-        modelNumber: '151000',
-        displayName: 'Bedroom Light 6',
-        ipAddress: '192.168.1.22',
-        lightVersion: '8',
+        uniqueId: '2C3AE806312AA',
+        modelNumber: '35.v3',
+        displayName: 'Office Wall Light',
+        ipAddress: '192.168.1.11',
+        lightVersion: '3',
 
       },
       {
@@ -80,13 +82,14 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
         displayName: 'Bedroom Light 7',
         ipAddress: '192.168.1.23',
         lightVersion: '7',
-      },
+      }, 
     ];   
 
 
     // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
+    for (const device of devices) {  
 
+      device.displayName = device.uniqueId;
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
@@ -98,6 +101,11 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
 
 
       if (!existingAccessory) { 
+
+        const transport = new Transport(device.ipAddress);
+        const state = await transport.getState();
+        device.lightVersion = state.lightVersion;
+        device.displayName = device.lightVersion;
         this.log.info('Registering new accessory:', device.displayName); 
 
         // create a new accessory
@@ -119,7 +127,7 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
  
         // create the accessory handler
         // this is imported from `platformAccessory.ts`
-        new ZackneticMagichomePlatformAccessory(this, accessory);
+        new ZackneticMagichomePlatformAccessory(this, accessory, this.config);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -151,7 +159,7 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
         }
         
         // create the accessory handler
-        new ZackneticMagichomePlatformAccessory(this, existingAccessory);   
+        new ZackneticMagichomePlatformAccessory(this, existingAccessory,this.config);   
 
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([existingAccessory]);

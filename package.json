@@ -26,7 +26,11 @@
   "keywords": [
     "homebridge-plugin"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@types/promise-queue": "^2.2.0",
+    "promise-queue": "^2.2.5",
+    "promise-socket": "^6.0.3"
+  },
   "devDependencies": {
     "@types/node": "^13.13.4",
     "@typescript-eslint/eslint-plugin": "^2.30.0",
