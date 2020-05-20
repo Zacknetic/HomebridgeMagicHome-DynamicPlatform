@@ -134,7 +134,7 @@ export class ZackneticMagichomePlatformAccessory {
 
     await this.setColor();
 
-    this.platform.log.debug('Set Characteristic Saturation -> ', value);
+    this.platform.log.debug('Set Characteristic Saturation -> %o for device: %o ', value, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     callback(null);
@@ -150,8 +150,7 @@ export class ZackneticMagichomePlatformAccessory {
     this.lightState.Brightness = value as number;
 
     await this.setColor();
-
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
+    this.platform.log.debug('Set Characteristic Brightness -> %o for device: %o ', value, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     callback(null);
@@ -167,7 +166,7 @@ export class ZackneticMagichomePlatformAccessory {
     this.lightState.On = value as boolean;
     this.send(this.lightState.On ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
  
-    this.platform.log.debug('Set Characteristic On ->', value);
+    this.platform.log.debug('Set Characteristic On -> %o for device: %o ', value, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     callback(null);
@@ -183,7 +182,7 @@ export class ZackneticMagichomePlatformAccessory {
     //update state with actual values asynchronously
     this.getState();
 
-    this.platform.log.debug('Get Characteristic Hue ->', hue);
+    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     // the first argument should be null if there were no errors
@@ -199,7 +198,7 @@ export class ZackneticMagichomePlatformAccessory {
     //update state with actual values asynchronously
     this.getState();
 
-    this.platform.log.debug('Get Characteristic Hue ->', saturation);
+    this.platform.log.debug('Get Characteristic Saturation -> %o for device: %o ', saturation, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     // the first argument should be null if there were no errors
@@ -215,7 +214,7 @@ export class ZackneticMagichomePlatformAccessory {
     // dont update the actual values from brightness, it is impossible to determine by rgb values alone
     //this.getState();
 
-    this.platform.log.debug('Get Characteristic Brightness ->', brightness);
+    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.device.uniqueId);
 
     // you must call the callback function
     // the first argument should be null if there were no errors
@@ -236,7 +235,7 @@ export class ZackneticMagichomePlatformAccessory {
     //update state with actual values asynchronously
     this.getState();
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.device.uniqueId);
     callback(null, isOn);
   }
 

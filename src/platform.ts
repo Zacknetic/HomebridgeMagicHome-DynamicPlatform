@@ -131,10 +131,11 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
       //=================================================
       // Start Cached Devices //
       } else {
-      //the device has already been registered and will need
+      // the device has already been registered and will need
       // to ensure the ip address (or other custom variables) are still identical
 
-        this.log.info('Registering cached accessory: %o...',  existingAccessory.context.device.displayName);
+        this.log.info('Registering cached accessory: %o... Model is: %o... ID is %o...',  existingAccessory.context.device.displayName,
+          existingAccessory.context.device.modelNumber,  existingAccessory.context.device.uniqueId);
         
         // set its restart prune counter to 0 as it has been seen this session
         existingAccessory.context.restartsSinceSeen = 0;

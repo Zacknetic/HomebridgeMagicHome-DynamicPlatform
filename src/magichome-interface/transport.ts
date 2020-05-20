@@ -9,7 +9,9 @@ const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
  
-//Very confused why this is needed. But if entire device  
+//how can I output to log in this file? Should I export from platform.ts?
+
+//Very confused why this is needed. But if removed, devices won't be able to reply current state.
 function wait(emitter: any, eventName: any) {
   return new Promise((resolve, reject) => {
     let off: any = setTimeout(() => {
@@ -47,7 +49,7 @@ export class Transport {
   constructor(host: any, timeout = 5) {
     this.host = host;
     this.timeout = timeout;
-
+    
     this.socket = null;
     this.queue = new Queue(1, Infinity); // 1 concurrent, infinit size
   }
@@ -100,7 +102,6 @@ export class Transport {
   }
 
   async read() {
-    //const data = await this.socket.data;
     const data = await wait(this.socket, 'data');
     // this.logger('Read data %o', `0x${data.toString('hex')}`);
     return data;
@@ -117,7 +118,9 @@ export class Transport {
     }
 
     return {
-     
+      //sometimes works perfectly, but sometimes gives error:
+      //getState() error:  TypeError: data.readUInt8 is not a function
+      //...HomebridgeMagicHome-DynamicPlatform\src\magichome-interface\transport.ts:121:18)
       isOn: data.readUInt8(2) === 0x23,
       color: {
         red: data.readUInt8(6),
