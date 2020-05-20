@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable linebreak-style */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
@@ -62,34 +63,18 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
-    const devices: any = await Discover.scan();
-    // devices.map(device => new LightAccessory(device, homebridge));
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    const exampleDevices = [
-      {
-        uniqueId: '2C3AE806312AA',
-        modelNumber: '35.v3',
-        displayName: 'Office Wall Light',
-        ipAddress: '192.168.1.11',
-        lightVersion: '3',
 
-      },
-      {
-        uniqueId: '5678',
-        modelNumber: '151001',
-        displayName: 'Bedroom Light 7',
-        ipAddress: '192.168.1.23',
-        lightVersion: '7',
-      }, 
-    ];   
+    
+    let devices: any = await Discover.scan();
 
+    while(devices.length === 0){
+      this.log.info('Found zero devices... rescanning.'); 
+      devices = await Discover.scan();
+    }
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of devices) {  
 
-      device.displayName = device.uniqueId;
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
@@ -98,33 +83,36 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
       // check that the device has not already been registered by checking the
       // cached devices we stored in the `configureAccessory` method above
 
-
-
+      //=================================================
+      // Start Unregistered Devices //
+        
       if (!existingAccessory) { 
-
+        //create a new transport object so we have access to devices state
+        //this is neccessary to determine the lightVersion
         const transport = new Transport(device.ipAddress);
+
+        //retrieve the device's state
         const state = await transport.getState();
+        
+        //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
         device.lightVersion = state.lightVersion;
         device.displayName = device.lightVersion;
-        this.log.info('Registering new accessory:', device.displayName); 
+        this.log.info('Registering new accessory: ', device.displayName); 
 
         // create a new accessory
         const accessory = new this.api.platformAccessory(device.displayName, uuid);
-
+        accessory.context.lightVersion = device.lightVersion;
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
         accessory.context.device = device; 
 
         // saved a distint cached version of the IP address to compare in future restarts
         accessory.context.cachedIPAddress = device.ipAddress;
+        this.log.info('Discovered IP', accessory.context.device.ipAddress); 
 
         // set its restart prune counter to 0 as it has been seen this session
         accessory.context.restartsSinceSeen = 0;
 
-        this.log.info('Discovered IP', accessory.context.device.ipAddress); 
-
-
- 
         // create the accessory handler
         // this is imported from `platformAccessory.ts`
         new ZackneticMagichomePlatformAccessory(this, accessory, this.config);
@@ -135,17 +123,26 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
         // push into accessory cache
         this.accessories.push(accessory);
 
-      // otherwise the device has already been registered and will need
-      // to ensure the ip address (or other custom variables) are still identical
-      } else {
 
-        this.log.info('Registering cached accessory: ', device.displayName, '...');
+        //=================================================
+        // End Unregistered Devices //
+
+        
+      //=================================================
+      // Start Cached Devices //
+      } else {
+      //the device has already been registered and will need
+      // to ensure the ip address (or other custom variables) are still identical
+
+        this.log.info('Registering cached accessory: %o...',  existingAccessory.context.device.displayName);
         
         // set its restart prune counter to 0 as it has been seen this session
         existingAccessory.context.restartsSinceSeen = 0;
 
+        //=================================================
+        // Start IP Discrepency //
         // test if the existing cached accessory ip address matches the discovered
-        // accessory ip address
+        // accessory ip address if not, replace it
         if (existingAccessory.context.cachedIPAddress !== device.ipAddress) {
 
           this.log.info('Ip address discrepancy found for accessory:' , device.displayName);
@@ -157,30 +154,48 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
 
           this.log.info('Ip address successfully reassigned to: ', existingAccessory.context.cachedIPAddress);
         }
+
+        //=================================================
+        // End IP Discrepency //
         
         // create the accessory handler
         new ZackneticMagichomePlatformAccessory(this, existingAccessory,this.config);   
 
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([existingAccessory]);
-
-        // push into accessory cache
-        this.accessories.push(existingAccessory); 
       } 
     }
+    //=================================================
+    // End Cached Devices //
+   
+    //***************** Device Pruning Start *****************//
 
-    if(this.config.pruneMissingCachedAccessories){
- 
-      for (const accessory of this.accessories){
+    //if config settings are enabled, devices that are no longer seen
+    //will be pruned, removing them from the cache. Usefull for removing
+    //unplugged or unresponsive accessories
+    for (const accessory of this.accessories){
+      
+      //simple warning to notify user that their accessory hasn't been seen in n restarts
+      if(accessory.context.restartsSinceSeen > 0){
+        this.log.warn('Warning! Accessory: %o has not been seen for %o restarts.', 
+          accessory.context.device.displayName, accessory.context.restartsSinceSeen);
+      }
+
+      //if the config parameters for pruning are set to true, prune any devices that haven't been seen
+      //for more restarts than the accepted ammount
+      if(this.config.pruneMissingCachedAccessories){
         if(accessory.context.restartsSinceSeen >= this.config.restartsBeforeMissingAccessoriesPruned){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          this.log.info('Successfully pruned accessory:', accessory.context.device.displayName,
+          this.log.warn('Successfully pruned accessory:', accessory.context.device.displayName,
             'due to not being seen for (',accessory.context.restartsSinceSeen,') restart(s).');
         }
       }
     
     } 
- 
-  } 
-}
+    //***************** Device Pruning End *****************//
+
+    this.log.info('Registered %o MagicHome devices.', this.accessories.length);
+  }//disoveredDevices()
+  
+}//ZackneticMagichomePlatform class
   

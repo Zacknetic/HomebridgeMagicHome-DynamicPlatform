@@ -3,17 +3,12 @@ export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function delayToSpeed(delay: never) {
-  let clamped = clamp(delay, 1, 31);
-  clamped -= 1; // bring into interval [0, 30]
-  return 100 - (clamped / 30) * 100;
-}
 
-export function speedToDelay(speed: never) {
-  const clamped = clamp(speed, 0, 100);
-  return 30 - (clamped / 100) * 30 + 1;
-}
+//=================================================
+// Start checksum //
 
+//a checksum is needed at the end of the byte array otherwise the message is rejected by the light
+//add all bytes and chop off the beginning by & with 0xFF
 export function checksum(buffer: Uint8Array) {
   let chk = 0;
 
@@ -24,7 +19,8 @@ export function checksum(buffer: Uint8Array) {
   return chk & 0xff;
 }
 
-
+//=================================================
+// Start Convert RGBtoHSL //
 export function convertRGBtoHSL(red: number, green: number, blue: number) {
   const r = red / 255;
   const g = green / 255;
@@ -73,7 +69,7 @@ export function hue2rgb(p: number, q: number, t: number) {
   }
   if (t < 1 / 6) {
     return p + (q - p) * 6 * t;
-  } 
+  }  
   if (t < 1 / 2) {
     return q;
   }
@@ -84,7 +80,13 @@ export function hue2rgb(p: number, q: number, t: number) {
 
 }
 
-export function convertHSLtoRGB (hsl: any) {
+//=================================================
+// End Convert RGBtoHSL //
+
+        
+//=================================================
+// Start Convert HSLtoRGB //
+export function convertHSLtoRGB (hsl: number[]) {
   const h = hsl[0] / 360;
   const s = hsl[1] / 100;
   const l = hsl[2] / 100;
@@ -131,3 +133,20 @@ export function convertHSLtoRGB (hsl: any) {
 
   return rgb;
 }
+//=================================================
+// End Convert HSLtoRGB //
+
+//Unused
+
+/*
+export function delayToSpeed(delay: never) {
+  let clamped = clamp(delay, 1, 31);
+  clamped -= 1; // bring into interval [0, 30]
+  return 100 - (clamped / 30) * 100;
+}
+
+export function speedToDelay(speed: never) {
+  const clamped = clamp(speed, 0, 100);
+  return 30 - (clamped / 100) * 30 + 1;
+}
+*/

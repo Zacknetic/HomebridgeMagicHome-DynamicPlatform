@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import dgram from 'dgram';
 
 const BROADCAST_ADDR = '255.255.255.255';

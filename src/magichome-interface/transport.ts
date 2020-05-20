@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-undef */
 /* eslint-disable prefer-const */
 import net from 'net';
@@ -8,7 +9,7 @@ const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
  
-
+//Very confused why this is needed. But if entire device  
 function wait(emitter: any, eventName: any) {
   return new Promise((resolve, reject) => {
     let off: any = setTimeout(() => {
