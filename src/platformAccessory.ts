@@ -18,7 +18,7 @@ const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
  */ 
 export class ZackneticMagichomePlatformAccessory {
   private service: Service;
-  private transport = new Transport(this.accessory.context.cachedIPAddress);
+  private transport = new Transport(this.accessory.context.cachedIPAddress, 50);
 
   private colorWhiteThreshold = this.config.colorWhiteThreshold;
   private colorOffThreshold = this.config.colorOffThreshold;
@@ -314,17 +314,24 @@ export class ZackneticMagichomePlatformAccessory {
     switch(this.accessory.context.lightVersion) {
 
       //light versions 8 and 9 have rgb and warmWhite capabilities
+      case 10://rgbw strip
       case 9: //rgbw
       case 8: //rgbw
-        //if saturation is below config set threshold, set all other values besides warmWhite to 0 and set the mask to white (0x0F)
-        if (hsl.Saturation < this.colorWhiteThreshold) {
+      
+   
+        //if saturation is below config set threshold or if user asks for warm white / cold white  
+        //set all other values besides warmWhite to 0 and set the mask to white (0x0F)
+        
+        if ((hsl.Saturation < this.colorWhiteThreshold) || 
+        (hsl.Hue == 31 && hsl.Saturation == 33) || (hsl.Hue == 208 && hsl.Saturation == 17)) {
           
           r = 0;
           g = 0;
           b = 0;
+          ww = Math.round((255 / 100) * brightness);
           cw = 0;
           mask = 0x0F;
-          this.platform.log.debug('Setting warmWhite without colors: ww:%o', ww);
+          this.platform.log.debug('Setting warmWhite only without colors: ww:%o', ww);
 
         } else { //else set warmWhite and coldWhite to zero. Color mask already set at top
           
@@ -339,9 +346,27 @@ export class ZackneticMagichomePlatformAccessory {
       //only color OR white can be enabled at one time (no 0xFF mask). However, both whites can turn on simultaniously
       case 7: //rgbww color/white non-simultanious
       case 5: //rgbww color/white non-simultanious
-      
-        //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). White colors were already calculated above
-        if (hsl.Saturation < this.colorWhiteThreshold) {
+     
+        if(hsl.Hue == 31 && hsl.Saturation == 33){
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = Math.round((255 / 100) * brightness);
+          cw = 0;
+          mask = 0x0F;
+          this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+        } else if (hsl.Hue == 208 && hsl.Saturation == 17){
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = 0;
+          cw = Math.round((255 / 100) * brightness);
+          mask = 0x0F;
+          this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
+       
+        //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+        //White colors were already calculated above
+        } else if (hsl.Saturation < this.colorWhiteThreshold) {
           r = 0;
           g = 0;
           b = 0;
@@ -363,8 +388,27 @@ export class ZackneticMagichomePlatformAccessory {
         //set mask to both color/white (0xFF) so we can control both color and white simultaniously,
         mask = 0xFF;
         
-        //if saturation is below config set "colorOffThreshold, set rgb to 0. White colors were already calculated above
-        if (hsl.Saturation < this.colorOffThreshold) {
+
+        if(hsl.Hue == 31 && hsl.Saturation == 33){
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = Math.round((255 / 100) * brightness);
+          cw = 0;
+          mask = 0x0F;
+          this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+        } else if (hsl.Hue == 208 && hsl.Saturation == 17){
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = 0;
+          cw = Math.round((255 / 100) * brightness);
+          mask = 0x0F;
+          this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
+       
+        //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+        //White colors were already calculated above
+        } else if (hsl.Saturation < this.colorOffThreshold) {
           this.platform.log.debug('Turning off color');
           r = 0;
           g = 0;
@@ -444,10 +488,11 @@ export class ZackneticMagichomePlatformAccessory {
     */
 
     //if the device type is rgbw it can only accept an 8 byte message
-    if (this.accessory.context.lightVersion == 8 || this.accessory.context.lightVersion == 9) {
+    if (this.accessory.context.lightVersion == 8 || this.accessory.context.lightVersion == 9 || this.accessory.context.lightVersion == 10) {
       this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
     } else {  //else the device type is rgbww and can only accept a 9 byte message
       this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
+      // this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
     }
    
   }//setColor
@@ -498,8 +543,9 @@ export class ZackneticMagichomePlatformAccessory {
    *  @returns buffer
    */
   async send(command: number[]) {
+    console.log('platformAccessory class Send function. Sending: %o', command);
     const buffer = Buffer.from(command);
-    return await this.transport.send(buffer);
+    await this.transport.send(buffer);
   } //send
 
   //=================================================

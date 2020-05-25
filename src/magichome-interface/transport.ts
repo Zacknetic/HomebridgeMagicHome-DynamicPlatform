@@ -8,16 +8,16 @@ import { checksum } from './utils';
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
- 
 //how can I output to log in this file? Should I export from platform.ts?
 
 //Very confused why this is needed. But if removed, devices won't be able to reply current state.
-function wait(emitter: any, eventName: any) {
+function wait(emitter: any, eventName: any, timeout: any) {
   return new Promise((resolve, reject) => {
     let off: any = setTimeout(() => {
       clearTimeout(off);
-      resolve('Promise A win!');
-    }, 200);
+      const buffer = Buffer.from([0x81, 0x35, 0x24, 0x61, 0x01, 0x01,0x00 ,0x00 ,0x00, 0xff, 0x05, 0x58, 0x0f, 0xa8]);
+      resolve(buffer);
+    }, timeout);
     const eventHandler = (...args: any) => {
       off();
       resolve(...args);
@@ -46,10 +46,10 @@ export class Transport {
    * @param {string} host - hostname
    * @param {number} timeout - connection timeout (in seconds)
    */
-  constructor(host: any, timeout = 5) {
+  constructor(host: any, timeout = 50) {
     this.host = host;
+  
     this.timeout = timeout;
-    
     this.socket = null;
     this.queue = new Queue(1, Infinity); // 1 concurrent, infinit size
   }
@@ -64,7 +64,7 @@ export class Transport {
     //this.logger('Attempting connection to %o', options);
     this.socket = net.connect(options);
 
-    await wait(this.socket, 'connect');
+    await wait(this.socket, 'connect', this.timeout);
     //await this.socket.connect;
     const result = await fn();
     await this.disconnect();
@@ -81,7 +81,9 @@ export class Transport {
   async send(buffer: any) {
     return this.queue.add(async () => (
       this.connect(async () => {
+        console.log('writing value: %o', buffer);
         await this.write(buffer);
+        console.log(this.read());
         return this.read();
       })
     )); 
@@ -91,18 +93,19 @@ export class Transport {
     const chk = checksum(buffer);
     const payload = Buffer.concat([buffer, Buffer.from([chk])]);
 
-    //   this.logger('Sending command %o', `0x${payload.toString('hex')}`);
+    console.log('Sending command %o', `${payload.toString('hex')}`);
     const sent = this.socket.write(payload, 'binary');
 
     // wait for drain event which means all data has been sent
     if (sent !== true) {
-      await wait(this.socket, 'drain');
+      console.log('did not send, waiting...');
+      await wait(this.socket, 'drain', this.timeout);
       //await this.socket.drain;
     }
   }
 
   async read() {
-    const data = await wait(this.socket, 'data');
+    const data = await wait(this.socket, 'data', this.timeout);
     // this.logger('Read data %o', `0x${data.toString('hex')}`);
     return data;
   }
@@ -112,15 +115,18 @@ export class Transport {
     // this.platform.log.debug('Querying state');
     const data = await this.send(COMMAND_QUERY_STATE);
 
-    
+
+    console.log('transport.ts getState() data: %o for ip: %o' , data, this.host);
     if (data.length < 14) {
       throw new Error('State query returned invalid data.');
     }
-
+    console.log(this.host);
     return {
       //sometimes works perfectly, but sometimes gives error:
       //getState() error:  TypeError: data.readUInt8 is not a function
       //...HomebridgeMagicHome-DynamicPlatform\src\magichome-interface\transport.ts:121:18)
+      
+      lightVersionModifier:data.readUInt8(1),
       isOn: data.readUInt8(2) === 0x23,
       color: {
         red: data.readUInt8(6),

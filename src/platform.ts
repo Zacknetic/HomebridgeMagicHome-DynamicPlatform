@@ -85,17 +85,26 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
 
       //=================================================
       // Start Unregistered Devices //
-        
+      const transport = new Transport(device.ipAddress, 1000);
       if (!existingAccessory) { 
         //create a new transport object so we have access to devices state
         //this is neccessary to determine the lightVersion
-        const transport = new Transport(device.ipAddress);
+        
 
         //retrieve the device's state
         const state = await transport.getState();
-        
-        //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
+
         device.lightVersion = state.lightVersion;
+        //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
+        device.lightVersionModifier = state.lightVersionModifier;
+        this.log.info('device modifier %o' , state.lightVersionModifier);
+
+        if(state.lightVersionModifier == 4){
+          this.log.info('found new device version' , device.lightVersionModifier);
+          device.lightVersion = 10;
+        }
+       
+       
         device.displayName = device.lightVersion;
         this.log.info('Registering new accessory: ', device.displayName); 
 
@@ -133,6 +142,19 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
       } else {
       // the device has already been registered and will need
       // to ensure the ip address (or other custom variables) are still identical
+
+        /*
+        const state = await transport.getState();
+  
+        //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
+      
+        this.log.info('device modifier %o' , state.lightVersionModifier);
+
+        if(state.lightVersionModifier == 4){
+          this.log.info('found new device version' , device.lightVersionModifier);
+          existingAccessory.context.lightVersion = 10;
+        }
+*/ 
 
         this.log.info('Registering cached accessory: %o... Model is: %o... ID is %o...',  existingAccessory.context.device.displayName,
           existingAccessory.context.device.modelNumber,  existingAccessory.context.device.uniqueId);
