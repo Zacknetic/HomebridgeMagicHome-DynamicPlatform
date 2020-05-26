@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "Zacknetic-Magichome-Platform",
+  "pluginAlias": "homebridge-magichome-dynamic-platform",
   "pluginType": "platform",
   "singular": true,
   "schema": {
