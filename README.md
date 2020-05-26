@@ -1,7 +1,7 @@
 
 <p align="center">
 
-<img src="https:https://github.com/Lethegrin/HomebridgeMagicHome-DynamicPlatform.png" width="150">
+<img src="https:https://github.com/Lethegrin/branding/logos/HomebridgeMagicHome-DynamicPlatform.png" width="150">
 
 </p>
 
