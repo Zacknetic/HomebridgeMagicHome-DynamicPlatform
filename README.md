@@ -1,12 +1,12 @@
 
 <p align="center">
 
-<img src="https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png" width="150">
+<img src="https://github.com/homebridge/branding/logos/zackneticlogo.svg" width="150">
 
 </p>
 
 
-# Homebridge Platform Plugin Template
+# Homebridge MagicHome Dynamic Platform
 
 This is a template Homebridge platform plugin and can be used as a base to help you get started developing your own plugin.
 

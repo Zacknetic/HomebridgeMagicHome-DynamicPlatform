@@ -81,9 +81,7 @@ export class Transport {
   async send(buffer: any) {
     return this.queue.add(async () => (
       this.connect(async () => {
-        console.log('writing value: %o', buffer);
         await this.write(buffer);
-        console.log(this.read());
         return this.read();
       })
     )); 
@@ -93,12 +91,10 @@ export class Transport {
     const chk = checksum(buffer);
     const payload = Buffer.concat([buffer, Buffer.from([chk])]);
 
-    console.log('Sending command %o', `${payload.toString('hex')}`);
     const sent = this.socket.write(payload, 'binary');
 
     // wait for drain event which means all data has been sent
     if (sent !== true) {
-      console.log('did not send, waiting...');
       await wait(this.socket, 'drain', this.timeout);
       //await this.socket.drain;
     }
@@ -115,18 +111,13 @@ export class Transport {
     // this.platform.log.debug('Querying state');
     const data = await this.send(COMMAND_QUERY_STATE);
 
-
-    console.log('transport.ts getState() data: %o for ip: %o' , data, this.host);
     if (data.length < 14) {
       throw new Error('State query returned invalid data.');
     }
-    console.log(this.host);
     return {
-      //sometimes works perfectly, but sometimes gives error:
-      //getState() error:  TypeError: data.readUInt8 is not a function
-      //...HomebridgeMagicHome-DynamicPlatform\src\magichome-interface\transport.ts:121:18)
       
-      lightVersionModifier:data.readUInt8(1),
+      debugBuffer: data,
+      lightVersionModifier: data.readUInt8(1),
       isOn: data.readUInt8(2) === 0x23,
       color: {
         red: data.readUInt8(6),

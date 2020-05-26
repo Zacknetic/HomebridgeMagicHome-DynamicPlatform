@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/camelcase */
+/* eslint-disable max-len */
 /* eslint-disable linebreak-style */
 /* eslint-disable eqeqeq */
 /* eslint-disable linebreak-style */
@@ -21,6 +23,7 @@ export class ZackneticMagichomePlatformAccessory {
   private transport = new Transport(this.accessory.context.cachedIPAddress, 50);
 
   private colorWhiteThreshold = this.config.colorWhiteThreshold;
+  private colorWhiteThresholdStripController = this.config.colorWhiteThresholdStripController;
   private colorOffThreshold = this.config.colorOffThreshold;
   private simultaniousColorWhite = this.config.simultaniousColorWhite;
   private isActive = false;
@@ -40,6 +43,7 @@ export class ZackneticMagichomePlatformAccessory {
     
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
+
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Magic Home')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.modelNumber)
@@ -47,42 +51,64 @@ export class ZackneticMagichomePlatformAccessory {
       .getCharacteristic(this.platform.Characteristic.Identify)
       .on(CharacteristicEventTypes.SET, this.identifyLight.bind(this));       // SET - bind to the 'Identify` method below
 
+      this.accessory.getService(this.platform.Service.AccessoryInformation)!
+        .addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+    
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
-    // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) ?? this.accessory.addService(this.platform.Service.Lightbulb);
+      // get the LightBulb service if it exists, otherwise create a new LightBulb service
+      // you can create multiple services for each accessory
+      this.service = this.accessory.getService(this.platform.Service.Lightbulb) ?? this.accessory.addService(this.platform.Service.Lightbulb);
 
-    // To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-    // when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-    // this.accessory.getService('NAME') ?? this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE');
+      this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
+        .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
+      // To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
+      // when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
+      // this.accessory.getService('NAME') ?? this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE');
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
+      // set the service name, this is what is displayed as the default name on the Home app
+      // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
+      this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.displayName);
 
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+      // each service must implement at-minimum the "required characteristics" for the given service type
+      // see https://developers.homebridge.io/#/service/Lightbulb
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .on(CharacteristicEventTypes.SET, this.setOn.bind(this))                // SET - bind to the `setOn` method below
-      .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
+      // register handlers for the On/Off Characteristic
+      this.service.getCharacteristic(this.platform.Characteristic.On)
+        .on(CharacteristicEventTypes.SET, this.setOn.bind(this))                // SET - bind to the `setOn` method below
+        .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
 
-    // register handlers for the Hue Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Hue)
-      .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
-      .on(CharacteristicEventTypes.GET, this.getHue.bind(this));              // GET - bind to the 'getHue` method below
+      // register handlers for the Hue Characteristic
+      this.service.getCharacteristic(this.platform.Characteristic.Hue)
+        .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
+        .on(CharacteristicEventTypes.GET, this.getHue.bind(this));              // GET - bind to the 'getHue` method below
 
-    // register handlers for the Saturation Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Saturation)
-      .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this))        // SET - bind to the 'setSaturation` method below
-      .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
+      // register handlers for the Saturation Characteristic
+      this.service.getCharacteristic(this.platform.Characteristic.Saturation)
+        .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this))        // SET - bind to the 'setSaturation` method below
+        .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
 
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
-      .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
+      // register handlers for the Brightness Characteristic
+      this.service.getCharacteristic(this.platform.Characteristic.Brightness)
+        .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
+        .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
+      this.getState;
+  }
+  
+
+  /**
+   * Handle "SET" requests from HomeKit
+   * These are sent when the user changes the state of an accessory, for example, changing the Hue
+   */
+  setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    const name: string = value.toString();
+    this.platform.log.debug('Renaming device to %o', name);
+    this.accessory.context.displayName = name;
+    this.platform.api.updatePlatformAccessories([this.accessory]);
+
+
+
+    callback(null);
   }
 
   /**
@@ -253,8 +279,7 @@ export class ZackneticMagichomePlatformAccessory {
   async getState() {
    
     try {
-      this.platform.log.debug('Getting state for accessory: %o version-%o',
-        this.accessory.displayName, this.accessory.context.lightVersion);
+
 
       const state = await this.transport.getState(); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
       
@@ -273,9 +298,11 @@ export class ZackneticMagichomePlatformAccessory {
       //brightness is returned instantly in "getBrightness()" 
       //(todo) should probably calculate brightness from rgbww for initial values
       //(todo) should probably create global warmWhite and coldWhite values and determine current white mode (color, white, both)
-
+      this.platform.log.debug('Getting state for accessory: %o version-%o',
+        this.accessory.context.displayName, this.accessory.context.lightVersion);
+      this.platform.log.debug('buffer data: ', state.debugBuffer); 
     } catch (error) {
-      this.platform.log.info('getState() error: ', error); 
+      this.platform.log.warn('getState() error: ', error); 
     }
   }
 
@@ -314,7 +341,6 @@ export class ZackneticMagichomePlatformAccessory {
     switch(this.accessory.context.lightVersion) {
 
       //light versions 8 and 9 have rgb and warmWhite capabilities
-      case 10://rgbw strip
       case 9: //rgbw
       case 8: //rgbw
       
@@ -390,6 +416,7 @@ export class ZackneticMagichomePlatformAccessory {
         
 
         if(hsl.Hue == 31 && hsl.Saturation == 33){
+          
           r = 0;
           g = 0;
           b = 0;
@@ -397,6 +424,7 @@ export class ZackneticMagichomePlatformAccessory {
           cw = 0;
           mask = 0x0F;
           this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+          
         } else if (hsl.Hue == 208 && hsl.Saturation == 17){
           r = 0;
           g = 0;
@@ -420,12 +448,60 @@ export class ZackneticMagichomePlatformAccessory {
           //this allows brightness to only affect the white colors, creating beautiful white+color balance
           //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
           //the white brightness effectively acts as the saturation value
-        } else if(hsl.Saturation < this.colorWhiteThreshold){
+        } else if(hsl.Saturation < this.colorWhiteThresholdStripController && this.simultaniousColorWhite){
           [red, green, blue] = convertHSLtoRGB([hsl.Hue, 100, hsl.Luminance]); //re-generate rgb with full saturation
           r = red;
           g = green;
           b = blue;
           this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
+
+          //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
+        } else {
+          ww = 0;
+          cw = 0;
+          this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
+        }
+        break;
+
+      //light version 10 has rgb and warmWhite capabilities.
+      //both color AND white can be enabled simultaniously (0xFF mask is possible).
+      case 10:  //rgbw simultanious color/white capable
+
+        //set mask to both color/white (0xFF) so we can control both color and white simultaniously,
+        mask = 0xFF;
+        
+
+        if((hsl.Hue == 31 && hsl.Saturation == 33) || (hsl.Hue == 208 && hsl.Saturation == 17)){
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = Math.round((255 / 100) * brightness);
+          cw = 0;
+          this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+        //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+        //White colors were already calculated above
+        } else if (hsl.Saturation < this.colorOffThreshold) {
+          this.platform.log.debug('Turning off color');
+          r = 0;
+          g = 0;
+          b = 0;
+          ww = Math.round((255 / 100) * brightness);
+          cw = 0;
+          this.platform.log.debug('Setting only white: ww:%o cw:%o', ww, cw);
+
+          //else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
+          //set RGB to 100% saturation and 100% brightness
+          //this allows brightness to only affect the white colors, creating beautiful white+color balance
+          //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
+          //the white brightness effectively acts as the saturation value
+        } else if(hsl.Saturation < this.colorWhiteThresholdStripController && this.simultaniousColorWhite){
+          [red, green, blue] = convertHSLtoRGB([hsl.Hue, 100, hsl.Luminance]); //re-generate rgb with full saturation
+          r = red;
+          g = green;
+          b = blue;
+          ww = Math.round((255 / 100) * brightness);
+          cw = 0;
+          this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o', r, g, b, ww);
 
           //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
         } else {
@@ -543,7 +619,6 @@ export class ZackneticMagichomePlatformAccessory {
    *  @returns buffer
    */
   async send(command: number[]) {
-    console.log('platformAccessory class Send function. Sending: %o', command);
     const buffer = Buffer.from(command);
     await this.transport.send(buffer);
   } //send
@@ -595,14 +670,14 @@ export class ZackneticMagichomePlatformAccessory {
       let rainbowHue = 0;
       let count = 0;
 
-      rainbowHue += 10;
+      rainbowHue += 1;
       if(rainbowHue > 360) {
         rainbowHue = 0;
         count++;
       }
       this.lightState.HSL.Hue = rainbowHue as number;
       this.setColor();
-      if(count >= 2){
+      if(count >= 1){
 
         this.lightState.HSL.Hue = 0;
         this.lightState.HSL.Saturation = 5;
@@ -611,12 +686,45 @@ export class ZackneticMagichomePlatformAccessory {
         clearInterval(interval);
         return;
       }
-    }, 50);
+    }, 500);
 
   } //rainbowEffect
 
    
   //=================================================
   // End LightEffects //
+
+  
+  speedToDelay(speed: number) {
+    speed = clamp(speed, 0, 100);
+    return (30 - ((speed / 100) * 30)) + 1;
+  }
+
+  /**
+	 * Sets the controller to display one of the predefined patterns
+	 * @param {String} pattern Name of the pattern
+	 * @param {Number} speed between 0 and 100
+	 * @param {function} callback 
+	 * @returns {Promise<boolean>}
+	 */
+  setPattern(pattern: number, speed: number) {
+
+    const delay = this.speedToDelay(speed);
+
+    //const cmd_buf = Buffer.from();
+
+    //const promise = new Promise((resolve, reject) => {
+    this.send([0x61, pattern, delay, 0x0f]);
+    //}).then(data => {
+    //return (data.length > 0 || !this._options.ack.pattern); 
+    //});
+
+    // if (callback && typeof callback == 'function') {
+    // promise.then(callback.bind(null, null), callback);
+    //}
+
+    //return promise;
+  }
+
 
 } // ZackneticMagichomePlatformAccessory class
