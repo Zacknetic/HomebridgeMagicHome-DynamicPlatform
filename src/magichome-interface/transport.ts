@@ -8,7 +8,7 @@ import { checksum } from './utils';
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
-//how can I output to log in this file? Should I export from platform.ts?
+//how can I output to log in this file? Shsdfould I export from platform.ts?
 
 //Very confused why this is needed. But if removed, devices won't be able to reply current state.
 function wait(emitter: any, eventName: any, timeout: any) {

@@ -6,7 +6,7 @@ import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { ZackneticMagichomePlatformAccessory } from './platformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 import { Discover } from './magichome-interface/Discover';
 import { Transport } from './magichome-interface/transport';
 
@@ -15,7 +15,7 @@ import { Transport } from './magichome-interface/transport';
  * This class is the main constructor for your plugin, this is where you should
  * parse the user config and discover/register accessories with Homebridge.
  */
-export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
+export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
   public readonly Service = this.api.hap.Service;
   public readonly Characteristic = this.api.hap.Characteristic;
   // this is used to track restored cached accessories
@@ -122,7 +122,7 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler
         // this is imported from `platformAccessory.ts`
-        new ZackneticMagichomePlatformAccessory(this, accessory, this.config);
+        new HomebridgeMagichomeDynamicPlatformAccessory(this, accessory, this.config);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -169,7 +169,7 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
           existingAccessory.context.cachedIPAddress,
           existingAccessory.context.device.initialState);
         // create the accessory handler
-        new ZackneticMagichomePlatformAccessory(this, existingAccessory,this.config);   
+        new HomebridgeMagichomeDynamicPlatformAccessory(this, existingAccessory,this.config);   
 
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([existingAccessory]);
@@ -196,7 +196,7 @@ export class ZackneticMagichomePlatform implements DynamicPlatformPlugin {
           accessory.context.cachedIPAddress,
           accessory.context.device.initialState);
         // create the accessory handler
-        new ZackneticMagichomePlatformAccessory(this, accessory,this.config);   
+        new HomebridgeMagichomeDynamicPlatformAccessory(this, accessory,this.config);   
 
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([accessory]);

@@ -7,7 +7,7 @@ import { CharacteristicEventTypes } from 'homebridge';
 import type { Service, PlatformConfig, PlatformAccessory, CharacteristicValue, 
   CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
-import { ZackneticMagichomePlatform } from './platform';
+import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/transport';
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
@@ -18,14 +18,14 @@ const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */ 
-export class ZackneticMagichomePlatformAccessory {
+export class HomebridgeMagichomeDynamicPlatformAccessory {
   private service: Service;
   private transport = new Transport(this.accessory.context.cachedIPAddress, 50);
 
-  private colorWhiteThreshold = this.config.colorWhiteThreshold;
-  private colorWhiteThresholdStripController = this.config.colorWhiteThresholdStripController;
-  private colorOffThreshold = this.config.colorOffThreshold;
-  private simultaniousColorWhite = this.config.simultaniousColorWhite;
+  private colorWhiteThreshold = this.config.settings.whiteEffects.colorWhiteThreshold;
+  private colorWhiteThresholdSimultaniousDevices = this.config.settings.whiteEffects.colorWhiteThresholdSimultaniousDevices;
+  private colorOffThresholdSimultaniousDevices = this.config.settings.whiteEffects.colorOffThresholdSimultaniousDevices;
+  private simultaniousDevicesColorWhite = this.config.settings.whiteEffects.simultaniousDevicesColorWhite;
   private isActive = false;
   private lightState = {
     HSL: { Hue: 255, Saturation: 100, Luminance: 50 },
@@ -36,7 +36,7 @@ export class ZackneticMagichomePlatformAccessory {
 
 
   constructor(
-    private readonly platform: ZackneticMagichomePlatform,
+    private readonly platform: HomebridgeMagichomeDynamicPlatform,
     private readonly accessory: PlatformAccessory,
     public readonly config: PlatformConfig,
   ) {
@@ -436,7 +436,7 @@ export class ZackneticMagichomePlatformAccessory {
        
         //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
         //White colors were already calculated above
-        } else if (hsl.Saturation < this.colorOffThreshold) {
+        } else if (hsl.Saturation < this.colorOffThresholdSimultaniousDevices) {
           this.platform.log.debug('Turning off color');
           r = 0;
           g = 0;
@@ -448,7 +448,7 @@ export class ZackneticMagichomePlatformAccessory {
           //this allows brightness to only affect the white colors, creating beautiful white+color balance
           //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
           //the white brightness effectively acts as the saturation value
-        } else if(hsl.Saturation < this.colorWhiteThresholdStripController && this.simultaniousColorWhite){
+        } else if(hsl.Saturation < this.colorWhiteThresholdSimultaniousDevices && this.simultaniousDevicesColorWhite){
           [red, green, blue] = convertHSLtoRGB([hsl.Hue, 100, hsl.Luminance]); //re-generate rgb with full saturation
           r = red;
           g = green;
@@ -480,7 +480,7 @@ export class ZackneticMagichomePlatformAccessory {
           this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
         //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
         //White colors were already calculated above
-        } else if (hsl.Saturation < this.colorOffThreshold) {
+        } else if (hsl.Saturation < this.colorOffThresholdSimultaniousDevices) {
           this.platform.log.debug('Turning off color');
           r = 0;
           g = 0;
@@ -494,7 +494,7 @@ export class ZackneticMagichomePlatformAccessory {
           //this allows brightness to only affect the white colors, creating beautiful white+color balance
           //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
           //the white brightness effectively acts as the saturation value
-        } else if(hsl.Saturation < this.colorWhiteThresholdStripController && this.simultaniousColorWhite){
+        } else if(hsl.Saturation < this.colorWhiteThresholdSimultaniousDevices && this.simultaniousDevicesColorWhite){
           [red, green, blue] = convertHSLtoRGB([hsl.Hue, 100, hsl.Luminance]); //re-generate rgb with full saturation
           r = red;
           g = green;
