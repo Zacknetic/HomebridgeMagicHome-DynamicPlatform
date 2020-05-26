@@ -63,11 +63,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
     let devices: any = await Discover.scan();
     while(devices.length === 0){
-      this.log.warn('Found zero devices... rescanning in five seconds.');
-      setTimeout(() => {
-        devices = Discover.scan();
-        return;
-      }, 5000);
+      this.log.warn('Found zero devices... rescanning...');
+      devices = Discover.scan();
+      return;
+
     }
 
 

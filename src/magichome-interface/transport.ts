@@ -75,7 +75,7 @@ export class Transport {
     this.socket = null;
   }
 
-  async send(buffer: any) {
+  async send(buffer: any, useChecksum = true) {
     return this.queue.add(async () => (
       this.connect(async () => {
         await this.write(buffer);
@@ -84,11 +84,18 @@ export class Transport {
     )); 
   }
 
-  async write(buffer: any) {
-    const chk = checksum(buffer);
-    const payload = Buffer.concat([buffer, Buffer.from([chk])]);
+  async write(buffer: any, useChecksum = true) {
+    let sent;
+    if(useChecksum){
+      const chk = checksum(buffer);
+      const payload = Buffer.concat([buffer, Buffer.from([chk])]);
+      sent = this.socket.write(payload, 'binary');
 
-    const sent = this.socket.write(payload, 'binary');
+    } else {
+      sent = this.socket.write(buffer, 'binary');
+    }
+ 
+
 
     // wait for drain event which means all data has been sent
     if (sent !== true) {

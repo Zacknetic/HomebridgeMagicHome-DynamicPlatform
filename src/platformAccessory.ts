@@ -336,10 +336,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //(todo) add rgb only case for users with rgb only light strips. Will need to know light version number
     switch(this.accessory.context.lightVersion) {
 
+      case 4: //rgb
+        this.send([0x56, r,g,b, 0xAA], false);
+        break;
+
       //light versions 8 and 9 have rgb and warmWhite capabilities
       case 9: //rgbw
       case 8: //rgbw
-      
    
         //if saturation is below config set threshold or if user asks for warm white / cold white  
         //set all other values besides warmWhite to 0 and set the mask to white (0x0F)
@@ -361,6 +364,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           cw = 0;
           this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
         }
+        this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
         break;
 
         
@@ -401,6 +405,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
 
         }
+        this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
         break;
 
       //light version 3 has rgb, warmWhite and coldWhite capabilities.
@@ -457,6 +462,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           cw = 0;
           this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
         }
+
+        this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
         break;
 
       //light version 10 has rgb and warmWhite capabilities.
@@ -505,12 +512,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           cw = 0;
           this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
         }
+
+        this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
         break;
 
         //warn user if we encounter an unknown light type
       default:
         this.platform.log.warn('Uknown light version: %o... color cannot be set.', this.accessory.context.lightVersion);
-        this.platform.log.warn('Please create an issue at https://github.com/Lethegrin/HomebridgeMagicHome-DynamicPlatform/issues and post your log');
+        this.platform.log.warn('Please create an issue at https://github.com/Lethegrin/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
         break;
     }
 
@@ -558,14 +567,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         #  useful if you want to set a default color such as warm white that can be easily reverted to by turning a switch on / off
         #
     */
-
-    //if the device type is rgbw it can only accept an 8 byte message
-    if (this.accessory.context.lightVersion == 8 || this.accessory.context.lightVersion == 9 || this.accessory.context.lightVersion == 10) {
-      this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
-    } else {  //else the device type is rgbww and can only accept a 9 byte message
-      this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
-      // this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
-    }
    
   }//setColor
 
@@ -614,9 +615,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  create a buffer from our byte array and send it to transport
    *  @returns buffer
    */
-  async send(command: number[]) {
+  async send(command: number[], useChecksum = true) {
     const buffer = Buffer.from(command);
-    await this.transport.send(buffer);
+    await this.transport.send(buffer, useChecksum);
   } //send
 
   //=================================================
