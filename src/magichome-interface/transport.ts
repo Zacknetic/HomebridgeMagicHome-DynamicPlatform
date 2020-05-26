@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-undef */
-/* eslint-disable prefer-const */
 import net from 'net';
 import Queue from 'promise-queue';
 import { checksum } from './utils';

@@ -1,4 +1,3 @@
-/* eslint-disable linebreak-style */
 import type { API } from 'homebridge';
 
 import { PLATFORM_NAME } from './settings';

@@ -2,14 +2,49 @@
   "pluginAlias": "homebridge-magichome-dynamic-platform",
   "pluginType": "platform",
   "singular": true,
+  "headerDisplay": "Optional content to display above the plugin config. Supports markdown.",
+  "footerDisplay": "Optional content to display below the plugin config. Supports markdown.",
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+      "settings": {
+        "type": "object",
+        "properties": {
+            "pruning": {
+                "type": "object",
+                "properties": {
+                    "pruneMissingCachedAccessories": {
+                        "title": " prune Missing Cached Accessories",
+                        "type": "boolean"
+                    },
+                    "restartsBeforeMissingAccessoriesPruned": {
+                        "title": "restarts Before Missing Accessories Pruned",
+                        "type": "integer"
+                    }
+                }
+            },
+            "whiteEffects": {
+                "type": "object",
+                "properties": {
+                    "simultaniousDevicesColorWhite": {
+                        "title": " simultanious Devices Color White",
+                        "type": "boolean"
+                    },
+                    "colorWhiteThreshold": {
+                        "title": "color White Threshold",
+                        "type": "integer"
+                    },
+                    "colorWhiteThresholdSimultaniousDevices": {
+                        "title": "color White Threshold SimultaniousDevices",
+                        "type": "integer"
+                    },
+                    "colorOffThresholdSimultaniousDevices": {
+                        "title": "color Off Threshold Simultanious Devices",
+                        "type": "integer"
+                    }
+                }
+            }
+        }
       }
     }
   }

@@ -19,14 +19,16 @@
     "semi": ["warn", "always"],
     "comma-dangle": ["warn", "always-multiline"],
     "dot-notation": "warn",
-    "eqeqeq": "warn",
     "curly": ["warn", "all"],
     "brace-style": ["warn"],
     "prefer-arrow-callback": ["warn"],
-    "max-len": ["warn", 140],
     "no-console": ["warn"], // use the provided Homebridge log method instead
     "lines-between-class-members": ["warn", "always", {"exceptAfterSingleLine": true}],
     "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/no-non-null-assertion": "off"
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off"
+
   }
 }

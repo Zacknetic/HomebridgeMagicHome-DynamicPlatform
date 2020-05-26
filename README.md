@@ -22,7 +22,7 @@ npm install -g homebridge-magichome-dynamic-platform
 
 ## Configuration
 
-### example '.json'
+### example 'config.json'
 ```json
 {
     "bridge": {

@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable linebreak-style */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
@@ -66,11 +62,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     
     let devices: any = await Discover.scan();
-
     while(devices.length === 0){
-      this.log.warn('Found zero devices... rescanning.'); 
-      devices = await Discover.scan();
+      this.log.warn('Found zero devices... rescanning in five seconds.');
+      setTimeout(() => {
+        devices = Discover.scan();
+        return;
+      }, 5000);
     }
+
+
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of devices) {  

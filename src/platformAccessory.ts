@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
-/* eslint-disable max-len */
-/* eslint-disable linebreak-style */
-/* eslint-disable eqeqeq */
-/* eslint-disable linebreak-style */
 import { CharacteristicEventTypes } from 'homebridge';
 import type { Service, PlatformConfig, PlatformAccessory, CharacteristicValue, 
   CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
@@ -20,7 +15,7 @@ const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
  */ 
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   private service: Service;
-  private transport = new Transport(this.accessory.context.cachedIPAddress, 50);
+  private transport = new Transport(this.accessory.context.cachedIPAddress, 200);
 
   private colorWhiteThreshold = this.config.settings.whiteEffects.colorWhiteThreshold;
   private colorWhiteThresholdSimultaniousDevices = this.config.settings.whiteEffects.colorWhiteThresholdSimultaniousDevices;
@@ -84,8 +79,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       // register handlers for the Saturation Characteristic
       this.service.getCharacteristic(this.platform.Characteristic.Saturation)
-        .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this))        // SET - bind to the 'setSaturation` method below
-        .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
+        .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
+      //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
 
       // register handlers for the Brightness Characteristic
       this.service.getCharacteristic(this.platform.Characteristic.Brightness)
@@ -216,6 +211,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     callback(null, hue);
   }
 
+  /*
   getSaturation(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
@@ -231,7 +227,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // the second argument should be the value to return
     callback(null, saturation);
   }
-
+*/
   getBrightness(callback: CharacteristicGetCallback) {
 
     // implement your own code to check if the device is on
