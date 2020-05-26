@@ -1,7 +1,7 @@
 
 <p align="center">
 
-<img src="https://github.com/homebridge/branding/logos/zackneticlogo.svg" width="150">
+<img src="https://github.com/homebridge/branding/logos/zackneticlogo.png" width="150">
 
 </p>
 
