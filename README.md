@@ -37,19 +37,13 @@ npm install -g homebridge-magichome-dynamic-platform
             "settings": {
                 "pruning": {
                     "pruneMissingCachedAccessories": false,         
-                    //prune accessories after they have been missing for n restarts
                     "restartsBeforeMissingAccessoriesPruned": 3,    
-                    //number of restarts missing before accessory is pruned
                 },
                 "whiteEffects": {
                     "simultaniousDevicesColorWhite": true,          
-                    //simultanious white and color for compatible devices
                     "colorWhiteThreshold": 10,                      
-                    //saturation threshold from color-only to white-only for non-simultanious devices
                     "colorWhiteThresholdSimultaniousDevices": 50,   
-                    //saturation threshold from color-only to color and white for simulanious devices
                     "colorOffThresholdSimultaniousDevices": 5,
-                    //saturation threshold from color and white to white only for simultanious devices
                 },
             },
         }
