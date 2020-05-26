@@ -62,11 +62,11 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     
     let devices: any = await Discover.scan();
-    while(devices.length === 0){
+    let scans = 0;
+    while(devices.length === 0 && scans < 5){
       this.log.warn('Found zero devices... rescanning...');
       devices = Discover.scan();
-      return;
-
+      scans++;
     }
 
 
@@ -84,14 +84,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
       //=================================================
       // Start Unregistered Devices //
-      const transport = new Transport(device.ipAddress, 1000);
+      const transport = new Transport(device.ipAddress, this.config);
       if (!existingAccessory) { 
         //create a new transport object so we have access to devices state
         //this is neccessary to determine the lightVersion
         
 
         //retrieve the device's state
-        const state = await transport.getState();
+        const state = await transport.getState(1000);
 
         device.initialState = state.debugBuffer;
         device.lightVersion = state.lightVersion;

@@ -1,6 +1,8 @@
 import net from 'net';
 import Queue from 'promise-queue';
 import { checksum } from './utils';
+import type { Service, PlatformConfig, PlatformAccessory, CharacteristicValue, 
+  CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
 
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
@@ -36,32 +38,29 @@ function wait(emitter: any, eventName: any, timeout: any) {
 
 export class Transport {
   host: any;
-  timeout: number;
   socket: any;
   queue: any;
   /**
    * @param {string} host - hostname
    * @param {number} timeout - connection timeout (in seconds)
    */
-  constructor(host: any, timeout = 50) {
+  constructor(host: any, public readonly config: PlatformConfig) {
     this.host = host;
-  
-    this.timeout = timeout;
     this.socket = null;
     this.queue = new Queue(1, Infinity); // 1 concurrent, infinit size
   }
 
-  async connect(fn: any) {
+  async connect(fn: any, _timeout = 200) {
     const options = {
       host: this.host,
       port: PORT,
-      timeout: this.timeout,
+      timeout: _timeout,
     };
 
     //this.logger('Attempting connection to %o', options);
     this.socket = net.connect(options);
 
-    await wait(this.socket, 'connect', this.timeout);
+    await wait(this.socket, 'connect', _timeout = 200);
     //await this.socket.connect;
     const result = await fn();
     await this.disconnect();
@@ -75,45 +74,45 @@ export class Transport {
     this.socket = null;
   }
 
-  async send(buffer: any, useChecksum = true) {
+  async send(buffer: any, useChecksum = true, _timeout = 200) {
     return this.queue.add(async () => (
       this.connect(async () => {
-        await this.write(buffer);
+        await this.write(buffer, useChecksum, _timeout);
         return this.read();
       })
     )); 
   }
 
-  async write(buffer: any, useChecksum = true) {
+  async write(buffer: any, useChecksum = true, _timeout = 200) {
     let sent;
     if(useChecksum){
       const chk = checksum(buffer);
       const payload = Buffer.concat([buffer, Buffer.from([chk])]);
-      sent = this.socket.write(payload, 'binary');
+      sent = this.socket.write(payload, useChecksum, _timeout);
 
     } else {
-      sent = this.socket.write(buffer, 'binary');
+      sent = this.socket.write(buffer, useChecksum, _timeout);
     }
  
 
 
     // wait for drain event which means all data has been sent
     if (sent !== true) {
-      await wait(this.socket, 'drain', this.timeout);
+      await wait(this.socket, 'drain', _timeout);
       //await this.socket.drain;
     }
   }
 
-  async read() {
-    const data = await wait(this.socket, 'data', this.timeout);
+  async read(_timeout = 200) {
+    const data = await wait(this.socket, 'data', _timeout);
     // this.logger('Read data %o', `0x${data.toString('hex')}`);
     return data;
   }
 
-  async getState(){
+  async getState(_timeout = 500){
     
     // this.platform.log.debug('Querying state');
-    const data = await this.send(COMMAND_QUERY_STATE);
+    const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
 
     if (data.length < 14) {
       throw new Error('State query returned invalid data.');

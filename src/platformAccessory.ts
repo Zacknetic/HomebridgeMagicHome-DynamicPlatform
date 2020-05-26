@@ -15,7 +15,7 @@ const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
  */ 
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   private service: Service;
-  private transport = new Transport(this.accessory.context.cachedIPAddress, 200);
+  private transport = new Transport(this.accessory.context.cachedIPAddress, this.config);
 
   private colorWhiteThreshold = this.config.settings.whiteEffects.colorWhiteThreshold;
   private colorWhiteThresholdSimultaniousDevices = this.config.settings.whiteEffects.colorWhiteThresholdSimultaniousDevices;
@@ -277,7 +277,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     try {
 
 
-      const state = await this.transport.getState(); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
+      const state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
       
       const { red, green, blue } = state.color; //create local constant for red, green, blue
       const [hue, saturation] = convertRGBtoHSL(red, green, blue);  //convert retrieved RGB values to hsl as homehit only uses hsl
