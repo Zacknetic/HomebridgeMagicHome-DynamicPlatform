@@ -333,11 +333,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //****logic switch for light types****\\
 
     //different light types need different different logic as they all have different capablilities
-    //(todo) add rgb only case for users with rgb only light strips. Will need to know light version number
+    //(FINISHED)(todo) add rgb-only case for users with rgb only light strips. Will need to know light version number (FINISHED)
     switch(this.accessory.context.lightVersion) {
 
-      case 4: //rgb
-        this.send([0x56, r,g,b, 0xAA], false);
+      case 11: //rgb needs the order of red and green switched
+        this.send([0x31, g, r, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
         break;
 
       //light versions 8 and 9 have rgb and warmWhite capabilities
@@ -518,9 +518,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
         //warn user if we encounter an unknown light type
       default:
-        this.platform.log.warn('Uknown light version: %o... color cannot be set.', this.accessory.context.lightVersion);
+        this.platform.log.warn('Uknown light version: %o... color probably cannot be set. Trying anyway...', this.accessory.context.lightVersion);
+        this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
         this.platform.log.warn('Please create an issue at https://github.com/Lethegrin/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
         break;
+
+        
     }
 
     //set state messages are constructed as follows:
@@ -617,6 +620,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async send(command: number[], useChecksum = true) {
     const buffer = Buffer.from(command);
+    this.platform.log.debug('\nSending command -> %o for...\nAccessory %o \nModel: %o \nID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',  
+      buffer,
+      this.accessory.context.displayName,
+      this.accessory.context.device.modelNumber, 
+      this.accessory.context.device.uniqueId, 
+      this.accessory.context.cachedIPAddress,
+      this.accessory.context.device.lightVersion,
+      this.accessory.context.device.lightVersionModifier);
     await this.transport.send(buffer, useChecksum);
   } //send
 
