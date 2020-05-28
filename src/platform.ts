@@ -219,11 +219,11 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
      
       //if the config parameters for pruning are set to true, prune any devices that haven't been seen
       //for more restarts than the accepted ammount
-      } else if(this.config.pruneMissingCachedAccessories){
-        if(accessory.context.restartsSinceSeen >= this.config.restartsBeforeMissingAccessoriesPruned){
+      } else if(this.config.pruneMissingCachedAccessories || this.config.pruneAllAccessoriesNextRestart){
+        if(accessory.context.restartsSinceSeen >= this.config.restartsBeforeMissingAccessoriesPruned || this.config.pruneAllAccessoriesNextRestart){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
           this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
-            'due to not being seen for (',accessory.context.restartsSinceSeen,') restart(s).');
+            'which had not being seen for (',accessory.context.restartsSinceSeen,') restart(s).');
         }
       }
     
