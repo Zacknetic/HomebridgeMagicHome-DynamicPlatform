@@ -14,12 +14,16 @@
                 "type": "object",
                 "properties": {
                     "pruneMissingCachedAccessories": {
-                        "title": " prune Missing Cached Accessories",
+                        "title": "Prune Missing Accesories",
                         "type": "boolean"
                     },
                     "restartsBeforeMissingAccessoriesPruned": {
-                        "title": "restarts Before Missing Accessories Pruned",
+                        "title": "Number Restarts Before Missing Accessories Are Pruned",
                         "type": "integer"
+                    },
+                    "pruneAllAccessoriesNextRestart": {
+                        "title": " Prune All Missing Accessories",
+                        "type": "boolean"
                     }
                 }
             },
@@ -27,19 +31,19 @@
                 "type": "object",
                 "properties": {
                     "simultaniousDevicesColorWhite": {
-                        "title": " simultanious Devices Color White",
+                        "title": "Allow Simultanious Color and White for Compatible Devices",
                         "type": "boolean"
                     },
                     "colorWhiteThreshold": {
-                        "title": "color White Threshold",
+                        "title": "Saturation Threshold Between Color and White for Non-Simnultanious Devices",
                         "type": "integer"
                     },
                     "colorWhiteThresholdSimultaniousDevices": {
-                        "title": "color White Threshold SimultaniousDevices",
+                        "title": "Saturation Threshold Between Color and White for Simultanious Devices",
                         "type": "integer"
                     },
                     "colorOffThresholdSimultaniousDevices": {
-                        "title": "color Off Threshold Simultanious Devices",
+                        "title": "Color Off Threshold for Simultanious Devices",
                         "type": "integer"
                     }
                 }
