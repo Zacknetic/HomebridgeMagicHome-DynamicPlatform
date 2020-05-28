@@ -354,8 +354,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         //if saturation is below config set threshold or if user asks for warm white / cold white  
         //set all other values besides warmWhite to 0 and set the mask to white (0x0F)
 
-        if ((hsl.Saturation < this.colorWhiteThreshold) ||
-          (hsl.Hue == 31 && hsl.Saturation == 33) || (hsl.Hue == 208 && hsl.Saturation == 17)) {
+        if ((hsl.Saturation < this.colorWhiteThreshold) 
+        || (hsl.Hue == 31 && hsl.Saturation == 33) 
+        || (hsl.Hue == 208 && hsl.Saturation == 17) 
+        || (hsl.Hue == 0 && hsl.Saturation == 0)) {
 
           r = 0;
           g = 0;
@@ -480,24 +482,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         //set mask to both color/white (0xFF) so we can control both color and white simultaniously,
         mask = 0xFF;
 
-
-        if ((hsl.Hue == 31 && hsl.Saturation == 33) || (hsl.Hue == 208 && hsl.Saturation == 17)) {
+        //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+        if ((hsl.Hue == 31 && hsl.Saturation == 33) || (hsl.Hue == 208 && hsl.Saturation == 17) || (hsl.Hue == 0 && hsl.Saturation == 0) || (hsl.Saturation < this.colorOffThresholdSimultaniousDevices) ) {
           r = 0;
           g = 0;
           b = 0;
           ww = Math.round((255 / 100) * brightness);
           cw = 0;
           this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
-          //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
-          //White colors were already calculated above
-        } else if (hsl.Saturation < this.colorOffThresholdSimultaniousDevices) {
-          this.platform.log.debug('Turning off color');
-          r = 0;
-          g = 0;
-          b = 0;
-          ww = Math.round((255 / 100) * brightness);
-          cw = 0;
-          this.platform.log.debug('Setting only white: ww:%o cw:%o', ww, cw);
 
           //else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
           //set RGB to 100% saturation and 100% brightness
@@ -575,11 +567,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     return whites;
   } //calculateWhiteColor
 
-  /**
-   ** @send
-   *  create a buffer from our byte array and send it to transport
-   *  @returns buffer
-   */
+
   async send(command: number[], useChecksum = true) {
     const buffer = Buffer.from(command);
     this.platform.log.debug('\nSending command -> %o for...\nAccessory %o \nModel: %o \nID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',

@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge MagicHome Dynamic Platform",
   "name": "homebridge-magichome-dynamic-platform",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -26,8 +26,11 @@
   "keywords": [
     "homebridge-plugin",
     "magichome",
+    "rgb",
     "rgbw",
-    "rgbww"
+    "rgbww",
+    "flux_led",
+    "smart lights"
   ],
   "dependencies": {
     "promise-queue": "^2.2.5"
