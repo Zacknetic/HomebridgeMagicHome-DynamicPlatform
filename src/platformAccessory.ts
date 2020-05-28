@@ -525,51 +525,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
         
     }
-
-    //set state messages are constructed as follows:
-
-    /*
-          # sample message for RGB protocol (w/o checksum at end)
-        #  0  1  2  3  4
-        # 56 90 fA 77 AA
-        #  |  |  |  |  |
-        #  |  |  |  |  terminator
-        #  |  |  |  blue
-        #  |  |  green
-        #  |  red
-        #  head
-
-        
-        # sample message for 8-byte protocols (w/ checksum at end)
-        #  0  1  2  3  4  5  6  7
-        # 31 90 fA 77 00 00 0F 00
-        #  |  |  |  |  |  |  |  |
-        #  |  |  |  |  |  |  |  checksum
-        #  |  |  |  |  |  |  terminator
-        #  |  |  |  |  |  write mask (F0 color, 0F white)
-        #  |  |  |  |  white
-        #  |  |  |  blue
-        #  |  |  green
-        #  |  red
-        #  persistence (31 for true / 41 for false)
-        #  useful if you want to set a default color such as warm white that can be easily reverted to by turning a switch on / off
-
-        # sample message for 9-byte LEDENET protocol (w/ checksum at end)
-        #  0  1  2  3  4  5  6  7  8
-        # 31 BC C1 FF 00 00 F0 0F 00
-        #  |  |  |  |  |  |  |  |  |
-        #  |  |  |  |  |  |  |  |  checksum
-        #  |  |  |  |  |  |  |  terminator
-        #  |  |  |  |  |  |  write mask (F0 color, 0F white, FF color & white)
-        #  |  |  |  |  |  cold white
-        #  |  |  |  |  warm white
-        #  |  |  |  blue
-        #  |  |  green
-        #  |  red
-        #  persistence (31 for true / 41 for false). Sets if the color will remain after a power cycle (on / off)
-        #  useful if you want to set a default color such as warm white that can be easily reverted to by turning a switch on / off
-        #
-    */
    
   }//setColor
 
