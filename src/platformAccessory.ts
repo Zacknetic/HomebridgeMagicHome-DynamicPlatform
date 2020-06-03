@@ -519,7 +519,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       default:
         this.platform.log.warn('Uknown light version: %o... color probably cannot be set. Trying anyway...', this.accessory.context.lightVersion);
         this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
-        this.platform.log.warn('Please create an issue at https://github.com/Lethegrin/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
+        this.platform.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
         break;
 
 
