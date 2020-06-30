@@ -24,9 +24,9 @@ npm install -g homebridge-magichome-dynamic-platform
 
 * This plugin automatically detects MagicHome bulbs and controllers just like the Magichome app, and it should do so when you first run Homebridge. No more setting individual IP addresses per device.
 
-* If a device has changed it's IP Address, such as after a power outage, this plugin will update that device with the new IP on the next restart. Maintaining the device's associated timers, scenes, etc.
+* If a device has changed its IP Address, such as after a power outage, this plugin will update that device with the new IP on the next restart. Maintaining the device's associated timers, scenes, etc.
 
-* If you'd like to remove an individual device, type the word 'delete' in any part of its name in Homekit and restart homebridge. This can be useful if you are intentionally taking a device offline or if you would simply like to reset it. Keep in mind, if it is still connected during the homebridge restart, it will be detected and added again.
+* If you'd like to remove an individual device, add the word 'delete' to any part of its name in Homekit and restart homebridge. This can be useful if you are intentionally taking a device offline or if you would simply like to reset it. Keep in mind, if it is still turned on during the homebridge restart, it will be detected and added again.
 
 ## Configuration
 
