@@ -54,22 +54,23 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }
 
   /**
-   * This is an example method showing how to register discovered accessories.
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
-
+    const discover = new Discover();
     
-    let devices: any = await Discover.scan();
-    //let scans = 0;
-    while(devices.length === 0){
+    let devices: any = await discover.scan(2000);
+    let scans = 0;
+    while(devices.length === 0 && scans <3){
       this.log.warn('Found zero devices... rescanning...');
-      devices = Discover.scan();
-    //  scans++;
+      devices = await discover.scan(2000);
+      scans++;
     }
 
+    this.log.warn('found %o devices', devices.length);
 
+    
     try {
   
 
@@ -187,7 +188,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
    
     //***************** Device Pruning Start *****************//
-
+    
     //if config settings are enabled, devices that are no longer seen
     //will be pruned, removing them from the cache. Usefull for removing
     //unplugged or unresponsive accessories
@@ -229,9 +230,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
     } 
     //***************** Device Pruning End *****************//
-
+    
     this.log.info('Registered %o MagicHome devices.', this.accessories.length);
-  }//disoveredDevices()
+  }//discoveredDevices()
   
 }//ZackneticMagichomePlatform class
   

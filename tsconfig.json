@@ -13,8 +13,9 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
     "esModuleInterop": true,
+    "strictNullChecks": false,
+"strict": false,
   },
   "include": [
     "src/"

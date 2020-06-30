@@ -1,13 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import dgram from 'dgram';
+import os from 'os';
+import broadcastAddress from 'broadcast-address';
+import systemInformation from 'systeminformation';
 
-const BROADCAST_ADDR = '255.255.255.255';
 const BROADCAST_PORT = 48899;
 const BROADCAST_MAGIC_STRING = 'HF-A11ASSISTHREAD';
 
 export class Discover {
-  static scan(timeout = 500) {
-
+  async scan(timeout = 500) {
+    const ifaces = os.networkInterfaces();
+    const defaultInterface = await systemInformation.networkInterfaceDefault();
+    const broadcastIPAddress = broadcastAddress(defaultInterface.toString());
     return new Promise((resolve, reject) => {
       const clients: Record<string, any> = [];
       const socket = dgram.createSocket('udp4');
@@ -31,7 +34,7 @@ export class Discover {
 
       socket.on('listening', () => {
         socket.setBroadcast(true);
-        socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, BROADCAST_ADDR);
+        socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, broadcastIPAddress);
       });
 
       socket.bind(BROADCAST_PORT);

@@ -22,6 +22,18 @@ npm install -g homebridge-magichome-dynamic-platform
 
 ## Configuration
 
+Please setup your config in Config UI X under ```Plugins>Homebridge MagicHome Dynamic Platform>Settings.``` 
+However the default settings should suffice. Please read below to learn more about the settings before changing anything.
+
+
+## Use
+
+* This plugin automatically detects MagicHome bulbs and controllers just like the Magichome app, and it should do so when you first run Homebridge. No more setting individual IP addresses per device.
+
+* If a device has changed it's IP Address, such as after a power outage, this plugin will update that device with the new IP on the next restart. Maintaining the device's associated timers, scenes, etc.
+
+* If you'd like to remove an individual device, type the word 'delete' in any part of its name in Homekit and restart homebridge. This can be useful if you are intentionally taking a device offline or if you would simply like to reset it. Keep in mind, if it is still connected during the homebridge restart, it will be detected and added again.
+
 ### example 'config.json'
 ```json
 {
@@ -37,7 +49,8 @@ npm install -g homebridge-magichome-dynamic-platform
             "settings": {
                 "pruning": {
                     "pruneMissingCachedAccessories": false,         
-                    "restartsBeforeMissingAccessoriesPruned": 3,    
+                    "restartsBeforeMissingAccessoriesPruned": 3,   
+                    "pruneAllAccessoriesNextRestart": false, 
                 },
                 "whiteEffects": {
                     "simultaniousDevicesColorWhite": true,          
@@ -54,9 +67,11 @@ npm install -g homebridge-magichome-dynamic-platform
 
 #### Pruning
 
-* `pruneMissingCachedAccessories` - **true** / **false** "Prune" or remove accessories once they have been missing for n restarts.
+* `pruneMissingCachedAccessories` - **true** / **false** "Prune" or remove accessories once they have been missing for n restarts. Associated names, timers, and scenes will be lost for those accessories.
 
-* `restartsBeforeMissingAccessoriesPruned` - ***number*** The number of homebridge restarts that an accessory can be not seen before being pruned. Will not occur if 'pruneMissingCachedAccessories' is set to false.
+* `restartsBeforeMissingAccessoriesPruned` - ***number*** The number of homebridge restarts that an accessory can be not seen before being pruned. Will not occur if `pruneMissingCachedAccessories` is set to false.
+
+* `pruneAllAccessoriesNextRestart` - **true** / **false** "Prune" or remove all accessories next restart. Use this if you would like to remove all your magichome accessories next restart. Be sure to set to false after you restart otherwise the cached accessories and associated names, timers, and scenes will be lost.
 
 #### White Effects
 

@@ -15,15 +15,19 @@
                 "properties": {
                     "pruneMissingCachedAccessories": {
                         "title": "Prune Missing Accesories",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default" : false
+                
                     },
                     "restartsBeforeMissingAccessoriesPruned": {
                         "title": "Number Restarts Before Missing Accessories Are Pruned",
-                        "type": "integer"
+                        "type": "integer",
+                        "default" : 3
                     },
                     "pruneAllAccessoriesNextRestart": {
                         "title": " Prune All Missing Accessories",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default" : false
                     }
                 }
             },
@@ -32,19 +36,23 @@
                 "properties": {
                     "simultaniousDevicesColorWhite": {
                         "title": "Allow Simultanious Color and White for Compatible Devices",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default" : true
                     },
                     "colorWhiteThreshold": {
                         "title": "Saturation Threshold Between Color and White for Non-Simnultanious Devices",
-                        "type": "integer"
+                        "type": "integer",
+                        "default" : 10
                     },
                     "colorWhiteThresholdSimultaniousDevices": {
                         "title": "Saturation Threshold Between Color and White for Simultanious Devices",
-                        "type": "integer"
+                        "type": "integer",
+                        "default" : 50
                     },
                     "colorOffThresholdSimultaniousDevices": {
                         "title": "Color Off Threshold for Simultanious Devices",
-                        "type": "integer"
+                        "type": "integer",
+                        "default" : 5
                     }
                 }
             }

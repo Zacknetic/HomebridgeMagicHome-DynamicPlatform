@@ -33,7 +33,10 @@
     "smart lights"
   ],
   "dependencies": {
-    "promise-queue": "^2.2.5"
+    "broadcast-address": "^1.0.2",
+    "color-convert": "^2.0.1",
+    "promise-queue": "^2.2.5",
+    "systeminformation": "^4.26.9"
   },
   "devDependencies": {
     "@types/node": "^14.0.5",
