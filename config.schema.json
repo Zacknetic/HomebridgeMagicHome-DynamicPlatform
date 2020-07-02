@@ -6,28 +6,28 @@
   "footerDisplay": "Optional content to display below the plugin config. Supports markdown.",
   "schema": {
     "type": "object",
-    "properties": {
-      "settings": {
-        "type": "object",
         "properties": {
             "pruning": {
                 "type": "object",
                 "properties": {
                     "pruneMissingCachedAccessories": {
-                        "title": "Prune Missing Accesories",
+                        "title": "Prune Missing Accesories Next Restart",
                         "type": "boolean",
-                        "default" : false
+                        "default" : false,
+                        "required": true
                 
                     },
                     "restartsBeforeMissingAccessoriesPruned": {
                         "title": "Number Restarts Before Missing Accessories Are Pruned",
                         "type": "integer",
-                        "default" : 3
+                        "default" : 3,
+                        "required": true
                     },
                     "pruneAllAccessoriesNextRestart": {
-                        "title": " Prune All Missing Accessories",
+                        "title": " Prune All Accessories Next Restart (WARNING: Dangerous!)",
                         "type": "boolean",
-                        "default" : false
+                        "default" : false,
+                        "required": true
                     }
                 }
             },
@@ -37,27 +37,43 @@
                     "simultaniousDevicesColorWhite": {
                         "title": "Allow Simultanious Color and White for Compatible Devices",
                         "type": "boolean",
-                        "default" : true
+                        "default" : true,
+                        "required": true
                     },
                     "colorWhiteThreshold": {
                         "title": "Saturation Threshold Between Color and White for Non-Simnultanious Devices",
                         "type": "integer",
-                        "default" : 10
+                        "default" : 10,
+                        "required": true
                     },
                     "colorWhiteThresholdSimultaniousDevices": {
                         "title": "Saturation Threshold Between Color and White for Simultanious Devices",
                         "type": "integer",
-                        "default" : 50
+                        "default" : 50,
+                        "required": true
                     },
                     "colorOffThresholdSimultaniousDevices": {
                         "title": "Color Off Threshold for Simultanious Devices",
                         "type": "integer",
-                        "default" : 5
+                        "default" : 5,
+                        "required": true
+                    }
+                }
+            },
+            "deviceManagement": {
+                "type": "object",
+                "properties": {
+                    "blacklistedUniqueIDs": {
+                        "title": "Blacklisted Unique ID",
+                        "type": "array",
+                        "items" : {
+                            "title": "Unique ID",
+                            "type": "string"
+                        }
                     }
                 }
             }
         }
-      }
     }
-  }
 }
+  

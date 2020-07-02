@@ -58,12 +58,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
+
+    this.log.warn('blacklisted Unique IDs', this.config.deviceManagement.blacklistedUniqueIDs);
     const discover = new Discover();
     
     let devices: any = await discover.scan(2000);
     let scans = 0;
-    while(devices.length === 0 && scans <3){
-      this.log.warn('Found zero devices... rescanning...');
+    while(devices.length === 0 && scans <5){
+      this.log.warn('( Scan: %o ) Found zero devices... rescanning...', scans + 1);
       devices = await discover.scan(2000);
       scans++;
     }
@@ -89,8 +91,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         // Start Unregistered Devices //
  
         if (!existingAccessory) { 
-        //create a new transport object so we have access to devices state
-        //this is neccessary to determine the lightVersion
+          if ((this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId)){
+            this.log.warn('Warning! Accessory: with Unique ID: %o will not be registered as this Unique ID is blacklisted.', 
+              device.uniqueId);
+            continue;
+          }
+
+          //create a new transport object so we have access to devices state
+          //this is neccessary to determine the lightVersion
         
           const transport = new Transport(device.ipAddress, this.config);
           //retrieve the device's state
@@ -164,10 +172,16 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             this.log.warn('Ip address successfully reassigned to: ', existingAccessory.context.cachedIPAddress);
           }
 
+          if ((this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId)){
+            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted.', 
+              existingAccessory.context.displayName, existingAccessory.context.device.uniqueId);
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+            continue;
+          }
           //=================================================
           // End IP Discrepency //
         
-          this.log.debug('Registering cached accessory %o Model: %o ID: %o IP-Address: %o \n Version %o \n Version Modifier: %o\n',  
+          this.log.debug('Registering cached accessory %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',  
             existingAccessory.context.displayName,
             existingAccessory.context.device.modelNumber, 
             existingAccessory.context.device.uniqueId, 
@@ -193,13 +207,34 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //will be pruned, removing them from the cache. Usefull for removing
     //unplugged or unresponsive accessories
     for (const accessory of this.accessories){
-      
+      if(accessory.context.displayName.toString().toLowerCase().includes('delete')){
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
+          'due to being marked for deletion');
+        continue;
+      //if the config parameters for pruning are set to true, prune any devices that haven't been seen
+      //for more restarts than the accepted ammount
+      } else if(this.config.pruning.pruneMissingCachedAccessories || this.config.pruning.pruneAllAccessoriesNextRestart){
+        if(accessory.context.restartsSinceSeen >= this.config.pruning.restartsBeforeMissingAccessoriesPruned || this.config.pruning.pruneAllAccessoriesNextRestart){
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
+            'which had not being seen for (',accessory.context.restartsSinceSeen,') restart(s).');
+          continue;
+        }
+      }
       //simple warning to notify user that their accessory hasn't been seen in n restarts
       if(accessory.context.restartsSinceSeen > 0){
+        //logic for removing blacklisted devices
+        if ((this.config.deviceManagement.blacklistedUniqueIDs).includes(accessory.context.device.uniqueId)){
+          this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted.', 
+            accessory.context.displayName, accessory.context.device.uniqueId);
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          continue;
+        }
         this.log.warn('Warning! Accessory: %o has not been seen for %o restarts but will continue to register.', 
           accessory.context.displayName, accessory.context.restartsSinceSeen);
 
-        this.log.debug('Continueing to register cached accessory %o Model: %o ID: %o IP-Address: %o \n Version %o \n Version Modifier: %o \n',  
+        this.log.debug('Continuing to register cached accessory %o Model: %o Unique ID: %o IP-Address: %o \n Version %o \n Version Modifier: %o \n',  
           accessory.context.displayName,
           accessory.context.device.modelNumber, 
           accessory.context.device.uniqueId, 
@@ -212,20 +247,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([accessory]);
 
-      }
-      if(accessory.context.displayName.toString().toLowerCase().includes('delete')){
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-        this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
-          'due to being marked for deletion');
-     
-      //if the config parameters for pruning are set to true, prune any devices that haven't been seen
-      //for more restarts than the accepted ammount
-      } else if(this.config.pruneMissingCachedAccessories || this.config.pruneAllAccessoriesNextRestart){
-        if(accessory.context.restartsSinceSeen >= this.config.restartsBeforeMissingAccessoriesPruned || this.config.pruneAllAccessoriesNextRestart){
-          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
-            'which had not being seen for (',accessory.context.restartsSinceSeen,') restart(s).');
-        }
       }
     
     } 
