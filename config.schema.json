@@ -63,14 +63,27 @@
             "deviceManagement": {
                 "type": "object",
                 "properties": {
+                    "blacklistOrWhitelist": {
+                        "title": "Blacklist / Whitelist",
+                        "type": "string",
+                        "default": "blacklist",
+                        "oneOf": [
+                          { "title": "Blacklist", "enum": ["blacklist"] },
+                          { "title": "Whitelist", "enum": ["whitelist"] }
+                        ],
+                        "required": true
+                      },
                     "blacklistedUniqueIDs": {
                         "title": "Blacklisted Unique ID",
                         "type": "array",
                         "items" : {
                             "title": "Unique ID",
-                            "type": "string"
+                            "type": "string",
+                            "default":[
+                            ]
                         }
                     }
+
                 }
             }
         }

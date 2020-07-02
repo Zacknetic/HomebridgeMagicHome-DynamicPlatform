@@ -73,6 +73,8 @@ However the default settings should suffice. Please read below to learn more abo
 
 #### Device Management
 
+* `blacklistOrWhitelist` - **blacklist** / **whitelist** Whether the listed Unique IDs are blacklisted or whitelisted.
+
 * `blacklistedUniqueIDs` - **Alphanumeric** Unique IDs of devices you wish this plugin to ignore/delete. Can be found in the Magichome app under "MAC Address" or in the logs under "Unique ID". **i.e. 6001940EDC1F**
 
 
@@ -101,6 +103,7 @@ If you do not use Config UI X, this example config.json contains everything you 
                 "colorOffThresholdSimultaniousDevices": 5
             },
             "deviceManagement": {
+                "blacklistOrWhitelist": "blacklist",
                 "blacklistedUniqueIDs": [
                     "6001940EDC1F",
                     "DC4F22CF0F46",

@@ -20,8 +20,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   private transport = new Transport(this.accessory.context.cachedIPAddress, this.config);
 
   private colorWhiteThreshold = this.config.whiteEffects.colorWhiteThreshold;
-  private colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
-  private colorOffThresholdSimultaniousDevices = this.config.whiteEffects.colorOffThresholdSimultaniousDevices;
+  private colorWhiteThresholdSimultaniousDevices = this.config.pruning.colorWhiteThresholdSimultaniousDevices;
+  private colorOffThresholdSimultaniousDevices = this.config.pruning.colorOffThresholdSimultaniousDevices;
   private simultaniousDevicesColorWhite = this.config.whiteEffects.simultaniousDevicesColorWhite;
   private isActive = false;
   private lightState = {
