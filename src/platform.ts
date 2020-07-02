@@ -65,6 +65,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     let registeredDevices = 0;
     let newDevices = 0;
+    let unseenDevices = 0;
     const discover = new Discover();
     this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', broadcastIPAddress, defaultInterface);
 
@@ -277,12 +278,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         // udpate the accessory to your platform
         this.api.updatePlatformAccessories([accessory]);
         registeredDevices++;
+        unseenDevices++;
       }
     
     } 
     //***************** Device Pruning End *****************//
     
-    this.log.info('Registered %o Magichome device(s). %o new devices, %o cached device(s)\n', registeredDevices, newDevices, registeredDevices-newDevices);
+    this.log.info('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o \nCached devices that were not seen this restart: %o\n',
+      registeredDevices, newDevices, registeredDevices-newDevices-unseenDevices, unseenDevices);
   }//discoveredDevices()
   
 }//ZackneticMagichomePlatform class
