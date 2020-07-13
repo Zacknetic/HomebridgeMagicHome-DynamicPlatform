@@ -20,7 +20,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   private transport = new Transport(this.accessory.context.cachedIPAddress, this.config);
 
   private colorWhiteThreshold = this.config.whiteEffects.colorWhiteThreshold;
-  private colorWhiteThresholdSimultaniousDevices = this.config.pruning.colorWhiteThresholdSimultaniousDevices;
+  private colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
   private colorOffThresholdSimultaniousDevices = this.config.whiteEffects.colorOffThresholdSimultaniousDevices;
   private simultaniousDevicesColorWhite = this.config.whiteEffects.simultaniousDevicesColorWhite;
   private isActive = false;
@@ -419,8 +419,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       //light version 3 has rgb, warmWhite and coldWhite capabilities.
       //both color AND white can be enabled simultaniously (0xFF mask is possible). Both whites can turn on simultaniously as well.
-      case 3:  //rgbww simultanious color/white capable
-
+      case 3:  //rgbww simultanious color/white capable compact strip
+      case 2:  //rgbww simultanious color/white capable wide strip
         //set mask to both color/white (0xFF) so we can control both color and white simultaniously,
         mask = 0xFF;
 

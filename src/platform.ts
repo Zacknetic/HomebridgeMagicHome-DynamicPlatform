@@ -118,10 +118,11 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           //create a new transport object so we have access to devices state
           //this is neccessary to determine the lightVersion
         
+
           const transport = new Transport(device.ipAddress, this.config);
           //retrieve the device's state
+  
           const state = await transport.getState(1000);
-
           device.initialState = state.debugBuffer;
           device.lightVersion = state.lightVersion;
           device.lightVersionModifier = state.lightVersionModifier;
@@ -133,6 +134,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           } else if (device.lightVersionModifier === 51 && device.lightVersion === 3){
             device.lightVersion = 11;
           }
+
+          if(device.modelNumber.contains('AK001-ZJ2131')){
+            device.lightVersion = 12;
+          }
+
+     
     
           // create a new accessory
           const accessory = new this.api.platformAccessory(device.lightVersion, uuid);
