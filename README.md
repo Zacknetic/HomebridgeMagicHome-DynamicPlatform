@@ -114,3 +114,7 @@ If you do not use Config UI X, this example config.json contains everything you 
     ]
 }
 ```
+## Todo
+
+- [ ] Clean up
+- [ ] Add original LEDnet Protocol
