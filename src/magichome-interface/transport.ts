@@ -111,7 +111,6 @@ export class Transport {
     
     // this.platform.log.debug('Querying state');
     const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
-
     if (data.length < 14) {
       throw new Error('State query returned invalid data.');
     }

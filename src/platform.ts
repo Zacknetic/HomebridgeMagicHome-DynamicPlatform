@@ -2,9 +2,9 @@ import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
+import { RGBStrip } from './accessories/RGBStrip';
 import { Discover } from './magichome-interface/Discover';
-import { Transport } from './magichome-interface/transport';
+import { Transport } from './magichome-interface/Transport';
 import broadcastAddress from 'broadcast-address';
 import systemInformation from 'systeminformation';
 
@@ -66,7 +66,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     let registeredDevices = 0;
     let newDevices = 0;
     let unseenDevices = 0;
-    const discover = new Discover();
+    const discover = new Discover(this.log, this.config);
     this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', broadcastIPAddress, defaultInterface);
 
     let devices: any = await discover.scan(2000);
@@ -294,6 +294,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.log.info('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o \nCached devices that were not seen this restart: %o\n',
       registeredDevices, newDevices, registeredDevices-newDevices-unseenDevices, unseenDevices);
   }//discoveredDevices()
+
+  async registerDeviceType(){
+    //determine which class we will create the discovered device as.
+  }
   
 }//ZackneticMagichomePlatform class
   
