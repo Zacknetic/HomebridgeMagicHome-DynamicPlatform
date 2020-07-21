@@ -96,25 +96,30 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         // number or MAC address
         const uuid = this.api.hap.uuid.generate(device.uniqueId);
         const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);  
+        const modelNumber = device.modelNumber;
         // check that the device has not already been registered by checking the
         // cached devices we stored in the `configureAccessory` method above
 
         //=================================================
         // Start Unregistered Devices //
- 
+
         if (!existingAccessory) { 
+          
           try {
-            
-         
-            if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
+
+            if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
+
+              if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
          || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId)) && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
-              this.log.warn('Warning! Accessory: with Unique ID: %o will not be registered as this Unique ID is blacklisted or not whitelisted.\n', 
-                device.uniqueId);
-              continue;
+                this.log.warn('Warning! Accessory: with Unique ID: %o will not be registered as this Unique ID is blacklisted or not whitelisted.\n', 
+                  device.uniqueId);
+                continue;
+              }
             }
           } catch (error) {
-            //this.log.debug(error);
+            this.log.debug(error);
           }
+          
           //create a new transport object so we have access to devices state
           //this is neccessary to determine the lightVersion
         
@@ -134,8 +139,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           } else if (device.lightVersionModifier === 51 && device.lightVersion === 3){
             device.lightVersion = 11;
           }
-
-          if(device.modelNumber.contains('AK001-ZJ2131')){
+         
+          if(modelNumber.includes('AK001-ZJ2131')){
             device.lightVersion = 12;
           }
 
@@ -202,6 +207,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
             this.log.warn('Ip address successfully reassigned to: o%\n ', existingAccessory.context.cachedIPAddress);
           }
+          
           try{
             if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
          || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId)) && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
@@ -292,7 +298,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //***************** Device Pruning End *****************//
     
     this.log.info('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o \nCached devices that were not seen this restart: %o\n',
-      registeredDevices, newDevices, registeredDevices-newDevices-unseenDevices, unseenDevices);
+      registeredDevices, 
+      newDevices, 
+      registeredDevices-newDevices-unseenDevices, 
+      unseenDevices);
   }//discoveredDevices()
   
 }//ZackneticMagichomePlatform class
