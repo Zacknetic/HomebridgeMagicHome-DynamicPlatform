@@ -86,8 +86,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     
     try {
-  
-
       // loop over the discovered devices and register each one if it has not already been registered
       for (const device of devices) {  
 
@@ -101,7 +99,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
         //=================================================
         // Start Unregistered Devices //
- 
         if (!existingAccessory) { 
           try {
             
@@ -113,31 +110,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
               continue;
             }
           } catch (error) {
-            //this.log.debug(error);
-          }
-          //create a new transport object so we have access to devices state
-          //this is neccessary to determine the lightVersion
-        
-
-          const transport = new Transport(device.ipAddress, this.config);
-          //retrieve the device's state
-  
-          const state = await transport.getState(1000);
-          device.initialState = state.debugBuffer;
-          device.lightVersion = state.lightVersion;
-          device.lightVersionModifier = state.lightVersionModifier;
-
-          //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
-          //test if the version modifier is 4 which means it's an RGBW strip
-          if(device.lightVersionModifier === 4){
-            device.lightVersion = 10;
-          } else if (device.lightVersionModifier === 51 && device.lightVersion === 3){
-            device.lightVersion = 11;
+            this.log.debug(error);
           }
 
-          if(device.modelNumber.contains('AK001-ZJ2131')){
-            device.lightVersion = 12;
-          }
+          
+          //device.initialState = state.debugBuffer;
+          //device.lightVersion = state.lightVersion;
+          //device.lightVersionModifier = state.lightVersionModifier;
+
+
 
      
     
@@ -157,7 +138,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           // create the accessory handler
           // this is imported from `platformAccessory.ts`
-          new HomebridgeMagichomeDynamicPlatformAccessory(this, accessory, this.config);
+          new RGBStrip(this, accessory, this.config);
 
           // link the accessory to your platform
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);

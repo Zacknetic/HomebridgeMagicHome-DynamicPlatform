@@ -29,8 +29,8 @@ export class RGBStrip {
     protected readonly platform: HomebridgeMagichomeDynamicPlatform,
     protected readonly accessory: PlatformAccessory,
     public readonly config: PlatformConfig,
-    private macAddress: string,
-    private readonly legacyProtocol: boolean,
+    //private macAddress: string,  //stored already in accessory.context
+    //private readonly legacyProtocol: boolean, // currently unneeded but can also be stored in accessory.context
   ) { 
     
     // set accessory information
@@ -129,11 +129,11 @@ export class RGBStrip {
     // implement your own code to set the brightness
     this.lightState.HSL.Hue = value as number;
 
-    if (this.legacyProtocol) {
-      await this.legacySetColor();
-    } else {
-      await this.setColor();
-    }
+    // if (this.legacyProtocol) {
+    //    await this.legacySetColor(); //apparantly legacy protocol is unneeded at this time
+    //   } else {
+    await this.setColor();
+    //  }
 
     this.platform.log.debug('Set Characteristic Hue -> ', value);
 
