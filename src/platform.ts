@@ -107,7 +107,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           
           try {
 
-            if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
+            if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined 
+              && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
 
               if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
          || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(device.uniqueId)) && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
@@ -205,16 +206,19 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             // overwrite the ip address of the existing accessory to the newly disovered ip address
             existingAccessory.context.cachedIPAddress = device.ipAddress;
 
-            this.log.warn('Ip address successfully reassigned to: o%\n ', existingAccessory.context.cachedIPAddress);
+            this.log.warn('Ip address successfully reassigned to: %o\n ', existingAccessory.context.cachedIPAddress);
           }
           
           try{
-            if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
+            if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
+
+              if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
          || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(existingAccessory.context.device.uniqueId)) && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
-              this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
-                existingAccessory.context.displayName, existingAccessory.context.device.uniqueId);
-              this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-              continue;
+                this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
+                  existingAccessory.context.displayName, existingAccessory.context.device.uniqueId);
+                this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+                continue;
+              }
             }
           } catch (error) {
             // this.log.debug(error);
@@ -239,7 +243,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //=================================================
     // End Cached Devices //
     } catch (error) {
-      //
+      this.log.error(error);
+     
     }
    
     //***************** Device Pruning Start *****************//
@@ -267,15 +272,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       if(accessory.context.restartsSinceSeen > 0){
         //logic for removing blacklisted devices
         try{
-          if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(accessory.context.device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
+          if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
+
+            if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(accessory.context.device.uniqueId) && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
         || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(accessory.context.device.uniqueId)) && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
-            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
-              accessory.context.displayName, accessory.context.device.uniqueId);
-            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-            continue;
+              this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
+                accessory.context.displayName, accessory.context.device.uniqueId);
+              this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+              continue;
+            }
           }
         } catch (error) {
-          //this.log.debug(error);
+          this.log.debug(error);
         }
         this.log.warn('\nWarning! Continuing to register cached accessory %o despite not being seen for %o restarts. \nModel: %o \nUnique ID: %o \nIP-Address: %o\n Version %o \nVersion Modifier: %o \n',  
           accessory.context.displayName,

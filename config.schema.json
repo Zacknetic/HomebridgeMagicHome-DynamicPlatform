@@ -2,8 +2,6 @@
   "pluginAlias": "homebridge-magichome-dynamic-platform",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Optional content to display above the plugin config. Supports markdown.",
-  "footerDisplay": "Optional content to display below the plugin config. Supports markdown.",
   "schema": {
     "type": "object",
         "properties": {
