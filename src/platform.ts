@@ -2,9 +2,9 @@ import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
+import { RGBStrip } from './accessories/RGBStrip';
 import { Discover } from './magichome-interface/Discover';
-import { Transport } from './magichome-interface/transport';
+import { Transport } from './magichome-interface/Transport';
 import broadcastAddress from 'broadcast-address';
 import systemInformation from 'systeminformation';
 
@@ -66,7 +66,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     let registeredDevices = 0;
     let newDevices = 0;
     let unseenDevices = 0;
-    const discover = new Discover();
+    const discover = new Discover(this.log, this.config);
     this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', broadcastIPAddress, defaultInterface);
 
     let devices: any = await discover.scan(2000);
@@ -86,8 +86,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     
     try {
-  
-
       // loop over the discovered devices and register each one if it has not already been registered
       for (const device of devices) {  
 
@@ -102,7 +100,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
         //=================================================
         // Start Unregistered Devices //
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4caa0c97a8d742413520d1e6532e3409f34605e7
         if (!existingAccessory) { 
           
           try {
@@ -120,6 +121,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           } catch (error) {
             this.log.debug(error);
           }
+<<<<<<< HEAD
           
           //create a new transport object so we have access to devices state
           //this is neccessary to determine the lightVersion
@@ -144,6 +146,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           if(modelNumber.includes('AK001-ZJ2131')){
             device.lightVersion = 12;
           }
+=======
+
+          
+          //device.initialState = state.debugBuffer;
+          //device.lightVersion = state.lightVersion;
+          //device.lightVersionModifier = state.lightVersionModifier;
+
+
+>>>>>>> 4caa0c97a8d742413520d1e6532e3409f34605e7
 
      
     
@@ -163,7 +174,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           // create the accessory handler
           // this is imported from `platformAccessory.ts`
-          new HomebridgeMagichomeDynamicPlatformAccessory(this, accessory, this.config);
+          new RGBStrip(this, accessory, this.config);
 
           // link the accessory to your platform
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -311,6 +322,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       registeredDevices-newDevices-unseenDevices, 
       unseenDevices);
   }//discoveredDevices()
+
+  async registerDeviceType(){
+    //determine which class we will create the discovered device as.
+  }
   
 }//ZackneticMagichomePlatform class
   

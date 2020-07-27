@@ -32,7 +32,7 @@ function wait(emitter: any, eventName: any, timeout: any) {
     emitter.on('error', errorHandler);
     emitter.on(eventName, eventHandler);
   });
-}
+} 
 
 export class Transport {
   host: any;
@@ -45,7 +45,7 @@ export class Transport {
   constructor(host: any, public readonly config: PlatformConfig) {
     this.host = host;
     this.socket = null;
-    this.queue = new Queue(1, Infinity); // 1 concurrent, infinit size
+    this.queue = new Queue(1, Infinity); // 1 concurrent, infinite size
   }
 
   async connect(fn: any, _timeout = 200) {
@@ -111,7 +111,6 @@ export class Transport {
     
     // this.platform.log.debug('Querying state');
     const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
-
     if (data.length < 14) {
       throw new Error('State query returned invalid data.');
     }
