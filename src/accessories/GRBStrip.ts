@@ -1,7 +1,7 @@
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
 
-export class RGBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
+export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     
   async setColor() {
@@ -24,7 +24,7 @@ export class RGBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
-    this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
+    this.send([0x31, g, r, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
 
     
   }//setColor
