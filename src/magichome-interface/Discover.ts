@@ -58,7 +58,7 @@ export class Discover {
     });
   } 
 
-  async determineDeviceType(device){
+  async createAccessory(device){
     
     const initialState = await this.getInitialState (device.ipAddress);
     let lightVersion = initialState.lightVersion;
@@ -69,7 +69,7 @@ export class Discover {
     //check the version modifiers. I wish there was a pattern to this.
     if(lightVersionModifier === 4 || lightVersionModifier === 6) {
       lightVersion = 10;
-    } else if ((lightVersionModifier === 51 && lightVersion === 3) || device.modelNumber.contains('AK001-ZJ2131')) {
+    } else if ((lightVersionModifier === 51 && lightVersion === 3) || device.modelNumber.includes('AK001-ZJ2131')) {
       lightVersion = 1;
     }
     
@@ -137,14 +137,16 @@ export class Discover {
   
         //warn user if we encounter an unknown light type
       default:
+        this.log.warn('Uknown light version: %o... type probably cannot be set. Trying anyway...', lightVersion);
+        this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
+        
         return {
           color_type: 'rgb',
           simultaneousCCT: false,
           convenientName: 'Check Log!',
         };
         
-        this.log.warn('Uknown light version: %o... type probably cannot be set. Trying anyway...', lightVersion);
-        this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
+
         break;
     }
   }
@@ -161,7 +163,8 @@ export class Discover {
       if (data.length < 14) {
         throw new Error('State query returned invalid data.');
       }
-      return {   
+      return {      
+        debugBuffer: data,
         lightVersionModifier: data.readUInt8(1),
         lightVersion: data.readUInt8(10),
       };
