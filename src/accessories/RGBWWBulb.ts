@@ -3,11 +3,7 @@ import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessor
 
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
 
-  /**
-   ** @getState
-   * retrieve light's state object from transport class
-   * once values are available, update homekit with actual values
-   */
+
   async getState() {
 
     try {
@@ -32,6 +28,13 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.Brightness, luminance * 2);
       } else if (state.isOn){
         this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp(((coldwhite/2.55) + (warmWhite/2.55)), 0, 100));
+        if(warmWhite>coldwhite){
+          this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldwhite/255)));
+          this.service.updateCharacteristic(this.platform.Characteristic.Hue, 0);
+        } else {
+          this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite/255)));
+          this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
+        }
       }
 
       this.accessory.context.lastKnownState = state;

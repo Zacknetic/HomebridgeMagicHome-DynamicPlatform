@@ -6,7 +6,6 @@ export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     
   async setColor() {
 
-
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     const [red, green, blue] = convertHSLtoRGB([hsl.Hue, hsl.Saturation, hsl.Luminance]); //convert HSL to RGB

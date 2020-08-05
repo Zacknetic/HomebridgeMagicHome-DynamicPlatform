@@ -3,6 +3,7 @@ import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformCon
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 
+import { DimmerStrip } from './accessories/DimmerStrip';
 import { RGBStrip } from './accessories/RGBStrip';
 import { GRBStrip } from './accessories/GRBStrip';
 import { RGBWBulb } from './accessories/RGBWBulb';
@@ -19,6 +20,7 @@ const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
 const accessoryType = {
+  DimmerStrip,
   GRBStrip,
   RGBStrip,
   RGBWBulb,
@@ -82,6 +84,12 @@ const lightTypesMap = new Map([
       controller_type: 'RGBWStrip',
       simultaneousCCT: true,
       convenientName: 'RGBW Simultanious',
+    }],
+  [99,  
+    {
+      controllerType: 'DimmerStrip',
+      simultaneousCCT: false,
+      convenientName: 'Dimmer',
     }],
 ]); 
 
@@ -154,6 +162,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', broadcastIPAddress, defaultInterface);
 
     let devices: any = await discover.scan(2000);
+    
     let scans = 0;
     while(devices.length === 0 && scans <5){
       this.log.warn('( Scan: %o ) Found zero devices... rescanning...', scans + 1);
@@ -171,7 +180,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
     try {
       // loop over the discovered devices and register each one if it has not already been registered
-      for (const device of devices) {  
+      for ( const device of devices) {  
 
         // generate a unique id for the accessory this should be generated from
         // something globally unique, but constant, for example, the device serial
@@ -202,15 +211,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           const state = await transport.getState(1000);
           device.initialState = state.debugBuffer;
           accessory.context.lastKnownState = state;
+
           //check if device is on blacklist or is not on whitelist
-          if(!this.isAllowed(device.uniqueId)){
+          if(!await this.isAllowed(device.uniqueId)){
             this.log.warn('Warning! New device with Unique ID: %o is blacklisted or is not whitelisted.\n', 
               device.uniqueId);
 
             //exit the loop
             continue;
           }
-
 
         
           // store a copy of the device object in the `accessory.context`
@@ -272,7 +281,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             this.log.warn('Ip address successfully reassigned to: %o\n ', existingAccessory.context.cachedIPAddress);
           }
           
-          if(!this.isAllowed(existingAccessory.context.device.uniqueId)){
+          if(!await this.isAllowed(existingAccessory.context.device.uniqueId)){
             this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
               existingAccessory.context.displayName, existingAccessory.context.device.uniqueId);
             this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
@@ -326,7 +335,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       if(accessory.context.restartsSinceSeen > 0){
         //logic for removing blacklisted devices
     
-        if(!this.isAllowed(accessory.context.device.uniqueId)){
+        if(!await this.isAllowed(accessory.context.device.uniqueId)){
           this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
             accessory.context.displayName, accessory.context.device.uniqueId);
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -361,7 +370,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       unseenDevices);
   }//discoveredDevices
 
-  isAllowed(uniqueId){
+  async isAllowed(uniqueId){
 
     let isAllowed = true;
     try {
@@ -415,6 +424,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       lightVersion = 10;
     } else if ((lightVersionModifier === 51 && lightVersion === 3) || device.modelNumber.includes('AK001-ZJ2131')) {
       lightVersion = 1;
+    }	else if (lightVersionModifier === 33){
+      lightVersion = 99;
     }
     
     if(lightTypesMap.has(lightVersion)){

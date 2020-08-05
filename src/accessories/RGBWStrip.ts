@@ -9,7 +9,6 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     let [red, green, blue] = convertHSLtoRGB([hsl.Hue, hsl.Saturation, hsl.Luminance]); //convert HSL to RGB
-
     const brightness = this.lightState.Brightness;
     
     this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.Hue, hsl.Saturation, hsl.Luminance, brightness);
@@ -62,5 +61,49 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     
   }//setColor
     
-    
+  async getState() {
+
+    try {
+
+
+      const state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
+
+      const { red, green, blue } = state.color; //create local constant for red, green, blue
+      const [hue, saturation, luminance] = convertRGBtoHSL(red, green, blue);  //convert retrieved RGB values to hsl as homehit only uses hsl
+      const isOn = state.isOn;
+      const warmWhite = state.warmWhite;
+
+      this.lightState.On = state.isOn;
+      this.lightState.HSL.Hue = hue;
+      this.lightState.HSL.Saturation = saturation;
+
+      this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
+      this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+      this.service.updateCharacteristic(this.platform.Characteristic.Saturation, saturation);
+      if(luminance > 0 && state.isOn){
+        this.service.updateCharacteristic(this.platform.Characteristic.Brightness, luminance * 2);
+      } else if (state.isOn){
+        this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp((warmWhite/2.55), 0, 100));
+      }
+
+      this.accessory.context.lastKnownState = state;
+
+      this.platform.log.debug('\nGetting state for Accessory: %o -- Type: %o \nOn: %o \nR: %o, G: %o, B: %o, WW: %o\nHue: %o \nSaturation: %o \nBrightness: %o \nBuffer Data: %o \n',  
+        this.accessory.context.displayName,
+        this.accessory.context.controllerName,
+        state.isOn,
+        red,
+        green,
+        blue,
+        state.warmWhite,
+        hue, 
+        saturation, 
+        luminance *2,
+        state.debugBuffer);
+
+
+    } catch (error) {
+      this.platform.log.error('getState() error: ', error);
+    }
+  }
 }

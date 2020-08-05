@@ -39,7 +39,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Magic Home')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.modelNumber)
@@ -88,7 +87,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
       .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
-    this.getState();
+    // this.getState();
   }
 
 
@@ -111,7 +110,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the Hue
    */
   identifyLight() {
-    this.platform.log.debug('Identifying accessory!');
+    this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
     this.flashEffect();
 
   }
@@ -227,7 +226,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //this.getState();
 
     this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.device.uniqueId);
-
+    this.getState();
     // you must call the callback function
     // the first argument should be null if there were no errors
     // the second argument should be the value to return
@@ -285,7 +284,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       this.platform.log.debug('\nGetting state for Accessory: %o -- Type: %o \nOn: %o \nHue: %o \nSaturation: %o \nBrightness: %o \nBuffer Data: %o\n',  
         this.accessory.context.displayName,
-        this.accessory.context.controllerName,
+        this.accessory.context.controllerType,
         state.isOn,
         hue, 
         saturation, 
@@ -366,6 +365,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
     return whites;
   } //calculateWhiteColor
+
+  
 
 
   async send(command: number[], useChecksum = true) {
