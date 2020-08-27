@@ -12,7 +12,7 @@ import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
 
 import { Discover } from './magichome-interface/Discover';
-import { Transport } from './magichome-interface/Transport';
+import { Transport } from './magichome-interface/transport';
 import broadcastAddress from 'broadcast-address';
 import systemInformation from 'systeminformation';
 
@@ -32,56 +32,56 @@ const accessoryType = {
 const lightTypesMap = new Map([
   [1,  
     {
-      controller_type: 'GRBStrip',
+      controllerType: 'GRBStrip',
       simultaneousCCT: false,
       convenientName: 'Simple GRB',
     }],
   [2,  
     {
-      controller_type: 'RGBWWStrip',
+      controllerType: 'RGBWWStrip',
       simultaneousCCT: true,
       convenientName: 'RGBWW Simultanious',
     }],
   [3,  
     {
-      controller_type: 'RGBWWStrip',
+      controllerType: 'RGBWWStrip',
       simultaneousCCT: true,
       convenientName: 'RGBWW Simultanious',
     }],
   [4,  
     {
-      controller_type: 'RGBStrip',
+      controllerType: 'RGBStrip',
       simultaneousCCT: false,
       convenientName: 'Simple RGB',
 
     }],
   [5,  
     {
-      controller_type: 'RGBWWBulb',
+      controllerType: 'RGBWWBulb',
       simultaneousCCT: false,
       convenientName: 'RGBWW Non-Simultanious',
     }],
   [7,  
     {
-      controller_type: 'RGBWWBulb',
+      controllerType: 'RGBWWBulb',
       simultaneousCCT: false,
       convenientName: 'RGBWW Non-Simultanious',
     }],
   [8,  
     {
-      controller_type: 'RGBWBulb',
+      controllerType: 'RGBWBulb',
       simultaneousCCT: false,
       convenientName: 'RGBW Non-Simultanious',
     }],
   [9,  
     {
-      controller_type: 'RGBWBulb',
+      controllerType: 'RGBWBulb',
       simultaneousCCT: false,
       convenientName: 'RGBW Non-Simultanious',
     }],
   [10,  
     {
-      controller_type: 'RGBWStrip',
+      controllerType: 'RGBWStrip',
       simultaneousCCT: true,
       convenientName: 'RGBW Simultanious',
     }],
@@ -437,7 +437,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       lightParameters = lightTypesMap.get(4);
     }
 
-    const controller = lightParameters.controller_type;
+    const controller = lightParameters.controllerType;
     return { controller,
       lightParameters,
       lightVersion,
