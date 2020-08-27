@@ -7,8 +7,6 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   async getState() {
 
     try {
-
-
       const state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
 
       const { red, green, blue } = state.color; //create local constant for red, green, blue

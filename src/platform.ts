@@ -171,9 +171,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
 
     if (devices.length == 0){
-      this.log.warn('\nFound zero devices! Will load cached devices if they exist.\n');
+      this.log.warn('\nDiscovered zero devices! Will load cached devices if they exist.\n');
     } else {
-      this.log.info('\nFound %o devices.\n', devices.length);
+      this.log.info('\nDiscovered %o devices.\n', devices.length);
     }
 
 
