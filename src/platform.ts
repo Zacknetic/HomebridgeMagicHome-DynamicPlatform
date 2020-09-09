@@ -461,7 +461,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
     if (lightVersionModifier == 33 || lightVersionModifier == 65){
       lightVersion = 99;
-    } else if ((lightVersionModifier == 51 && lightVersion == 3) || device.modelNumber.includes('AK001-ZJ2131')) {
+    } else if ((lightVersionModifier == 51 && lightVersion == 3) || (lightVersionModifier == 51 && lightVersion == 4 || device.modelNumber.includes('AK001-ZJ2131'))) {
       lightVersion = 1;
     } else if(lightVersionModifier == 4 || lightVersionModifier == 6) {
       lightVersion = 10;
