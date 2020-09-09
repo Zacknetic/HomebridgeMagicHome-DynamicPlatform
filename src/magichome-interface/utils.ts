@@ -21,7 +21,7 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // Start Convert RGBtoHSL //
-export function convertRGBtoHSL(red: number, green: number, blue: number) {
+export function convertRGBtoHSL({red, green, blue}) {
   const r = red / 255;
   const g = green / 255;
   const b = blue / 255;
@@ -56,8 +56,8 @@ export function convertRGBtoHSL(red: number, green: number, blue: number) {
   } else {
     s = delta / (2 - max - min);
   }
-
-  return [h, s * 100, l * 100];
+  const HSL = {hue: h, saturation: s * 100, luminance: l * 100};
+  return HSL;
 } 
 
 export function hue2rgb(p: number, q: number, t: number) {
@@ -86,10 +86,10 @@ export function hue2rgb(p: number, q: number, t: number) {
         
 //=================================================
 // Start Convert HSLtoRGB //
-export function convertHSLtoRGB (hsl: number[]) {
-  const h = hsl[0] / 360;
-  const s = hsl[1] / 100;
-  const l = hsl[2] / 100;
+export function convertHSLtoRGB ({hue, saturation, luminance}) {
+  const h = hue / 360;
+  const s = saturation / 100;
+  const l = 50 / 100;
   let t2;
   let t3;
   let val;

@@ -1,20 +1,22 @@
 import net from 'net';
 import Queue from 'promise-queue';
 import { checksum } from './utils';
-import type { Service, PlatformConfig, PlatformAccessory, CharacteristicValue, 
-  CharacteristicSetCallback, CharacteristicGetCallback} from 'homebridge';
+import type { PlatformConfig } from 'homebridge';
 
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
 
 function wait(emitter: any, eventName: any, timeout: any) {
+
   return new Promise((resolve, reject) => {
+
     let off: any = setTimeout(() => {
       clearTimeout(off);
-      const buffer = Buffer.from([0x81, 0x35, 0x24, 0x61, 0x01, 0x01,0x00 ,0x00 ,0x00, 0xff, 0x05, 0x58, 0x0f, 0xa8]);
-      resolve(buffer);
+      //const buffer = Buffer.from([0x81, 0x35, 0x24, 0x61, 0x01, 0x01, 0x00 ,0x00 ,0x00, 0xff, 0x05, 0x58, 0x0f, 0xa8]);
+      resolve(null);
     }, timeout);
+
     const eventHandler = (...args: any) => {
       off();
       resolve(...args);
@@ -59,7 +61,8 @@ export class Transport {
     this.socket = net.connect(options);
 
     await wait(this.socket, 'connect', _timeout = 200);
-    //await this.socket.connect;
+
+
     const result = await fn();
     await this.disconnect();
 
@@ -76,7 +79,7 @@ export class Transport {
     return this.queue.add(async () => (
       this.connect(async () => {
         await this.write(buffer, useChecksum, _timeout);
-        return this.read();
+        return this.read(_timeout);
       })
     )); 
   }
@@ -111,22 +114,25 @@ export class Transport {
     
     // this.platform.log.debug('Querying state');
     const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
-    if (data.length < 14) {
-      throw new Error('State query returned invalid data.');
+    if (data == null) {
+      return null;
     }
     return {
       
       debugBuffer: data,
       lightVersionModifier: data.readUInt8(1),
       isOn: data.readUInt8(2) === 0x23,
-      color: {
+      RGB: {
         red: data.readUInt8(6),
         green: data.readUInt8(7),
         blue: data.readUInt8(8),
       },
-      warmWhite: data.readUInt8(9),
+      whiteValues: {
+        warmWhite: data.readUInt8(9),
+        coldWhite: data.readUInt8(11),
+      },
       lightVersion: data.readUInt8(10),
-      coldWhite: data.readUInt8(11),
+
     };
   }
 }

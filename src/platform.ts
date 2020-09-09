@@ -1,6 +1,5 @@
 import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
-
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 
 import { DimmerStrip } from './accessories/DimmerStrip';
@@ -12,7 +11,10 @@ import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
 
 import { Discover } from './magichome-interface/Discover';
-import { Transport } from './magichome-interface/transport';
+import { Transport } from './magichome-interface/Transport';
+//import { AnimationPlatformAccessory } from './animationPlatformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
+
 import broadcastAddress from 'broadcast-address';
 import systemInformation from 'systeminformation';
 
@@ -33,65 +35,74 @@ const lightTypesMap = new Map([
   [1,  
     {
       controllerType: 'GRBStrip',
-      simultaneousCCT: false,
       convenientName: 'Simple GRB',
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [2,  
     {
       controllerType: 'RGBWWStrip',
-      simultaneousCCT: true,
       convenientName: 'RGBWW Simultanious',
+      simultaneousCCT: true,
+      hasColor: true,
     }],
   [3,  
     {
       controllerType: 'RGBWWStrip',
-      simultaneousCCT: true,
       convenientName: 'RGBWW Simultanious',
+      simultaneousCCT: true,
+      hasColor: true,
     }],
   [4,  
     {
       controllerType: 'RGBStrip',
-      simultaneousCCT: false,
       convenientName: 'Simple RGB',
-
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [5,  
     {
       controllerType: 'RGBWWBulb',
-      simultaneousCCT: false,
       convenientName: 'RGBWW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [7,  
     {
       controllerType: 'RGBWWBulb',
-      simultaneousCCT: false,
       convenientName: 'RGBWW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [8,  
     {
       controllerType: 'RGBWBulb',
-      simultaneousCCT: false,
       convenientName: 'RGBW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [9,  
     {
       controllerType: 'RGBWBulb',
-      simultaneousCCT: false,
       convenientName: 'RGBW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
     }],
   [10,  
     {
       controllerType: 'RGBWStrip',
-      simultaneousCCT: true,
       convenientName: 'RGBW Simultanious',
+      simultaneousCCT: true,
+      hasColor: true,
     }],
   [99,  
     {
       controllerType: 'DimmerStrip',
-      simultaneousCCT: false,
       convenientName: 'Dimmer',
+      simultaneousCCT: false,
+      hasColor: false,
     }],
-]); 
+]);
 
 
 
@@ -105,13 +116,13 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly Characteristic = this.api.hap.Characteristic;
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
-
+  public readonly lightAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = [];
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    this.log.debug('Finished initializing:', this.config.name);
+    this.log.debug('Finished initializing homebridge-magichome-dynamic-platform');
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
     // in order to ensure they weren't added to homebridge already. This event can also be used
@@ -121,6 +132,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
       // run the method to discover / register your devices as accessories
       this.discoverDevices();
+      // this.discoverAnimations();
     });
   }
 
@@ -130,17 +142,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    */
   configureAccessory(accessory: PlatformAccessory) {
 
-
     this.log.debug('Loading accessory from cache...', accessory.context.displayName);
-
     // set cached accessory as not recently seen 
     // if found later to be a match with a discovered device, will change to true
     accessory.context.restartsSinceSeen++;
-
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
-    
- 
   }
 
   /**
@@ -165,7 +172,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
     let scans = 0;
     while(devices.length === 0 && scans <5){
-      this.log.warn('( Scan: %o ) Found zero devices... rescanning...', scans + 1);
+      this.log.warn('( Scan: %o ) Discovered zero devices... rescanning...', scans + 1);
       devices = await discover.scan(2000);
       scans++;
     }
@@ -199,7 +206,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    */
         if (!existingAccessory) { 
 
-          const updatedDevice = await this.createAccessory(device);
+          const updatedDevice = await this.determineController(device);
+          if(updatedDevice == null){
+            this.log.warn('Warning! Device type could not be determined, please restart homebridge and try again. If problem persists, file an issue.\n', 
+              device.uniqueId);
+            continue;
+          }
           
           const accessory = new this.api.platformAccessory(updatedDevice.lightParameters.convenientName, uuid);
 
@@ -209,8 +221,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           //retrieve the device's state
   
           const state = await transport.getState(1000);
-          device.initialState = state.debugBuffer;
-          accessory.context.lastKnownState = state;
 
           //check if device is on blacklist or is not on whitelist
           if(!await this.isAllowed(device.uniqueId)){
@@ -233,16 +243,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           accessory.context.restartsSinceSeen = 0;
 
           accessory.context.displayName = updatedDevice.lightParameters.convenientName;
-          accessory.context.controllerName = updatedDevice.lightParameters.convenientName;
-          accessory.context.controller = updatedDevice.controller;
+          accessory.context.lightParameters = updatedDevice.lightParameters;
           device.lightVersion = updatedDevice.lightVersion;
           device.lightVersionModifier = updatedDevice.lightVersionModifier;
 
           accessory.context.device = device; 
           // create the accessory handler
           // this is imported from `platformAccessory.ts`
-      
-          new accessoryType[updatedDevice.controller](this, accessory, this.config);
+          const lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = new accessoryType[accessory.context.lightParameters.controllerType](this, accessory, this.config);
 
           // link the accessory to your platform
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
@@ -259,7 +267,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           // push into accessory cache
           this.accessories.push(accessory);
- 
+          this.lightAccessories.push(lightAccessory);
         } else {
           // the device has already been registered and will need
           // to ensure the ip address (or other custom variables) are still identical
@@ -297,7 +305,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             existingAccessory.context.device.lightVersion,
             existingAccessory.context.device.lightVersionModifier);
           // create the accessory handler
-          new accessoryType[existingAccessory.context.controller](this, existingAccessory, this.config);
+          const lightAccessory = new accessoryType[existingAccessory.context.lightParameters.controllerType](this, existingAccessory, this.config);
+          this.lightAccessories.push(lightAccessory);
           registeredDevices++;
           // udpate the accessory to your platform
           this.api.updatePlatformAccessories([existingAccessory]);
@@ -314,53 +323,65 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //if config settings are enabled, devices that are no longer seen
     //will be pruned, removing them from the cache. Usefull for removing
     //unplugged or unresponsive accessories
+
     for (const accessory of this.accessories){
-      if(accessory.context.displayName.toString().toLowerCase().includes('delete')){
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-        this.log.warn('Successfully pruned accessory: ', accessory.context.displayName,
-          'due to being marked for deletion\n');
-        continue;
-        
-      //if the config parameters for pruning are set to true, prune any devices that haven't been seen
-      //for more restarts than the accepted ammount
-      } else if(this.config.pruning.pruneMissingCachedAccessories || this.config.pruning.pruneAllAccessoriesNextRestart){
-        if(accessory.context.restartsSinceSeen >= this.config.pruning.restartsBeforeMissingAccessoriesPruned || this.config.pruning.pruneAllAccessoriesNextRestart){
+      try {
+      
+   
+        if(accessory.context.displayName.toString().toLowerCase().includes('delete')){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
-            'which had not being seen for (',accessory.context.restartsSinceSeen,') restart(s).\n');
+          this.log.warn('Successfully pruned accessory: ', accessory.context.displayName,
+            'due to being marked for deletion\n');
           continue;
+        
+        //if the config parameters for pruning are set to true, prune any devices that haven't been seen
+        //for more restarts than the accepted ammount
+        } else if(this.config.pruning.pruneMissingCachedAccessories || this.config.pruning.pruneAllAccessoriesNextRestart){
+          if(accessory.context.restartsSinceSeen >= this.config.pruning.restartsBeforeMissingAccessoriesPruned || this.config.pruning.pruneAllAccessoriesNextRestart){
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+            this.log.warn('Successfully pruned accessory:', accessory.context.displayName,
+              'which had not being seen for (',accessory.context.restartsSinceSeen,') restart(s).\n');
+            continue;
+          }
         }
-      }
-      //simple warning to notify user that their accessory hasn't been seen in n restarts
-      if(accessory.context.restartsSinceSeen > 0){
+        //simple warning to notify user that their accessory hasn't been seen in n restarts
+        if(accessory.context.restartsSinceSeen > 0){
         //logic for removing blacklisted devices
     
-        if(!await this.isAllowed(accessory.context.device.uniqueId)){
-          this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
-            accessory.context.displayName, accessory.context.device.uniqueId);
-          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          continue;
+          if( !await this.isAllowed(accessory.context.device.uniqueId)){
+            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
+              accessory.context.displayName, accessory.context.device.uniqueId);
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+            continue;
+          }
+
+
+          this.log.warn('\nWarning! Continuing to register cached accessory %o despite not being seen for %o restarts. \nModel: %o \nUnique ID: %o \nIP-Address: %o\n Version %o \nVersion Modifier: %o \n',  
+            accessory.context.displayName,
+            accessory.context.restartsSinceSeen,
+            accessory.context.device.modelNumber,
+            accessory.context.device.uniqueId, 
+            accessory.context.cachedIPAddress,
+            accessory.context.device.lightVersion,
+            accessory.context.device.lightVersionModifier);
+          // create the accessory handler
+        
+          const lightAccessory = new accessoryType[accessory.context.lightParameters.controllerType](this, accessory, this.config);
+          this.lightAccessories.push(lightAccessory);
+          // udpate the accessory to your platform
+          this.api.updatePlatformAccessories([accessory]);
+          registeredDevices++;
+          unseenDevices++;
         }
-
-
-        this.log.warn('\nWarning! Continuing to register cached accessory %o despite not being seen for %o restarts. \nModel: %o \nUnique ID: %o \nIP-Address: %o\n Version %o \nVersion Modifier: %o \n',  
-          accessory.context.displayName,
-          accessory.context.restartsSinceSeen,
-          accessory.context.device.modelNumber,
-          accessory.context.device.uniqueId, 
-          accessory.context.cachedIPAddress,
-          accessory.context.device.lightVersion,
-          accessory.context.device.lightVersionModifier);
-        // create the accessory handler
-        new accessoryType[accessory.context.controller](this, accessory, this.config);
-
-        // udpate the accessory to your platform
-        this.api.updatePlatformAccessories([accessory]);
-        registeredDevices++;
-        unseenDevices++;
-      }
     
-    } 
+      
+      } catch (error) {
+        //this.log.debug(error);
+      }
+
+
+    }
+
 
     
     this.log.info('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o \nCached devices that were not seen this restart: %o\n',
@@ -368,6 +389,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       newDevices, 
       registeredDevices-newDevices-unseenDevices, 
       unseenDevices);
+  
+
+
+
   }//discoveredDevices
 
   async isAllowed(uniqueId){
@@ -392,11 +417,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   async getInitialState(ipAddress, _timeout = 500){
 
+    const transport = new Transport(ipAddress, this.config);
     try{
-      const transport = new Transport(ipAddress, this.config);
-      const data = await transport.send(NEW_COMMAND_QUERY_STATE, true, _timeout);
-      if (data.length < 14) {
-        throw new Error('State query returned invalid data.');
+      let scans = 0;
+      let data;
+
+      while(data == null && scans < 5){
+        data = await transport.send(NEW_COMMAND_QUERY_STATE, true, _timeout);
+        scans++;
+      } 
+
+      if (data.length < 14 || data == null) {
+        return null;
       }
       return {      
         debugBuffer: data,
@@ -410,41 +442,133 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
   }
 
-  async createAccessory(device){
+  async determineController(device){
     
     const initialState = await this.getInitialState (device.ipAddress);
-    let lightVersion = initialState.lightVersion;
+    if( initialState == null){
+      return null;
+    }
+
+    let lightVersion;
     const lightVersionModifier = initialState.lightVersionModifier;
     
+    this.log.debug('\n Platform.ts.createAccessory(): \nAssigning controller to device: UniqueId: %o \nIpAddress %o \nModel: %o\nLight Version: %o\nLight Version Modifier: %o\n', device.uniqueId, device.ipAddress,device.modelNumber, initialState.lightVersion, initialState.lightVersionModifier);
+
     let lightParameters;
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     //check the version modifiers. I wish there was a pattern to this.
-    if(lightVersionModifier === 4 || lightVersionModifier === 6) {
-      lightVersion = 10;
-    } else if ((lightVersionModifier === 51 && lightVersion === 3) || device.modelNumber.includes('AK001-ZJ2131')) {
-      lightVersion = 1;
-    }	else if (lightVersionModifier === 33){
-      lightVersion = 99;
-    }
     
+    if (lightVersionModifier == 33){
+      lightVersion = 99;
+    } else if ((lightVersionModifier == 51 && lightVersion == 3) || device.modelNumber.includes('AK001-ZJ2131')) {
+      lightVersion = 1;
+    } else if(lightVersionModifier == 4 || lightVersionModifier == 6) {
+      lightVersion = 10;
+    } else {
+      lightVersion = initialState.lightVersion;
+    }
+
     if(lightTypesMap.has(lightVersion)){
+      this.log.debug('Light version: %o matches known device type records', lightVersion);
       lightParameters = lightTypesMap.get(lightVersion);
     } else {
       this.log.warn('Uknown light version: %o... type probably cannot be set. Trying anyway...', lightVersion);
-      this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your log.txt');
-      
+      this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your homebridge.log');
       lightParameters = lightTypesMap.get(4);
     }
 
-    const controller = lightParameters.controllerType;
-    return { controller,
+    this.log.debug('\nPlatform.ts.determineController(): \nLight version assigned to %o\nController Type assigned to %o', lightVersion, lightParameters.controllerType);
+    return {
       lightParameters,
       lightVersion,
       lightVersionModifier,
     };
 
+
+
   }
+
+  /*
+  async discoverAnimations(){
+
+    let registeredAnimations = 0;
+    let newAnimations = 0;
+
+
+    const animationDevices: any = this.config.animations;
+
+    if (animationDevices.length == 0){
+      return;
+    } else {
+      this.log.info('Found %o animations in config.', animationDevices.length);
+    }
+
+    try {
+      // loop over the discovered devices and register each one if it has not already been registered
+      for ( const animationDevice of animationDevices) {  
+
+        // generate a unique id for the accessory this should be generated from
+        // something globally unique, but constant
+        const uuid = this.api.hap.uuid.generate(animationDevice.name);
+        animationDevice.uuid = uuid;
+
+        // check that the device has not already been registered by checking the
+        // cached devices we stored in the `configureAccessory` method above
+        const existingAnimationAccessory = this.accessories.find(accessory => accessory.UUID === uuid);  
+
+
+        if (!existingAnimationAccessory) { 
+          
+          const animationAccessory = new this.api.platformAccessory(animationDevice.name, uuid);
+
+
+          animationAccessory.context.displayName = animationDevice.name;
+
+
+          animationAccessory.context.animationDevice = animationDevice; 
+          // create the accessory handler
+          // this is imported from `platformAccessory.ts`
+          new AnimationPlatformAccessory(this, this.config, this.lightAccessories, animationAccessory);
+
+          // link the accessory to your platform
+          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [animationAccessory]);
+          registeredAnimations++;
+          newAnimations++;
+
+          this.log.info('Registering new animation %o',  
+            animationAccessory.context.displayName,
+          );
+
+          // push into accessory cache
+          this.accessories.push(animationAccessory);
+ 
+        } else {
+          // the animation has already been registered
+
+          this.log.info('Registering existing animation %o',  
+            existingAnimationAccessory.context.displayName,
+          );
+
+          // create the accessory handler
+          new AnimationPlatformAccessory(this, this.config, this.lightAccessories, existingAnimationAccessory);
+          registeredAnimations++;
+          // udpate the accessory to your platform
+          this.api.updatePlatformAccessories([existingAnimationAccessory]);
+        }
+      }
+      this.log.info('\n\nRegistered %o total Animation(s)\nNew Animtions: %o \nCached Animations: %o\n',
+        registeredAnimations, 
+        newAnimations, 
+        registeredAnimations-newAnimations,
+      ); 
+    //=================================================
+    // End Cached Devices //
+    } catch (error) {
+      this.log.error(error);
+    }
+  }
+*/
   
 }//ZackneticMagichomePlatform class
 

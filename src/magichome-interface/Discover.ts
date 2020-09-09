@@ -37,6 +37,8 @@ export class Discover {
 
         const [ipAddress, uniqueId, modelNumber] = parts;
         clients.push({ ipAddress, uniqueId, modelNumber });
+        this.log.debug('\nDiscover.ts.scan(): Discovered device\nUniqueId: %o \nIpAddress %o \nModel: %o\n', uniqueId, ipAddress,modelNumber);
+        
       });
 
       socket.on('listening', () => {
