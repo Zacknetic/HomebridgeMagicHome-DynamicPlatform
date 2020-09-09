@@ -459,7 +459,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     //check the version modifiers. I wish there was a pattern to this.
     
-    if (lightVersionModifier == 33){
+    if (lightVersionModifier == 33 || lightVersionModifier == 65){
       lightVersion = 99;
     } else if ((lightVersionModifier == 51 && lightVersion == 3) || device.modelNumber.includes('AK001-ZJ2131')) {
       lightVersion = 1;
