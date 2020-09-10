@@ -208,7 +208,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           const updatedDevice = await this.determineController(device);
           if(updatedDevice == null){
-            this.log.warn('Warning! Device type could not be determined, please restart homebridge and try again. If problem persists, file an issue.\n', 
+            this.log.error('Warning! Device type could not be determined, please restart homebridge and try again. If problem persists, file an issue.\n', 
               device.uniqueId);
             continue;
           }
@@ -439,7 +439,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     } catch (error) {
       this.log.debug(error);
     }
-    
   }
 
   async determineController(device){
@@ -484,9 +483,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       lightVersion,
       lightVersionModifier,
     };
-
-
-
   }
 
   /*
@@ -569,7 +565,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
   }
 */
-  
 }//ZackneticMagichomePlatform class
 
   
