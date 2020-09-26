@@ -8,6 +8,9 @@
 
 # Homebridge MagicHome Dynamic Platform
 
+[![Patreon](https://img.shields.io/badge/Subscribe-Patreon-%23F96854?style=for-the-badge&logo=Patreon)](https://www.patreon.com/zacknetic)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-%2300457C?style=for-the-badge&logo=PayPal)](paypal.me/zacharyavino)
+
 ## About
 
 A Homebridge plugin for a range of Magic Home Wi-Fi lights and LED controllers.
