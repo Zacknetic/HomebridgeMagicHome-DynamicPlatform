@@ -13,8 +13,8 @@
     "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues"
   },
   "funding": {
-    "type" : "patreon",
-    "url" : "https://www.patreon.com/zacknetic"
+    "type": "patreon",
+    "url": "https://www.patreon.com/zacknetic"
   },
   "engines": {
     "node": ">=10.17.0",
