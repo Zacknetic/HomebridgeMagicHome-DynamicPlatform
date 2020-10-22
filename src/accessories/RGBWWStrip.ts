@@ -60,8 +60,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       //the white brightness effectively acts as the saturation value
     } else if (hsl.saturation < this.colorWhiteThresholdSimultaniousDevices && this.simultaniousDevicesColorWhite) {
             
-      hsl.saturation = 100;
-      [red, green, blue] = convertHSLtoRGB(hsl); //re-generate rgb with full saturation
+      [red, green, blue] = convertHSLtoRGB({ hue: hsl.hue, saturation: 100, luminance: hsl.luminance}); //re-generate rgb with full saturation
       r = red;
       g = green;
       b = blue;

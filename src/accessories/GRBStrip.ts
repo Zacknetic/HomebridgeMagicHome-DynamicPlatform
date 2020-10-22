@@ -22,7 +22,7 @@ export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
   
-    this.send([0x31, g, r, b, 0x00,0x00, mask, 0x0F]); //9th byte checksum calculated later in send()
+    this.send([0x31, g, r, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
 
     
   }//setColor

@@ -75,7 +75,7 @@ export class Transport {
     this.socket = null;
   }
 
-  async send(buffer: any, useChecksum = true, _timeout = 200) {
+  async send(buffer: any, useChecksum = true, _timeout = 2000) {
     return this.queue.add(async () => (
       this.connect(async () => {
         await this.write(buffer, useChecksum, _timeout);

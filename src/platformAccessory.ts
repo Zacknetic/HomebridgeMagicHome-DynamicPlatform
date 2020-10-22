@@ -421,7 +421,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       */
 
-    await this.transport.send(buffer, useChecksum, _timeout);
+    const output = await this.transport.send(buffer, useChecksum, _timeout);
+    this.platform.log.debug('Recived the following response', output);
+
   } //send
 
   cacheCurrentLightState(){

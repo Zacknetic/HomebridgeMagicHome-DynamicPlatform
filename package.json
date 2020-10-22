@@ -12,13 +12,15 @@
   "bugs": {
     "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues"
   },
-  "funding": [{
-    "type": "patreon",
-    "url": "https://www.patreon.com/zacknetic"
-  },{
-    "type" : "paypal",
-    "url" : "paypal.me/ZacharyAvino"
-  }
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://www.patreon.com/zacknetic"
+    },
+    {
+      "type": "paypal",
+      "url": "paypal.me/ZacharyAvino"
+    }
   ],
   "engines": {
     "node": ">=10.17.0",
@@ -38,14 +40,13 @@
     "rgb",
     "rgbw",
     "rgbww",
+    "LEDnet",
     "flux_led",
     "smart lights"
   ],
   "dependencies": {
-    "broadcast-address": "^1.0.2",
     "color-convert": "^2.0.1",
-    "promise-queue": "^2.2.5",
-    "systeminformation": "^4.26.10"
+    "promise-queue": "^2.2.5"
   },
   "devDependencies": {
     "@types/node": "^14.0.23",

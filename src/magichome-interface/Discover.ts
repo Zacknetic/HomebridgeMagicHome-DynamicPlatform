@@ -1,6 +1,7 @@
 import dgram from 'dgram';
-import broadcastAddress from 'broadcast-address';
-import systemInformation from 'systeminformation';
+
+import { Network } from './Network';
+
 import type { Logger, PlatformConfig } from 'homebridge';
 
 const BROADCAST_PORT = 48899;
@@ -15,9 +16,9 @@ export class Discover {
 
 
   async scan(timeout = 500) {
-
-    const defaultInterface = await systemInformation.networkInterfaceDefault();
-    const broadcastIPAddress = broadcastAddress(defaultInterface.toString());
+    
+    const userInterfaces = Network.subnets();
+    
     return new Promise((resolve, reject) => {
       const clients: Record<string, any> = [];
       const socket = dgram.createSocket('udp4');
@@ -43,7 +44,11 @@ export class Discover {
 
       socket.on('listening', () => {
         socket.setBroadcast(true);
-        socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, broadcastIPAddress);
+        
+        for (const userInterface of userInterfaces){
+          this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', userInterface.broadcast);
+          socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, userInterface.broadcast);
+        }
       });
 
       socket.bind(BROADCAST_PORT);

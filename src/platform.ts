@@ -1,4 +1,4 @@
-import { APIEvent, AccessoryEventTypes, UUID } from 'homebridge';
+import { APIEvent } from 'homebridge';
 import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 
@@ -10,16 +10,15 @@ import { RGBWWBulb } from './accessories/RGBWWBulb';
 import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
 
+
 import { Discover } from './magichome-interface/Discover';
+
 import { Transport } from './magichome-interface/Transport';
 //import { AnimationPlatformAccessory } from './animationPlatformAccessory';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 
-import broadcastAddress from 'broadcast-address';
-import systemInformation from 'systeminformation';
-
 const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
-const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
+//const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
 const accessoryType = {
   DimmerStrip,
@@ -159,18 +158,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
 
   async discoverDevices() {
-    const defaultInterface = await systemInformation.networkInterfaceDefault();
-    const broadcastIPAddress = broadcastAddress(defaultInterface.toString());
 
-    let registeredDevices = 0;
-    let newDevices = 0;
-    let unseenDevices = 0;
+
+    let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
     const discover = new Discover(this.log, this.config);
-    this.log.info('Scanning broadcast-address: %o on interface: %o for Magichome lights... \n', broadcastIPAddress, defaultInterface);
-
     let devices: any = await discover.scan(2000);
-    
-    let scans = 0;
+  
     while(devices.length === 0 && scans <5){
       this.log.warn('( Scan: %o ) Discovered zero devices... rescanning...', scans + 1);
       devices = await discover.scan(2000);
@@ -244,7 +237,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           accessory.context.displayName = updatedDevice.lightParameters.convenientName;
           accessory.context.lightParameters = updatedDevice.lightParameters;
-          device.lightVersion = updatedDevice.lightVersion;
+          device.protocolVersion = updatedDevice.protocolVersion;
+          device.lightVersionOriginal = updatedDevice.lightVersionOriginal;
           device.lightVersionModifier = updatedDevice.lightVersionModifier;
 
           accessory.context.device = device; 
@@ -257,13 +251,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           registeredDevices++;
           newDevices++;
 
-          this.log.info('\nRegistering new accessory %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',  
+          this.log.info('\nRegistering new accessory %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nLight Version %o \nVersion Modifier: %o\nProtocol Version: %o\n',  
             accessory.context.displayName,
             device.modelNumber, 
             device.uniqueId, 
             device.ipAddress,
-            device.lightVersion,
-            device.lightVersionModifier);
+            device.lightVersionOriginal,
+            device.lightVersionModifier,
+            device.protocolVersion);
 
           // push into accessory cache
           this.accessories.push(accessory);
@@ -297,13 +292,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           }
 
         
-          this.log.info('\nRegistering cached accessory %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',  
+          this.log.info('\nRegistering existing accessory %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nLight Version %o \nVersion Modifier: %o\nProtocol Version: %o\n',  
             existingAccessory.context.displayName,
             existingAccessory.context.device.modelNumber, 
             existingAccessory.context.device.uniqueId, 
-            existingAccessory.context.cachedIPAddress,
-            existingAccessory.context.device.lightVersion,
-            existingAccessory.context.device.lightVersionModifier);
+            existingAccessory.context.device.ipAddress,
+            existingAccessory.context.device.lightVersionOriginal,
+            existingAccessory.context.device.lightVersionModifier,
+            existingAccessory.context.device.protocolVersion);
           // create the accessory handler
           const lightAccessory = new accessoryType[existingAccessory.context.lightParameters.controllerType](this, existingAccessory, this.config);
           this.lightAccessories.push(lightAccessory);
@@ -448,43 +444,46 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       return null;
     }
 
-    let lightVersion;
-    const lightVersionModifier = initialState.lightVersionModifier;
+    let protocolVersion, lightParameters;
+    const lightVersionModifier = initialState.lightVersionModifier, lightVersionOriginal = initialState.lightVersion;
     
-    this.log.debug('\n Platform.ts.createAccessory(): \nAssigning controller to device: UniqueId: %o \nIpAddress %o \nModel: %o\nLight Version: %o\nLight Version Modifier: %o\n', device.uniqueId, device.ipAddress,device.modelNumber, initialState.lightVersion, initialState.lightVersionModifier);
+    this.log.info('\n Platform.ts.createAccessory(): \nAssigning controller to device: UniqueId: %o \nIpAddress %o \nModel: %o\nOriginal Light Version: %o\nLight Version Modifier: %o\n', device.uniqueId, device.ipAddress,device.modelNumber, initialState.lightVersion, initialState.lightVersionModifier);
 
-    let lightParameters;
+ 
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     //check the version modifiers. I wish there was a pattern to this.
     
     if (lightVersionModifier == 33 || lightVersionModifier == 65){
-      lightVersion = 99;
-    } else if ((lightVersionModifier == 51 && lightVersion == 3) || (lightVersionModifier == 51 && lightVersion == 4 || device.modelNumber.includes('AK001-ZJ2131'))) {
-      lightVersion = 1;
+      protocolVersion = 99;
+    } else if ((lightVersionModifier == 51 && protocolVersion == 3) || (lightVersionModifier == 51 && protocolVersion == 4 || device.modelNumber.includes('AK001-ZJ2131'))) {
+      protocolVersion = 1;
     } else if(lightVersionModifier == 4 || lightVersionModifier == 6) {
-      lightVersion = 10;
+      protocolVersion = 10;
     } else {
-      lightVersion = initialState.lightVersion;
+      protocolVersion = initialState.lightVersion;
     }
 
-    if(lightTypesMap.has(lightVersion)){
-      this.log.debug('Light version: %o matches known device type records', lightVersion);
-      lightParameters = lightTypesMap.get(lightVersion);
+    if(lightTypesMap.has(protocolVersion)){
+      this.log.info('( Modified) Light version: %o matches known device type records', protocolVersion);
+      lightParameters = lightTypesMap.get(protocolVersion);
     } else {
-      this.log.warn('Uknown light version: %o... type probably cannot be set. Trying anyway...', lightVersion);
+      this.log.warn('Uknown light version: %o... type probably cannot be set. Trying anyway...', protocolVersion);
       this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your homebridge.log');
       lightParameters = lightTypesMap.get(4);
     }
 
-    this.log.debug('\nPlatform.ts.determineController(): \nLight version assigned to %o\nController Type assigned to %o', lightVersion, lightParameters.controllerType);
+    this.log.debug('\nPlatform.ts.determineController(): \nLight version assigned to %o\nController Type assigned to %o', protocolVersion, lightParameters.controllerType);
     return {
       lightParameters,
-      lightVersion,
+      protocolVersion,
       lightVersionModifier,
+      lightVersionOriginal,
     };
   }
 
+
+  
   /*
   async discoverAnimations(){
 
@@ -566,5 +565,3 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }
 */
 }//ZackneticMagichomePlatform class
-
-  
