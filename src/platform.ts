@@ -372,7 +372,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
       
       } catch (error) {
-        //this.log.debug(error);
+        this.log.error(error);
       }
 
 

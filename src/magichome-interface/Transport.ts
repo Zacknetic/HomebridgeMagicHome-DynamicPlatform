@@ -70,7 +70,6 @@ export class Transport {
   }
 
   disconnect() {  
-  //  this.logger('Disconnecting');
     this.socket.end();
     this.socket = null;
   }
@@ -100,39 +99,41 @@ export class Transport {
     // wait for drain event which means all data has been sent
     if (sent !== true) {
       await wait(this.socket, 'drain', _timeout);
-      //await this.socket.drain;
     }
   }
 
   async read(_timeout = 200) {
     const data = await wait(this.socket, 'data', _timeout);
-    // this.logger('Read data %o', `0x${data.toString('hex')}`);
     return data;
   }
 
   async getState(_timeout = 500){
-    
-    // this.platform.log.debug('Querying state');
-    const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
-    if (data == null) {
-      return null;
-    }
-    return {
+    try {
+      const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
+      if (data == null) {
+        return null;
+      }
+      return {
       
-      debugBuffer: data,
-      lightVersionModifier: data.readUInt8(1),
-      isOn: data.readUInt8(2) === 0x23,
-      RGB: {
-        red: data.readUInt8(6),
-        green: data.readUInt8(7),
-        blue: data.readUInt8(8),
-      },
-      whiteValues: {
-        warmWhite: data.readUInt8(9),
-        coldWhite: data.readUInt8(11),
-      },
-      lightVersion: data.readUInt8(10),
+        debugBuffer: data,
+        lightVersionModifier: data.readUInt8(1),
+        isOn: data.readUInt8(2) === 0x23,
+        RGB: {
+          red: data.readUInt8(6),
+          green: data.readUInt8(7),
+          blue: data.readUInt8(8),
+        },
+        whiteValues: {
+          warmWhite: data.readUInt8(9),
+          coldWhite: data.readUInt8(11),
+        },
+        lightVersion: data.readUInt8(10),
+  
+      };
+    } catch (error) {
+      // this.platform.log.debug(error);
+    }
 
-    };
+
   }
 }
