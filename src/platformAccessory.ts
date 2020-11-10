@@ -6,7 +6,7 @@ import type {
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
-
+import { getLogger } from './instance';
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
 
@@ -30,7 +30,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
-
+  log = getLogger();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
     RGB: { red: 0, green: 0, blue: 0 },
@@ -390,7 +390,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const buffer = Buffer.from(command);
 
     const output = await this.transport.send(buffer, useChecksum, _timeout);
-    this.platform.log.debug('Recived the following response', output);
+    //this.platform.log.debug('Recieved the following response', output);
 
   } //send
 

@@ -23,7 +23,7 @@ function wait(emitter: any, eventName: any, timeout: any) {
     };
     const errorHandler = (e: any) => {
       off();
-      reject(e);
+      reject(null);
     };  
 
     off = () => {

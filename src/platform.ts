@@ -252,7 +252,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           //retrieve the device's state
   
           const state = await transport.getState(1000);
-
+         
           //check if device is on blacklist or is not on whitelist
           if(!await this.isAllowed(device.uniqueId)){
             this.log.warn('Warning! New device with Unique ID: %o is blacklisted or is not whitelisted.\n', 
@@ -272,7 +272,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           // set its restart prune counter to 0 as it has been seen this session
           accessory.context.restartsSinceSeen = 0;
-
           accessory.context.displayName = updatedDevice.lightParameters.convenientName;
           accessory.context.lightParameters = updatedDevice.lightParameters;
           device.lightVersionOriginal = updatedDevice.lightVersionOriginal;
@@ -587,4 +586,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
   }
 */
+
+  async send(transport, command: number[], useChecksum = true, _timeout = 200) {
+    const buffer = Buffer.from(command);
+
+    const output = await transport.send(buffer, useChecksum, _timeout);
+    this.log.debug('Recived the following response', output);
+
+  } //send
 }//ZackneticMagichomePlatform class

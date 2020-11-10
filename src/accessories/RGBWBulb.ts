@@ -2,7 +2,7 @@ import { clamp, convertHSLtoRGB } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
 
 export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
-    
+  public eightByteProtocol = 2;
   async updateDeviceState() {
 
     //**** local variables ****\\
@@ -39,15 +39,19 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       mask = 0x0F;
       // this.platform.log.debug('Setting warmWhite only without colors: ww:%o', ww);
 
-    } else {
-
-      //this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
-      
+    } 
+   
+    if(this.eightByteProtocol == 0){
+      this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
+    } else if(this.eightByteProtocol == 1){
+      this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F]);
+    } else if (this.eightByteProtocol == 2){
+      this.eightByteProtocol = (await this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
+      this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
     }
-    this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
-    
-  }//updateDeviceState
 
+  }
+  
   async updateHomekitState(){
     this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);

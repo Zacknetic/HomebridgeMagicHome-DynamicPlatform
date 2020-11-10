@@ -2,7 +2,7 @@ import { clamp, convertHSLtoRGB } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
 
 export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
-
+  public eightByteProtocol = 2;
   async updateDeviceState() {
 
     //**** local variables ****\\
@@ -22,7 +22,15 @@ export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
   
-    this.send([0x31, g, r, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
+   
+    if(this.eightByteProtocol == 0){
+      this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
+    } else if(this.eightByteProtocol == 1){
+      this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F]);
+    } else if (this.eightByteProtocol == 2){
+      this.eightByteProtocol = (await this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
+      this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
+    }
 
     
   }//setColor
