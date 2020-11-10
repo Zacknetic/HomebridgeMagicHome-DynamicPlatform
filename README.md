@@ -10,6 +10,9 @@
 
 [![Patreon](https://img.shields.io/badge/Subscribe-Patreon-%23F96854?style=for-the-badge&logo=Patreon)](https://www.patreon.com/zacknetic)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-%2300457C?style=for-the-badge&logo=PayPal)](https://www.paypal.com/paypalme/zacharyavino)
+[![Discord](https://img.shields.io/badge/Chat-Discord-%237289DA?style=for-the-badge&logo=Discord)](https://discord.gg/c8xpmZSNZC)
+
+### Join the [Official MagicHome Discord Channel](https://discord.gg/c8xpmZSNZC) for tech support and to chat with other MagicHome users
 
 ## About
 
@@ -79,45 +82,3 @@ However the default settings should suffice. Please read below to learn more abo
 * `blacklistOrWhitelist` - **blacklist** / **whitelist** Whether the listed Unique IDs are blacklisted or whitelisted.
 
 * `blacklistedUniqueIDs` - **Alphanumeric** Unique IDs of devices you wish this plugin to ignore/delete. Can be found in the Magichome app under "MAC Address" or in the logs under "Unique ID". **i.e. 6001940EDC1F**
-
-
-### example 'config.json'
-If you do not use Config UI X, this example config.json contains everything you need to get started. Only use this if you do not use Config UI X.
-```json
-{
-    "bridge": {
-        "name": "Example Config",
-        "username": "1A:2B:3C:4B:5D:6E",
-        "port": 51398,
-        "pin": "123-45-678"
-    },
-    "platforms": [
-        {
-        "platform": "homebridge-magichome-dynamic-platform",
-            "pruning": {
-                "pruneMissingCachedAccessories": false,
-                "restartsBeforeMissingAccessoriesPruned": 3,
-                "pruneAllAccessoriesNextRestart": false
-            },
-            "whiteEffects": {
-                "simultaniousDevicesColorWhite": true,
-                "colorWhiteThreshold": 10,
-                "colorWhiteThresholdSimultaniousDevices": 50,
-                "colorOffThresholdSimultaniousDevices": 5
-            },
-            "deviceManagement": {
-                "blacklistOrWhitelist": "blacklist",
-                "blacklistedUniqueIDs": [
-                    "6001940EDC1F",
-                    "DC4F22CF0F46",
-                    "D8F15BA2F7BB"
-                ]
-            }
-        }
-    ]
-}
-```
-## Todo
-
-- [ ] Clean up
-- [ ] Add original LEDnet Protocol
