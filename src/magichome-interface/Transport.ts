@@ -2,6 +2,7 @@ import net from 'net';
 import Queue from 'promise-queue';
 import { checksum } from './utils';
 import type { PlatformConfig } from 'homebridge';
+import { getLogger } from '../instance';
 
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
@@ -13,7 +14,6 @@ function wait(emitter: any, eventName: any, timeout: any) {
 
     let off: any = setTimeout(() => {
       clearTimeout(off);
-      //const buffer = Buffer.from([0x81, 0x35, 0x24, 0x61, 0x01, 0x01, 0x00 ,0x00 ,0x00, 0xff, 0x05, 0x58, 0x0f, 0xa8]);
       resolve(null);
     }, timeout);
 
@@ -37,6 +37,7 @@ function wait(emitter: any, eventName: any, timeout: any) {
 } 
 
 export class Transport {
+  log = getLogger();
   host: any;
   socket: any;
   queue: any;
@@ -61,8 +62,6 @@ export class Transport {
     this.socket = net.connect(options);
 
     await wait(this.socket, 'connect', _timeout = 200);
-
-
     const result = await fn();
     await this.disconnect();
 
@@ -86,6 +85,7 @@ export class Transport {
   async write(buffer: any, useChecksum = true, _timeout = 200) {
     let sent;
     if(useChecksum){
+
       const chk = checksum(buffer);
       const payload = Buffer.concat([buffer, Buffer.from([chk])]);
       sent = this.socket.write(payload, useChecksum, _timeout);
@@ -94,8 +94,6 @@ export class Transport {
       sent = this.socket.write(buffer, useChecksum, _timeout);
     }
  
-
-
     // wait for drain event which means all data has been sent
     if (sent !== true) {
       await wait(this.socket, 'drain', _timeout);
@@ -131,9 +129,7 @@ export class Transport {
   
       };
     } catch (error) {
-      // this.platform.log.debug(error);
+      this.log.debug(error);
     }
-
-
   }
 }

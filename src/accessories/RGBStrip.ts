@@ -22,6 +22,9 @@ export class RGBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
+    if( this.accessory.context.lightParameters.byteNumber == 9){
+      this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
+    }
     this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
 
   }//setColor  

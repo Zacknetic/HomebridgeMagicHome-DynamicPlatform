@@ -146,9 +146,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.lightState.HSL.hue = value as number;
 
     await this.updateDeviceState();
-    //  this.platform.log.debug('Set Characteristic Hue -> ', value);
 
-    // you must call the callback function
     callback(null);
   }
 
@@ -159,11 +157,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.lightState.HSL.saturation = value as number;
 
-    // await this.updateDeviceState();
-
-    //this.platform.log.debug('Set Characteristic Saturation -> %o for device: %o ', value, this.accessory.context.displayName);
-
-    // you must call the callback function
     callback(null);
   }
 
@@ -175,9 +168,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.lightState.brightness = value as number;
 
     await this.updateDeviceState();
-    //this.platform.log.debug('Set Characteristic Brightness -> %o for device: %o ', value, this.accessory.context.displayName);
 
-    // you must call the callback function
     callback(null);
   }
 
@@ -191,9 +182,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
 
-    //this.platform.log.debug('Set Characteristic On -> %o for device: %o ', value, this.accessory.context.displayName);
-
-    // you must call the callback function
     callback(null);
   }
 
@@ -210,11 +198,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //update state with actual values asynchronously
     this.updateLocalState();
 
-    //  this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.accessory.context.displayName);
-
-    // you must call the callback function
-    // the first argument should be null if there were no errors
-    // the second argument should be the value to return
     callback(null, hue);
   }
 
@@ -228,9 +211,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.displayName);
     this.updateLocalState();
-    // you must call the callback function
-    // the first argument should be null if there were no errors
-    // the second argument should be the value to return
+
     callback(null, brightness);
   }
 
@@ -408,19 +389,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   async send(command: number[], useChecksum = true, _timeout = 200) {
     const buffer = Buffer.from(command);
 
-    /*
-    
-    this.platform.log.debug('\nSending command -> %o for...\nAccessory %o \nModel: %o \nID: %o \nIP-Address: %o \nVersion %o \nVersion Modifier: %o\n',
-      buffer,
-      this.accessory.context.displayName,
-      this.accessory.context.device.modelNumber,
-      this.accessory.context.device.uniqueId,
-      this.accessory.context.cachedIPAddress,
-      this.accessory.context.device.lightVersion,
-      this.accessory.context.device.lightVersionModifier);
-
-      */
-
     const output = await this.transport.send(buffer, useChecksum, _timeout);
     this.platform.log.debug('Recived the following response', output);
 
@@ -449,7 +417,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     let count = 0;
 
     const interval = setInterval(() => {
-
 
       if (change) {
         this.lightState.brightness = 0;

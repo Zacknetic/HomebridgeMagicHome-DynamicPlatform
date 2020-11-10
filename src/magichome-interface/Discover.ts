@@ -6,8 +6,8 @@ import type { Logger, PlatformConfig } from 'homebridge';
 const BROADCAST_PORT = 48899;
 const BROADCAST_MAGIC_STRING = 'HF-A11ASSISTHREAD';
 
-
 export class Discover {
+  public count = 1;
   constructor(  
     public readonly log: Logger,
     private readonly config: PlatformConfig,
@@ -38,11 +38,11 @@ export class Discover {
 
         if (clients.findIndex((item) => item.uniqueID === uniqueId) === -1) {
           clients.push({ ipAddress, uniqueId, modelNumber });
-          this.log.debug('\nDiscover.ts.scan(): Discovered device\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', uniqueId, ipAddress,modelNumber); 
+          this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', this.count++, uniqueId, ipAddress,modelNumber); 
         } else {
-          this.log.debug('\nDiscover.ts.scan(): Discovered device\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists. ', uniqueId, ipAddress,modelNumber);    
+          this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists. ', this.count++, uniqueId, ipAddress,modelNumber);    
         }
- 
+        
       });
 
       socket.on('listening', () => {
