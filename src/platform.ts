@@ -44,62 +44,6 @@ const accessoryType = {
 }; */
 
 const lightTypesMap = new Map([
-  [0x21,  
-    {
-      controllerType: 'DimmerStrip',
-      convenientName: 'Dimmer',
-      simultaneousCCT: false,
-      hasColor: false,
-    }],
-  [0x41,  
-    {
-      controllerType: 'DimmerStrip',
-      convenientName: 'Dimmer',
-      simultaneousCCT: false,
-      hasColor: false,
-    }],
-  [0x65,  
-    {
-      controllerType: 'DimmerStrip',
-      convenientName: 'Dimmer',
-      simultaneousCCT: false,
-      hasColor: false,
-    }],
-  [0x33,  
-    {
-      controllerType: 'GRBStrip',
-      convenientName: 'Simple GRB',
-      simultaneousCCT: false,
-      hasColor: true,
-    }],
-  [0xA1,  
-    {
-      controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
-      simultaneousCCT: false,
-      hasColor: true,
-    }],
-  [0x21,  
-    {
-      controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
-      simultaneousCCT: false,
-      hasColor: true,
-    }],
-  [0x35,  
-    {
-      controllerType: 'RGBWWBulb',
-      convenientName: 'RGBWW Non-Simultanious',
-      simultaneousCCT: false,
-      hasColor: true,
-    }],
-  [0x44,  
-    {
-      controllerType: 'RGBWBulb',
-      convenientName: 'RGBW Non-Simultanious',
-      simultaneousCCT: false,
-      hasColor: true,
-    }],
   [0x04,  
     {
       controllerType: 'RGBWStrip',
@@ -128,13 +72,71 @@ const lightTypesMap = new Map([
       simultaneousCCT: false,
       hasColor: true,
     }],
-  [0xFF,  
+  [0x21,  
+    {
+      controllerType: 'DimmerStrip',
+      convenientName: 'Dimmer',
+      simultaneousCCT: false,
+      hasColor: false,
+    }],
+  [0x33,  
+    {
+      controllerType: 'GRBStrip',
+      convenientName: 'Simple GRB',
+      simultaneousCCT: false,
+      hasColor: true,
+    }],
+  [0x25,  
     {
       controllerType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultanious',
       simultaneousCCT: true,
       hasColor: true,
     }],
+  [0x35,  
+    {
+      controllerType: 'RGBWWBulb',
+      convenientName: 'RGBWW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
+    }],
+  [0x41,  
+    {
+      controllerType: 'DimmerStrip',
+      convenientName: 'Dimmer',
+      simultaneousCCT: false,
+      hasColor: false,
+    }],
+
+  [0x44,  
+    {
+      controllerType: 'RGBWBulb',
+      convenientName: 'RGBW Non-Simultanious',
+      simultaneousCCT: false,
+      hasColor: true,
+    }],
+  [0x65,  
+    {
+      controllerType: 'DimmerStrip',
+      convenientName: 'Dimmer',
+      simultaneousCCT: false,
+      hasColor: false,
+    }],
+  [0xA1,  
+    {
+      controllerType: 'RGBStrip',
+      convenientName: 'Simple RGB',
+      simultaneousCCT: false,
+      hasColor: true,
+    }],
+  [0xA2,  
+    {
+      controllerType: 'RGBStrip',
+      convenientName: 'Simple RGB',
+      simultaneousCCT: false,
+      hasColor: true,
+    }],
+
 ]);
 
 
@@ -465,7 +467,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     if(lightVersionOriginal == 0x03){
-      lightParameters = lightTypesMap.get(0xFF);
+      lightParameters = lightTypesMap.get(0x25);
     } else {
       if(lightTypesMap.has(lightVersionModifier)){
         this.log.info('Light Version: %o with Firmware Version: %o matches known device type records', 
