@@ -4,6 +4,7 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { join } from 'path';
 import { loadJson } from './magichome-interface/utils';
 
+import { Switch } from './accessories/Switch';
 import { DimmerStrip } from './accessories/DimmerStrip';
 import { RGBStrip } from './accessories/RGBStrip';
 import { GRBStrip } from './accessories/GRBStrip';
@@ -25,6 +26,7 @@ const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
 const accessoryType = {
+  Switch,
   DimmerStrip,
   GRBStrip,
   RGBStrip,
@@ -50,6 +52,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBW Simultanious',
       simultaneousCCT: true,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x06,  
     {
@@ -57,6 +60,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBW Simultanious',
       simultaneousCCT: true,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x07,  
     {
@@ -64,6 +68,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBW Non-Simultanious',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x08,  
     {
@@ -71,6 +76,7 @@ const lightTypesMap = new Map([
       convenientName: 'Simple RGB',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x21,  
     {
@@ -78,6 +84,7 @@ const lightTypesMap = new Map([
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
+      hasBrightness:true,
     }],
   [0x33,  
     {
@@ -85,6 +92,7 @@ const lightTypesMap = new Map([
       convenientName: 'Simple GRB',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x25,  
     {
@@ -92,6 +100,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBWW Simultanious',
       simultaneousCCT: true,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x35,  
     {
@@ -99,6 +108,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBWW Non-Simultanious',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x41,  
     {
@@ -106,6 +116,7 @@ const lightTypesMap = new Map([
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
+      hasBrightness:true,
     }],
 
   [0x44,  
@@ -114,6 +125,7 @@ const lightTypesMap = new Map([
       convenientName: 'RGBW Non-Simultanious',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0x65,  
     {
@@ -121,6 +133,15 @@ const lightTypesMap = new Map([
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
+      hasBrightness:true,
+    }],
+  [0x97,  
+    {
+      controllerType: 'Switch',
+      convenientName: 'Power Socket',
+      simultaneousCCT: false,
+      hasColor: false,
+      hasBrightness: false,
     }],
   [0xA1,  
     {
@@ -128,6 +149,7 @@ const lightTypesMap = new Map([
       convenientName: 'Simple RGB',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
   [0xA2,  
     {
@@ -135,6 +157,7 @@ const lightTypesMap = new Map([
       convenientName: 'Simple RGB',
       simultaneousCCT: false,
       hasColor: true,
+      hasBrightness:true,
     }],
 
 ]);
@@ -408,15 +431,16 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
 
   async isAllowed(uniqueId){
-
+ 
+    const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs;
     let isAllowed = true;
     try {
 
-      if(this.config.deviceManagement.blacklistedUniqueIDs !== undefined 
+      if(blacklistedUniqueIDs !== undefined 
         && this.config.deviceManagement.blacklistOrWhitelist !== undefined){
-        if (((this.config.deviceManagement.blacklistedUniqueIDs).includes(uniqueId) 
+        if (((blacklistedUniqueIDs).includes(uniqueId) 
         && (this.config.deviceManagement.blacklistOrWhitelist).includes('blacklist')) 
-         || (!(this.config.deviceManagement.blacklistedUniqueIDs).includes(uniqueId)) 
+         || (!(blacklistedUniqueIDs).includes(uniqueId)) 
          && (this.config.deviceManagement.blacklistOrWhitelist).includes('whitelist')){
           isAllowed = false; 
         }
