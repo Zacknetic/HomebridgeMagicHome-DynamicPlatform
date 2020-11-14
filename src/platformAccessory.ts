@@ -64,7 +64,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.modelNumber)
       .setCharacteristic(this.platform.Characteristic.FirmwareRevision, accessory.context.device.lightVersion)
       .getCharacteristic(this.platform.Characteristic.Identify)
-      .removeAllListeners('set')
       .on(CharacteristicEventTypes.SET, this.identifyLight.bind(this));       // SET - bind to the 'Identify` method below
 
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -73,16 +72,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
-    if(this.accessory.context.lightParameters.hasBrightness){
+    if(this.accessory.context.lightParameters.hasBrightness || this.accessory.context.lightParameters.hasBrightness == undefined){
+            
+      if (this.accessory.getService(this.platform.Service.Switch)) {
+        this.accessory.removeService(this.accessory.getService(this.platform.Service.Switch));
+      }
       this.service = this.accessory.getService(this.platform.Service.Lightbulb) ?? this.accessory.addService(this.platform.Service.Lightbulb);
+      this.accessory.context.lightParameters.hasBrightness = true;
 
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
-        .removeAllListeners('set')
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
     
       // each service must implement at-minimum the "required characteristics" for the given service type
       // see https://developers.homebridge.io/#/service/Lightbulb
-
 
       // register handlers for the Brightness Characteristic
       this.service.getCharacteristic(this.platform.Characteristic.Brightness)
@@ -105,22 +107,24 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
         //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
+      
+
       }
     } else {
 
       this.service = this.accessory.getService(this.platform.Service.Switch) ?? this.accessory.addService(this.platform.Service.Switch);
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
-        .removeAllListeners('set')
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
-      // register handlers for the On/Off Characteristic
-      this.service.getCharacteristic(this.platform.Characteristic.On)
-        .removeAllListeners('set')
-        .removeAllListeners('get')
-        .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
-        .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
-      // this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
-      this.updateLocalState();
+
     }
+    // register handlers for the On/Off Characteristic
+    this.service.getCharacteristic(this.platform.Characteristic.On)
+      .removeAllListeners('set')
+      .removeAllListeners('get')
+      .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
+      .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
+    //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
+    this.updateLocalState();
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name, this.accessory.displayName);

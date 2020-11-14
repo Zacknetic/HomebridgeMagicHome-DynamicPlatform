@@ -118,7 +118,6 @@ const lightTypesMap = new Map([
       hasColor: false,
       hasBrightness:true,
     }],
-
   [0x44,  
     {
       controllerType: 'RGBWBulb',
