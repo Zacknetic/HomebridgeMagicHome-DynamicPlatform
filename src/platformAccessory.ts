@@ -29,6 +29,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
+  protected hueisSet = false;
+  protected saturationIsSet = false;
   log = getLogger();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
@@ -151,10 +153,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if(this.activeAnimation.hueSaturationInterrupt){
       this.stopAnimation();
     }
-
     this.lightState.HSL.hue = value as number;
-    await this.updateDeviceState();
 
+    //ensure that we don't get caught in a race condition
+    if(this.saturationIsSet){
+      this.saturationIsSet = false;
+      this.hueisSet = false;
+      await this.updateDeviceState();
+    } else {
+      this.hueisSet = true;
+    }
     callback(null);
   }
 
@@ -162,10 +170,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if(this.activeAnimation.hueSaturationInterrupt){
       this.stopAnimation();
     }
-
     this.lightState.HSL.saturation = value as number;
 
-    await this.updateDeviceState();
+    //ensure that we don't get caught in a race condition
+    if(this.hueisSet){
+      this.saturationIsSet = false;
+      this.hueisSet = false;
+      await this.updateDeviceState();
+    } else {
+      this.saturationIsSet = true;
+    }
     callback(null);
   }
 
