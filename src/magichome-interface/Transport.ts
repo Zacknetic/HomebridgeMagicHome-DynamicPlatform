@@ -8,33 +8,48 @@ const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
 const PORT = 5577;
 
-function wait(emitter: any, eventName: any, timeout: any) {
+function wait(emitter: net.Socket, eventName: string, timeout: number) {
 
   return new Promise((resolve, reject) => {
+    let complete = false;
 
-    let off: any = setTimeout(() => {
-      clearTimeout(off);
+    const waitTimeout: any = setTimeout(() => {
+      complete = true; // mark the job as done
       resolve(null);
     }, timeout);
 
-    const eventHandler = (...args: any) => {
-      off();
-      resolve(...args);
-    };
-    const errorHandler = (e: any) => {
-      off();
-      reject(null);
-    };  
+    // listen for the first event, then stop listening (once)
+    emitter.once(eventName, (...args: any) => {
+      clearTimeout(waitTimeout); // stop the timeout from executing
 
-    off = () => {
-      emitter.removeListener('error', errorHandler);
-      emitter.removeListener(eventName, eventHandler);
-    };
+      if (!complete) {
+        complete = true; // mark the job as done
+        resolve(...args);
+      }
+    });
 
-    emitter.on('error', errorHandler);
-    emitter.on(eventName, eventHandler);
+    emitter.once('close', () => {
+      clearTimeout(waitTimeout); // stop the timeout from executing
+
+      // if the socket closed before we resolved the promise, reject the promise
+      if (!complete) {
+        complete = true;
+        reject(null);
+      }
+    });
+
+    // handle the first error and reject the promise
+    emitter.on('error', (e) => {
+      clearTimeout(waitTimeout); // stop the timeout from executing
+
+      if (!complete) {
+        complete = true;
+        reject(e);
+      }
+    });
+
   });
-} 
+}
 
 export class Transport {
   log = getLogger();
@@ -58,14 +73,21 @@ export class Transport {
       timeout: _timeout,
     };
 
-    //this.logger('Attempting connection to %o', options);
-    this.socket = net.connect(options);
+    let result;
+    try {
+      this.socket = net.connect(options);
+      await wait(this.socket, 'connect', _timeout = 200);
+      result = await fn();
+      return result;
+    } catch (e) {
+      this.log.error('transport.ts error', e);
+    } finally {
+      this.socket.end();
+      this.socket.destroy();
 
-    await wait(this.socket, 'connect', _timeout = 200);
-    const result = await fn();
-    await this.disconnect();
+    }
 
-    return result;
+    return null;
   }
 
   disconnect() {  

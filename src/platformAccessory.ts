@@ -88,22 +88,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       // register handlers for the Brightness Characteristic
       this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-        .removeAllListeners('set')
-        .removeAllListeners('get')
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
       if( this.accessory.context.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
-          .removeAllListeners('set')
-          .removeAllListeners('get')
           .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
           .on(CharacteristicEventTypes.GET, this.getHue.bind(this));              // GET - bind to the 'getHue` method below
 
         // register handlers for the Saturation Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Saturation)
-          .removeAllListeners('set')
           .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
         //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
@@ -119,8 +114,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.On)
-      .removeAllListeners('set')
-      .removeAllListeners('get')
       .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
       .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
     //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
@@ -160,7 +153,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     this.lightState.HSL.hue = value as number;
-
     await this.updateDeviceState();
 
     callback(null);
@@ -173,6 +165,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.lightState.HSL.saturation = value as number;
 
+    await this.updateDeviceState();
     callback(null);
   }
 
