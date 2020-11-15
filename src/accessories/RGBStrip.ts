@@ -2,7 +2,7 @@ import { clamp, convertHSLtoRGB } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
 
 export class RGBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
-  public eightByteProtocol = null;
+  public eightByteProtocol = 2;
   async updateDeviceState() {
 
     //**** local variables ****\\
