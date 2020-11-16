@@ -286,7 +286,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       if(state == null){
-        this.platform.log.warn('Warning. Was unable to determine state for device: %o', this.accessory.context.displayName);
+        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.displayName);
         return;
       }
       this.accessory.context.lastKnownState = state;

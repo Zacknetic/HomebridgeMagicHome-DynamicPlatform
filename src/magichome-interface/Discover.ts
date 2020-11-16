@@ -15,7 +15,7 @@ export class Discover {
 
 
   async scan(timeout = 500) {
-    
+
     return new Promise((resolve, reject) => {
       const userInterfaces = Network.subnets();
       const clients: Record<string, any> = [];
@@ -27,20 +27,18 @@ export class Discover {
       });
 
       socket.on('message', (msg) => {
-
         const parts = msg.toString().split(',');
 
         if (parts.length !== 3) {
           return;
         }
-
         const [ipAddress, uniqueId, modelNumber] = parts;
 
-        if (clients.findIndex((item) => item.uniqueID === uniqueId) === -1) {
+        if (clients.findIndex((item) => item.uniqueId === uniqueId) === -1) {
           clients.push({ ipAddress, uniqueId, modelNumber });
           this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', this.count++, uniqueId, ipAddress,modelNumber); 
         } else {
-          this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists. ', this.count++, uniqueId, ipAddress,modelNumber);    
+          this.log.info('\n%o - A device has been discovered that already exists. Likely due to a "fun" network layout...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists.', this.count++, uniqueId, ipAddress,modelNumber);    
         }
         
       });
