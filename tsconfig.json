@@ -17,6 +17,9 @@
     "strictNullChecks": false,
     "strict": false,
   },
+  "include": [
+    "src/"
+  ],
   "exclude": [
     "**/*.spec.ts"
   ]
