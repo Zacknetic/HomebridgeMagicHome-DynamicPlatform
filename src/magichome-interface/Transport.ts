@@ -101,12 +101,9 @@ export class Transport {
   }
 
   async send(buffer: any, useChecksum = true, _timeout = 2000) {
-    this.log.warn(`[IGOR] send (adding to queue) data to ${this.host}`);
     return this.queue.add(async () => (
       this.connect(async () => {
-        this.log.warn(`[IGOR] send (picking from queue) data to ${this.host}`);
         await this.write(buffer, useChecksum, _timeout);
-        this.log.warn(`[IGOR] send (write complete) data to ${this.host}`);
         return this.read(_timeout);
       })
     )); 
