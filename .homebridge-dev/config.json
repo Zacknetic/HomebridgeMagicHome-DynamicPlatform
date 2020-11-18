@@ -31,7 +31,8 @@
       "deviceManagement": {
         "blacklistOrWhitelist": "blacklist",
         "blacklistedUniqueIDs": [""]
-      }
+      },
+      "uniqueNames": true
     }
   ]
 }
