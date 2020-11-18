@@ -80,7 +80,12 @@ export class Transport {
       result = await fn();
       return result;
     } catch (e) {
-      this.log.error('transport.ts error', e);
+      const { code, address, port } = e;
+      if(code){
+        this.log.warn(`Unable to connect to ${address} ${port} (code: ${code})`);
+      } else {
+        this.log.error('transport.ts error keys', e);
+      }
     } finally {
       this.socket.end();
       this.socket.destroy();
@@ -96,9 +101,12 @@ export class Transport {
   }
 
   async send(buffer: any, useChecksum = true, _timeout = 2000) {
+    this.log.warn(`[IGOR] send (adding to queue) data to ${this.host}`);
     return this.queue.add(async () => (
       this.connect(async () => {
+        this.log.warn(`[IGOR] send (picking from queue) data to ${this.host}`);
         await this.write(buffer, useChecksum, _timeout);
+        this.log.warn(`[IGOR] send (write complete) data to ${this.host}`);
         return this.read(_timeout);
       })
     )); 
