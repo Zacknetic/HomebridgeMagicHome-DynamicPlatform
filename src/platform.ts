@@ -143,7 +143,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           }
        
           // if user has oped, use unique name such as "Bulb AABBCCDD"
-          if( this.config.uniqueNames ){
+          if( this.config.advancedOptions && this.config.advancedOptions.namesWithMacAddress ){
             const prettyName = getPrettyName(deviceBroadcast.uniqueId, deviceQueryData.lightParameters.controllerType);
             deviceQueryData.lightParameters.convenientName = prettyName;
           }
@@ -388,9 +388,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   printDeviceInfo(message: string, accessory: PlatformAccessory){
     this.log.info( message +
-    '\n%o - Display Name: %o \nModel: %o \nUnique ID: %o \nIP-Address: %o \nFirmware Version: %o \nDevice Type: %o\n',  
+    '\n%o - Display Name: %o \nController Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nFirmware Version: %o \nDevice Type: %o\n',  
     this.count++,
     accessory.context.displayName,
+    accessory.context.device.lightParameters.controllerType,
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,
