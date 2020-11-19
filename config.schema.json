@@ -84,10 +84,18 @@
 
                 }
             },
-            "uniqueNames": {
-                "description": "Use unique name during device creation. Same naming scheme as the Magic Home App.",
-                "type": "boolean"
-              }
+            "advancedOptions": {
+                "type": "object",
+                "properties": {
+                    "namesWithMacAddress": {
+                    "title": "Device names with MAC address.",
+                    "description": "When this option is enabled, upon device registering each device name will contain the lst 6 digits of its MAC address, just like the default the MagicHome App gives. For example, when option is enabled a new lamp may get name of 'Bulb 22F481' instead of the default 'RGBW Non-Simultaneous'.",
+                    "type": "boolean",
+                    "default": false,
+                    "required": true
+                    }
+                }
+            }
         }
     }
 }
