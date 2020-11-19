@@ -16,9 +16,10 @@
   "accessories": [],
   "platforms": [
     {
+      "platform": "homebridge-magichome-dynamic-platform",
       "pruning": {
         "pruneMissingCachedAccessories": false,
-        "restartsBeforeMissingAccessoriesPruned": 99,
+        "restartsBeforeMissingAccessoriesPruned": 3,
         "pruneAllAccessoriesNextRestart": false
       },
       "whiteEffects": {
@@ -28,12 +29,12 @@
         "colorOffThresholdSimultaniousDevices": 5
       },
       "deviceManagement": {
-        "blacklistOrWhitelist": "blacklist"
+        "blacklistOrWhitelist": "blacklist",
+        "blacklistedUniqueIDs": [""]
       },
       "advancedOptions": {
         "namesWithMacAddress": true
-      },
-      "platform": "homebridge-magichome-dynamic-platform"
+      }
     }
   ]
 }
