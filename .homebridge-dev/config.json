@@ -31,6 +31,9 @@
       "deviceManagement": {
         "blacklistOrWhitelist": "blacklist",
         "blacklistedUniqueIDs": [""]
+      },
+      "advancedOptions": {
+        "namesWithMacAddress": true
       }
     }
   ]

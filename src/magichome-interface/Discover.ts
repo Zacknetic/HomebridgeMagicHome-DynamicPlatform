@@ -2,6 +2,7 @@ import dgram from 'dgram';
 import { Network } from './Network';
 
 import type { Logger, PlatformConfig } from 'homebridge';
+import { IDeviceBroadcastProps } from '../magichome-interface/types';
 
 const BROADCAST_PORT = 48899;
 const BROADCAST_MAGIC_STRING = 'HF-A11ASSISTHREAD';
@@ -14,11 +15,11 @@ export class Discover {
   ){}
 
 
-  async scan(timeout = 500) {
+  async scan(timeout = 500): Promise<IDeviceBroadcastProps[]> {
 
     return new Promise((resolve, reject) => {
       const userInterfaces = Network.subnets();
-      const clients: Record<string, any> = [];
+      const clients: IDeviceBroadcastProps[] = [];
       const socket = dgram.createSocket('udp4');
 
       socket.on('error', (err) => {

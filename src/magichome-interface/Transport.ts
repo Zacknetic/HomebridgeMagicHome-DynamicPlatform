@@ -80,7 +80,12 @@ export class Transport {
       result = await fn();
       return result;
     } catch (e) {
-      this.log.error('transport.ts error', e);
+      const { code, address, port } = e;
+      if(code){
+        this.log.warn(`Unable to connect to ${address} ${port} (code: ${code})`);
+      } else {
+        this.log.error('transport.ts error keys', e);
+      }
     } finally {
       this.socket.end();
       this.socket.destroy();
