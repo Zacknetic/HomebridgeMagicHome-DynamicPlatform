@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge MagicHome Dynamic Platform",
   "name": "homebridge-magichome-dynamic-platform",
-  "version": "1.7.5",
+  "version": "1.8.0",
   "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -14,16 +14,12 @@
   },
   "funding": [
     {
-      "type": "patreon",
-      "url": "https://www.patreon.com/zacknetic"
+      "type": "github",
+      "url": "https://github.com/sponsors/Zacknetic"
     },
     {
       "type": "paypal",
       "url": "https://www.paypal.com/paypalme/ZacharyAvino"
-    },
-    {
-      "type": "github",
-      "url": "https://github.com/sponsors/Zacknetic"
     }
   ],
   "engines": {
@@ -41,6 +37,10 @@
     "homebridge-plugin",
     "hoobs",
     "magichome",
+    "magic",
+    "home",
+    "Magic Home",
+    "magic home",
     "dimmer",
     "rgb",
     "rgbw",
