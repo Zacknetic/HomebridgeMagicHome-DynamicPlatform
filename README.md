@@ -7,8 +7,7 @@
 
 
 # Homebridge MagicHome Dynamic Platform
-
-[![Patreon](https://img.shields.io/badge/Subscribe-Patreon-%23F96854?style=for-the-badge&logo=Patreon)](https://www.patreon.com/zacknetic)
+[![Sponsor](https://img.shields.io/badge/Donate-GitHub-%2300457C?style=for-the-badge&logo=PayPal)](https://github.com/sponsors/Zacknetic)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-%2300457C?style=for-the-badge&logo=PayPal)](https://www.paypal.com/paypalme/zacharyavino)
 [![Discord](https://img.shields.io/badge/Chat-Discord-%237289DA?style=for-the-badge&logo=Discord)](https://discord.gg/c8xpmZSNZC)
 
