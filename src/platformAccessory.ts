@@ -29,8 +29,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
-  protected hueisSet = false;
-  protected saturationIsSet = false;
+  protected deviceUpdateInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
@@ -148,64 +147,63 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-  async setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-
-    if(this.activeAnimation.hueSaturationInterrupt){
-      this.stopAnimation();
-    }
+  setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    callback(null);
     this.lightState.HSL.hue = value as number;
 
-    //ensure that we don't get caught in a race condition
-    if(this.saturationIsSet){
-      this.saturationIsSet = false;
-      this.hueisSet = false;
-      await this.updateDeviceState();
-    } else {
-      this.hueisSet = true;
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(() => {
+        this.updateDeviceState();
+        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.deviceUpdateInProgress = false;
+      }, 100);
     }
-    callback(null);
+
   }
 
-  async setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    if(this.activeAnimation.hueSaturationInterrupt){
-      this.stopAnimation();
-    }
+  setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    callback(null);
     this.lightState.HSL.saturation = value as number;
 
-    //ensure that we don't get caught in a race condition
-    if(this.hueisSet){
-      this.saturationIsSet = false;
-      this.hueisSet = false;
-      await this.updateDeviceState();
-    } else {
-      this.saturationIsSet = true;
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(() => {
+        this.updateDeviceState();
+        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.deviceUpdateInProgress = false;
+      }, 100);
     }
-    callback(null);
+
   }
 
-  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    if(this.activeAnimation.brightnessInterrupt){
-      this.stopAnimation();
-    }
-
+  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    callback(null);
     this.lightState.brightness = value as number;
 
-    await this.updateDeviceState();
-
-    callback(null);
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(() => {
+        this.updateDeviceState();
+        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.deviceUpdateInProgress = false;
+      }, 100);
+    }
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-
+    callback(null);
 
     this.lightState.isOn = value as boolean;
-    if(!this.lightState.isOn){
-      this.stopAnimation();
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(() => {
+        this.updateDeviceState();
+        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.deviceUpdateInProgress = false;
+      }, 100);
     }
 
-    this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-
-    callback(null);
   }
 
   //=================================================
@@ -272,7 +270,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   /**
-   ** @getDeviceState
+   ** @updateLocalState
    * retrieve light's state object from transport class
    * once values are available, update homekit with actual values
    */
@@ -343,7 +341,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
    *  
    */
-  async updateDeviceState(_timeout = 200) {
+  updateDeviceState(_timeout = 200) {
+
 
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
@@ -363,6 +362,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
     this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
+  
+
 
   }//updateDeviceState
 
@@ -543,4 +544,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //return promise;
   }
 
+  
 } // ZackneticMagichomePlatformAccessory class
+
