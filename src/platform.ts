@@ -391,7 +391,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     '\n%o - Display Name: %o \nController Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nFirmware Version: %o \nDevice Type: %o\n',  
     this.count++,
     accessory.context.displayName,
-    accessory.context.device.lightParameters.controllerType,
+    //accessory.context.device.lightParameters.controllerType,
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,
