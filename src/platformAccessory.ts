@@ -9,7 +9,7 @@ import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
-const updateWaitTime = 50;
+const updateWaitTime = 100;
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
