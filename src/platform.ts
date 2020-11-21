@@ -191,6 +191,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
              
 
         } else {
+
+          // Just in case user has a misconfigued device, drop it.
+          if(!existingAccessory.context.device.lightParameters.controllerType){
+            this.log.warn(`The previously registered device "${existingAccessory.context.device}" is being unregister because is not currently supported.` );
+            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+            continue;
+          }
+
           // the device has already been registered and will need
           // to ensure the ip address (or other custom variables) are still identical
         
@@ -339,6 +347,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         debugBuffer: data,
         lightVersionModifier: data.lightVersionModifier,
         lightVersion: data.lightVersion,
+        operatingMode: data.operatingMode,
       };
     
     } catch (error) {
@@ -353,8 +362,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
 
     let lightParameters: ILightParameters;
-    const lightVersionModifier = initialState.lightVersionModifier, lightVersionOriginal = initialState.lightVersion;
-  
+    const { lightVersion:lightVersionOriginal, lightVersionModifier, debugBuffer, operatingMode  } = initialState;
+
     this.log.info('\nAssigning controller to device: UniqueId: %o \nIpAddress %o \nModel: %o\nFirmware Version: %o \nDevice Type: %o\n',
       device.uniqueId, device.ipAddress,device.modelNumber, initialState.lightVersion, initialState.lightVersionModifier.toString(16));
  
@@ -363,16 +372,16 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     if(lightVersionOriginal == 0x03){
       lightParameters = lightTypesMap.get(0x25);
     } else {
-      if(lightTypesMap.has(lightVersionModifier)){
+      if(!lightTypesMap.has(lightVersionModifier)){
         this.log.info('Light Version: %o with Firmware Version: %o matches known device type records', 
           lightVersionModifier.toString(16),
           lightVersionOriginal.toString(16));
         //lightParameters = lightTypesMap_2[lightVersionModifier];
         lightParameters = lightTypesMap.get(lightVersionModifier);
       } else {
-        this.log.warn('Unknown device type: %o... type probably cannot be set. Trying anyway with default GRB device', lightVersionModifier.toString(16));
-        this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your homebridge.log');
-        lightParameters = lightTypesMap.get(0x01);
+        this.log.warn('Unknown device type: %o ', lightVersionModifier.toString(16));
+        this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your homebridge.log and this device signature: ', debugBuffer);
+        return null;
       }
     }
 
@@ -383,6 +392,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       lightParameters,
       lightVersionModifier, 
       lightVersionOriginal,
+      operatingMode,
     };
   }
 
