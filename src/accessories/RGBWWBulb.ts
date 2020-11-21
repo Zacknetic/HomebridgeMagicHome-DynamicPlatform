@@ -4,14 +4,17 @@ import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessor
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   async updateDeviceState(_timeout = 200) {
-    this.platform.log.debug('[updateDeviceState.RGBWW] Target mode: ', this.lightState.targetColorTemperature ? 'whiteMode' : 'colorMode');
-
-    if(this.lightState.targetColorTemperature){
+    const { operatingMode } = this.lightState;
+    if(operatingMode === 'whiteMode' || this.lightState.targetColorTemperature){
       const { coldWhite:cw, warmWhite:ww} = convertColorTemperatureToWhites(this.lightState.targetColorTemperature);
       const mask = 0x0F; // color(0xF0), white (0x0F), or both (0xFF)
+      this.platform.log.debug(`[updateDeviceState.RGBWW] Target mode: "whiteMode" cw:${cw} ww:${ww}`);
+      // TODO: add brightness controll
       await this.send([0x31, 0,0,0, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
       return;
     }
+    this.platform.log.debug('[updateDeviceState.RGBWW] Target mode: "colorMode"');
+
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
@@ -76,7 +79,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     const { brightness, isOn} = this.lightState;
     const { mired } = convertWhitesToColorTemperature(this.lightState.whiteValues);
     const str = `on:${isOn} h:${hue} s:${saturation} b:${brightness} , color:${mired}`;
-    this.platform.log.debug(`Reporting ${this.accessory.displayName} to HomeKit: `, str);
+    this.platform.log.debug(`Reporting to HomeKit"${this.accessory.displayName}" `, str);
 
     this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
