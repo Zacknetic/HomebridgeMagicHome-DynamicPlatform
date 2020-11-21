@@ -22,7 +22,7 @@ export class DimmerStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //**** local variables ****\\
     const brightness = Math.round((2.5 * this.lightState.brightness));
 
-    this.send([0x31, brightness, 0x00, 0x00, 0x03, 0x01, 0x0F]); //8th byte checksum calculated later in send()
+    await this.send([0x31, brightness, 0x00, 0x00, 0x03, 0x01, 0x0F]); //8th byte checksum calculated later in send()
 
     
   }//setColor

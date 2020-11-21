@@ -57,12 +57,12 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     if(this.eightByteProtocol == 0){
-      this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
+      await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
     } else if(this.eightByteProtocol == 1){
-      this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F]);
+      await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F]);
     } else if (this.eightByteProtocol == 2){
       this.eightByteProtocol = (await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
-      this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
+      await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
     }
     
   }//setColor
