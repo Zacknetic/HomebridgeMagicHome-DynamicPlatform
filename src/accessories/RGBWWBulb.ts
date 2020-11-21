@@ -58,28 +58,22 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       //this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
 
     }
-    this.send([0x31, r, g, b, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
+    await this.send([0x31, r, g, b, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
 
     
   }//setColor
 
 
   async updateHomekitState() {
-    this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
-    this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    } else if (this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp(((this.lightState.whiteValues.coldWhite/2.55) + (this.lightState.whiteValues.warmWhite/2.55)), 0, 100));
-      if(this.lightState.whiteValues.warmWhite>this.lightState.whiteValues.coldWhite){
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255)));
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, 0);
-      } else {
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255)));
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
-      }
-    }
+    const { hue, saturation } = this.lightState.HSL;
+    const { brightness, isOn} = this.lightState;
+    const str = `on:${isOn} h:${hue} s:${saturation} b:${brightness}`;
+    this.platform.log.debug(`Reporting ${this.accessory.displayName} to HomeKit: `, str);
+
+    this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
+    this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+    this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
+    this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
     this.cacheCurrentLightState();
   }
     
