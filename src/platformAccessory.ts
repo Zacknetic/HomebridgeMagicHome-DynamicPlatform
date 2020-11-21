@@ -45,6 +45,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     whiteValues: {warmWhite: 0, coldWhite: 0},
     isOn: true,
     brightness: 100,
+    target: { hue: null, saturation: null, brightness: null },
+    onTarget: null,
   }
 
  
@@ -148,62 +150,101 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.target.hue = value;
+    this.processRequest('msg');
     callback(null);
-    this.lightState.HSL.hue = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, 100);
-    }
-
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.target.saturation = value;
+    this.processRequest('msg');
     callback(null);
-    this.lightState.HSL.saturation = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, 100);
-    }
-
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.target.brightness =  value;
+    this.processRequest('msg');
     callback(null);
-    this.lightState.brightness = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, 100);
-    }
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.onTarget = value;
+    this.processRequest('msg');
     callback(null);
+  }
 
-    this.lightState.isOn = value as boolean;
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, 100);
+  protected myTimer = null
+  async processRequest(reason: string){
+    reason = reason || 'msg';
+    const dbg = () => ( {...this.lightState.target, on: this.lightState.onTarget} );
+    this.platform.log.debug(`[ProcessRequest] Trigger: ${reason}: `, dbg());
+
+    if(reason === 'msg'){
+      clearTimeout(this.myTimer);
     }
+    // CASE1: [scene] If have hue, sat and bri, then send message to device
+    // CASE2: [hue/sat] else if I have only hue and sat, and 100ms has passed from 1st msg and NO bri, send message with last known bri
+    // CASE3: [bri] else if I have bri, and 100ms has passed from last msg, then send msg
+    // CASE3: [on/off] else if I have on/off, and 100ms has passed from last msg, then send msg
+    // CASE4: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
+    // CASE5:  else check again upon next msg arrival / next timeout
 
+    const { on } = this.lightState.onTarget;
+    const { hue, saturation, brightness } = this.lightState.target;
+    const case1 = hue !== null && saturation !== null && brightness !== null;
+    const case2 = hue !== null && saturation !== null && reason === 'timeout';
+    const case3 = brightness !== null && reason === 'timeout';
+    const case4 = on !== null && reason === 'timeout';
+
+    if( case1 || case2 || case3) {
+      this.platform.log.debug(`[ProcessRequest] UPDATE type: ${case1 && '"scene"'} ${case2 && '"hue/sat"'} ${case3 && '"bright"'}`);
+      this.applyTarget();
+      this.updateDeviceState();
+      if(on!==null){
+        this.applyOnTarget();
+        await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+      }
+    } else if(case4) {
+      this.platform.log.debug(`[ProcessRequest] UPDATE type: ${case4 && '"on"'}`);
+      this.applyOnTarget();
+      await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    }else if( reason === 'timeout' ){
+      this.resetTarget();
+      this.platform.log.debug('[ProcessRequest] Timeout. State: ', dbg() );
+    } else {
+      this.platform.log.debug('[ProcessRequest] Setting 100ms timer: ', dbg() );
+      this.myTimer = setTimeout( () => this.processRequest('timeout'), 100);
+    }
+ 
+  }
+
+  applyOnTarget():void{
+    this.lightState.isOn = this.lightState.onTarget;
+    this.lightState.onTarget = null;
+  }
+
+  updateDevicePower(){
+    this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+  }
+
+  applyTarget():void{
+    const { hue, saturation, brightness } = this.lightState.target;
+    if(hue!==null){
+      this.lightState.HSL.hue = hue;
+    }
+    if(saturation!==null){
+      this.lightState.HSL.saturation = saturation;
+    }
+    if(brightness!==null){
+      this.lightState.brightness = brightness;
+    }
+    this.resetTarget();
+    return;
+  }
+
+  resetTarget():void {
+    this.lightState.target = { hue: null, saturation: null, brightness: null };
+    return;
   }
 
   //=================================================
