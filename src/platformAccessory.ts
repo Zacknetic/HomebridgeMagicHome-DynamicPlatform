@@ -7,9 +7,21 @@ import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertWhitesToColorTemperatur
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
+import { ILightParameters } from './magichome-interface/types';
+
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
 const INTRA_MESSAGE_TIME = 5;
+const DEFAULT_LIGHT_STATE: ILightState = {
+  HSL: { hue: 255, saturation: 100, luminance: 50 },
+  RGB: { red: 0, green: 0, blue: 0 },
+  whiteValues: {warmWhite: 0, coldWhite: 0},
+  isOn: true,
+  brightness: 100,
+  target: { hue: null, saturation: null, brightness: null },
+  onTarget: null,
+  targetColorTemperature: null,
+};
 
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
@@ -32,26 +44,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   public activeAnimation = animations.none;
   protected deviceUpdateInProgress = false;
   log = getLogger();
-  public lightStateTemporary= {
-    HSL: { hue: 255, saturation: 100, luminance: 50 },
-    RGB: { red: 0, green: 0, blue: 0 },
-    whiteValues: {warmWhite: 0, coldWhite: 0},
-    isOn: true,
-    brightness: 100,
-  };
 
-  protected lightState = {
-    HSL: { hue: 255, saturation: 100, luminance: 50 },
-    RGB: { red: 0, green: 0, blue: 0 },
-    whiteValues: {warmWhite: 0, coldWhite: 0},
-    isOn: true,
-    brightness: 100,
-    target: { hue: null, saturation: null, brightness: null },
-    onTarget: null,
-    targetColorTemperature: null,
-  }
-
- 
+  public lightStateTemporary: ILightState = DEFAULT_LIGHT_STAGE
+  protected lightState: ILightState = DEFAULT_LIGHT_STAGE
 
   //=================================================
   // Start Constructor //
@@ -239,9 +234,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         await this.updateDeviceState(); // only transmit if current or target state is on !!!
         this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} ${case5 ? '"colorTemp"' : ''} `);
       } else{
-        // Edge Case 2: User adjusts hue/sat while lamp is off
+        // Edge Case 2: User adjusts hue/sat OR colorTemp while lamp is off
         //    Let's store the target, and apply it when user sets lamp on. 
-        this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
+        this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case5 ? '"colorTemp"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
       }
       await this.updateHomekitState();
       this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
@@ -268,6 +263,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if(this.lightState.onTarget!== null) {
       this.lightState.isOn = this.lightState.onTarget;
       this.lightState.onTarget = null;
+    }
+  }
+
+  applyColorTemperature():void{
+    const { targetColorTemperature } = this.lightState;
+    if(targetColorTemperature!==null){
+      this.lightState.operatingMode = targetColorTemperature;
     }
   }
 
