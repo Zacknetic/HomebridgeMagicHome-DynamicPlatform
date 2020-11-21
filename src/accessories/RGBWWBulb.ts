@@ -1,10 +1,17 @@
-import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/utils';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertColorTemperatureToWhites, convertWhitesToColorTemperature } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
 
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   async updateDeviceState(_timeout = 200) {
+    this.platform.log.debug('[updateDeviceState.RGBWW] Target mode: ', this.lightState.targetColorTemperature ? 'whiteMode' : 'colorMode');
 
+    if(this.lightState.targetColorTemperature){
+      const { coldWhite:cw, warmWhite:ww} = convertColorTemperatureToWhites(this.lightState.targetColorTemperature);
+      const mask = 0x0F; // color(0xF0), white (0x0F), or both (0xFF)
+      await this.send([0x31, 0,0,0, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
+      return;
+    }
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
@@ -67,13 +74,16 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   async updateHomekitState() {
     const { hue, saturation } = this.lightState.HSL;
     const { brightness, isOn} = this.lightState;
-    const str = `on:${isOn} h:${hue} s:${saturation} b:${brightness}`;
+    const { mired } = convertWhitesToColorTemperature(this.lightState.whiteValues);
+    const str = `on:${isOn} h:${hue} s:${saturation} b:${brightness} , color:${mired}`;
     this.platform.log.debug(`Reporting ${this.accessory.displayName} to HomeKit: `, str);
 
     this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
+    this.service.updateCharacteristic(this.platform.Characteristic.ColorTemperature, mired);
+
     this.cacheCurrentLightState();
   }
     
