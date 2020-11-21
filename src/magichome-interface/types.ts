@@ -8,6 +8,13 @@ export interface IDeviceQueriedProps {
     lightParameters: ILightParameters;
     lightVersionOriginal: string;
     lightVersionModifier: string;
+    operatingMode: opMode;
+}
+
+enum opMode {
+    colorMode = 240,
+    whiteMode = 15,
+    simultaneous = 255
 }
 
 export interface ILightParameters {
