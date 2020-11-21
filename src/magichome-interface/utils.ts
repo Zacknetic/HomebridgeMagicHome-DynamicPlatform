@@ -152,6 +152,35 @@ export function loadJson<T>(file: string, replacement: T): T {
   return parseJson<T>(readFileSync(file).toString(), replacement);
 }
 
+// Color Temperature Range, in mired
+const TMP_MAX = 500;
+const TMP_MIN = 140;
+
+function miredToK(mired){
+  return Math.round( 1000000/mired) ;
+}
+
+function Ktomired(tempK){
+  return Math.round( 1000000/tempK );
+}
+
+export function convertColorTemperatureToWhites(mired) {
+  mired = parseInt(mired);
+  const coldWhite  = Math.round( (((mired - TMP_MIN) / (TMP_MAX - TMP_MIN)) * (0 - 255)) + 255 );
+  const warmWhite = 255-coldWhite;
+  const tempK = miredToK(mired);
+  return { coldWhite, warmWhite, tempK, mired };
+}
+
+export function convertWhitesToColorTemperature(whites){
+  // temperature is determined by the ratio of cold and warm whites
+  const { coldWhite, warmWhite } = whites;
+  const warmRatio = coldWhite / coldWhite + warmWhite;
+  const mired = (1-warmRatio) * (TMP_MAX-TMP_MIN) + TMP_MIN; 
+  const tempK = miredToK(mired);
+  return {mired, tempK, ...whites};
+}
+
 //Unused
 
 /*
