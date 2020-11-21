@@ -9,7 +9,7 @@ import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
-
+const updateWaitTime = 50;
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
@@ -29,6 +29,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
+
   protected deviceUpdateInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
@@ -153,11 +154,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
+      setTimeout(async () => {
+        await this.updateDeviceState();
         this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
         this.deviceUpdateInProgress = false;
-      }, 100);
+      }, updateWaitTime);
     }
 
   }
@@ -168,13 +169,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
+      setTimeout(async () => {
+        await this.updateDeviceState();
         this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
         this.deviceUpdateInProgress = false;
-      }, 100);
+      }, updateWaitTime);
     }
-
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -183,11 +183,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
+      setTimeout(async () => {
+        await this.updateDeviceState();
         this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
         this.deviceUpdateInProgress = false;
-      }, 100);
+      }, updateWaitTime);
     }
   }
 
@@ -195,13 +195,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     callback(null);
 
     this.lightState.isOn = value as boolean;
+
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
-      setTimeout(() => {
-        this.updateDeviceState();
+      setTimeout(async () => {
+        await this.updateDeviceState();
         this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
         this.deviceUpdateInProgress = false;
-      }, 100);
+      }, updateWaitTime);
     }
 
   }
@@ -341,7 +342,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
    *  
    */
-  updateDeviceState(_timeout = 200) {
+  async updateDeviceState(_timeout = 200) {
 
 
     //**** local variables ****\\
