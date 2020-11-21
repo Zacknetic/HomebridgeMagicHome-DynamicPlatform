@@ -3,7 +3,7 @@ import type {
   Service, PlatformConfig, PlatformAccessory, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback,
 } from 'homebridge';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertWhitesToColorTemperature } from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
@@ -48,6 +48,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     brightness: 100,
     target: { hue: null, saturation: null, brightness: null },
     onTarget: null,
+    targetColorTemperature: null,
   }
 
  
@@ -107,6 +108,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
+        // register handler for Color Temperature Characteristic
+        this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
+          .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this)) 
+          .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));  
 
       }
     } else {
@@ -170,6 +175,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     callback(null);
   }
 
+  async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
+    this.platform.log.debug(`[ProcessRequest] colorTemp rxD: ${value}`);
+    this.lightState.targetColorTemperature = value;
+    this.processRequest('msg');
+    callback(null);
+  }
+
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.platform.log.debug(`[ProcessRequest] setOn rxD: ${value}`);
     this.lightState.onTarget = value;
@@ -196,24 +208,25 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           CASE2: [hue/sat] else if I have only hue and sat, and idle for 100ms (bri missing), send message with last known bri
           CASE3: [bri] else if I have bri, and 100ms has passed from last msg, then send msg
           CASE4: [on/off] else if I have on/off, and 100ms has passed from last msg, then send msg
-          CASE5: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
+          CASEx: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
 
           After performing cases 1,2,3 update the target on state, if any.
           -- Note: if in the future user reports issues, this is the likely cultript
     */
 
     const on = this.lightState.onTarget;
+    const targetColorTemperature = this.lightState.targetColorTemperature;
     const { hue, saturation, brightness } = this.lightState.target;
     const case1 = hue !== null && saturation !== null && brightness !== null;
     const case2 = hue !== null && saturation !== null && reason === 'timeout';
     const case3 = brightness !== null && reason === 'timeout';
     const case4 = on !== null && reason === 'timeout';
-
+    const case5 = targetColorTemperature !== null && reason === 'timeout';
     const printTS = (ts) =>{
       return ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
     };
 
-    if( case1 || case2 || case3) {  
+    if( case1 || case2 || case3 || case5) {  
       if( this.lightState.isOn && this.lightState.onTarget === false && brightness === 0){
         // Edge Case 1: user just slided brighness bar to zero, causing setBrightness=0 and setOn=Off
         this.platform.log.debug(`[ProcessRequest] Special case: skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
@@ -224,7 +237,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.applyOnTarget();
         this.applyTarget();
         await this.updateDeviceState(); // only transmit if current or target state is on !!!
-        this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} `);
+        this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} ${case5 ? '"colorTemp"' : ''} `);
       } else{
         // Edge Case 2: User adjusts hue/sat while lamp is off
         //    Let's store the target, and apply it when user sets lamp on. 
@@ -300,6 +313,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.getDeviceStatus();
     this.platform.log.debug('Get Characteristic Saturation -> %o for device: %o ', this.lightState.HSL.saturation, this.accessory.context.displayName);
     callback(null, this.lightState.HSL.saturation);
+  }
+
+  getColorTemperature(callback: CharacteristicGetCallback){
+    this.getDeviceStatus();
+    const { mired } = convertWhitesToColorTemperature(this.lightState.whiteValues);
+    this.platform.log.debug('Get Characteristic Color Temperature -> %o for device: %o ', mired, this.accessory.context.displayName);
+    callback(null, mired);
   }
 
   protected lastTimeCalled = Date.now()
