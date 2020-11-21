@@ -9,6 +9,7 @@ import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
+const INTRA_MESSAGE_TIME = 5;
 
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
@@ -102,8 +103,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
         // register handlers for the Saturation Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Saturation)
-          .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
-        //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
+          .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this))        // SET - bind to the 'setSaturation` method below
+          .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
 
@@ -146,34 +147,38 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   identifyLight() {
     this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
     this.flashEffect();
-
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.platform.log.debug(`[ProcessRequest] setHue rxD: ${value}`);
     this.lightState.target.hue = value;
     this.processRequest('msg');
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.platform.log.debug(`[ProcessRequest] setSat rxD: ${value}`);
     this.lightState.target.saturation = value;
     this.processRequest('msg');
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.platform.log.debug(`[ProcessRequest] setBri rxD: ${value}`);
     this.lightState.target.brightness =  value;
     this.processRequest('msg');
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.platform.log.debug(`[ProcessRequest] setOn rxD: ${value}`);
     this.lightState.onTarget = value;
     this.processRequest('msg');
     callback(null);
   }
 
   protected myTimer = null
+  protected timestamps = []
   async processRequest(reason: string){
     reason = reason || 'msg';
     const dbg = () => ( {...this.lightState.target, on: this.lightState.onTarget} );
@@ -181,50 +186,76 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     if(reason === 'msg'){
       clearTimeout(this.myTimer);
+      this.timestamps.push(Date.now());
     }
-    // CASE1: [scene] If have hue, sat and bri, then send message to device
-    // CASE2: [hue/sat] else if I have only hue and sat, and 100ms has passed from 1st msg and NO bri, send message with last known bri
-    // CASE3: [bri] else if I have bri, and 100ms has passed from last msg, then send msg
-    // CASE3: [on/off] else if I have on/off, and 100ms has passed from last msg, then send msg
-    // CASE4: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
-    // CASE5:  else check again upon next msg arrival / next timeout
 
-    const { on } = this.lightState.onTarget;
+    /*
+      Message Transmission Logic
+          Every time a new message arrives OR 100ms after last message, we perform the following logic:
+          CASE1: [scene] If have hue, sat and bri, then send message to device
+          CASE2: [hue/sat] else if I have only hue and sat, and idle for 100ms (bri missing), send message with last known bri
+          CASE3: [bri] else if I have bri, and 100ms has passed from last msg, then send msg
+          CASE4: [on/off] else if I have on/off, and 100ms has passed from last msg, then send msg
+          CASE5: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
+
+          After performing cases 1,2,3 update the target on state, if any.
+          -- Note: if in the future user reports issues, this is the likely cultript
+    */
+
+    const on = this.lightState.onTarget;
     const { hue, saturation, brightness } = this.lightState.target;
     const case1 = hue !== null && saturation !== null && brightness !== null;
     const case2 = hue !== null && saturation !== null && reason === 'timeout';
     const case3 = brightness !== null && reason === 'timeout';
     const case4 = on !== null && reason === 'timeout';
 
-    if( case1 || case2 || case3) {
-      this.platform.log.debug(`[ProcessRequest] UPDATE type: ${case1 && '"scene"'} ${case2 && '"hue/sat"'} ${case3 && '"bright"'}`);
-      this.applyTarget();
-      this.updateDeviceState();
-      if(on!==null){
+    const printTS = (ts) =>{
+      return ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
+    };
+
+    if( case1 || case2 || case3) {  
+      if( this.lightState.isOn && this.lightState.onTarget === false && brightness === 0){
+        // Edge Case 1: user just slided brighness bar to zero, causing setBrightness=0 and setOn=Off
+        this.platform.log.debug(`[ProcessRequest] Special case: skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
         this.applyOnTarget();
-        await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.applyTarget();
+        await this.updateDeviceState(); // only transmit if current or target state is on !!!
+      } else if( this.lightState.onTarget || this.lightState.onTarget ===null && this.lightState.isOn){
+        this.applyOnTarget();
+        this.applyTarget();
+        await this.updateDeviceState(); // only transmit if current or target state is on !!!
+        this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} `);
+      } else{
+        // Edge Case 2: User adjusts hue/sat while lamp is off
+        //    Let's store the target, and apply it when user sets lamp on. 
+        this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
       }
+      await this.updateHomekitState();
+      this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
+      this.timestamps = [];
     } else if(case4) {
-      this.platform.log.debug(`[ProcessRequest] UPDATE type: ${case4 && '"on"'}`);
+      this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case4 ? '"on"' :''}`);
+      this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
+      this.timestamps = [];
       this.applyOnTarget();
       await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+      await this.updateHomekitState();
     }else if( reason === 'timeout' ){
-      this.resetTarget();
       this.platform.log.debug('[ProcessRequest] Timeout. State: ', dbg() );
+      this.timestamps = [];
+      this.resetTarget();
     } else {
-      this.platform.log.debug('[ProcessRequest] Setting 100ms timer: ', dbg() );
-      this.myTimer = setTimeout( () => this.processRequest('timeout'), 100);
+      this.platform.log.debug(`[ProcessRequest] wait ${INTRA_MESSAGE_TIME}ms timer: `, dbg() );
+      this.myTimer = setTimeout( () => this.processRequest('timeout'), INTRA_MESSAGE_TIME);
     }
  
   }
 
   applyOnTarget():void{
-    this.lightState.isOn = this.lightState.onTarget;
-    this.lightState.onTarget = null;
-  }
-
-  updateDevicePower(){
-    this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    if(this.lightState.onTarget!== null) {
+      this.lightState.isOn = this.lightState.onTarget;
+      this.lightState.onTarget = null;
+    }
   }
 
   applyTarget():void{
@@ -254,27 +285,31 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // Start Getters //
 
   getHue(callback: CharacteristicGetCallback) {
-
-    const hue = this.lightState.HSL.hue;
-
-    //update state with actual values asynchronously
-    this.updateLocalState();
-
-    callback(null, hue);
+    this.getDeviceStatus();
+    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', this.lightState.HSL.hue, this.accessory.context.displayName);
+    callback(null, this.lightState.HSL.hue);
   }
 
   getBrightness(callback: CharacteristicGetCallback) {
+    this.getDeviceStatus();
+    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', this.lightState.brightness, this.accessory.context.displayName);
+    callback(null, this.lightState.brightness);
+  }
 
-    // implement your own code to check if the device is on
-    const brightness = this.lightState.brightness;
+  getSaturation(callback: CharacteristicGetCallback) {
+    this.getDeviceStatus();
+    this.platform.log.debug('Get Characteristic Saturation -> %o for device: %o ', this.lightState.HSL.saturation, this.accessory.context.displayName);
+    callback(null, this.lightState.HSL.saturation);
+  }
 
-    // dont update the actual values from brightness, it is impossible to determine by rgb values alone
-    //this.getState();
-
-    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.displayName);
-    this.updateLocalState();
-
-    callback(null, brightness);
+  protected lastTimeCalled = Date.now()
+  async getDeviceStatus(){
+    if( Date.now() - this.lastTimeCalled > 50 ){
+      this.lastTimeCalled = Date.now(); 
+      await this.updateLocalState();
+      this.platform.log.debug('status refreshed', this.accessory.displayName);
+    }
+    return;
   }
 
   /**
@@ -283,14 +318,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * next call this.getState() which will update all values asynchronously as they are ready
    */
   getOn(callback: CharacteristicGetCallback) {
-
-    const isOn = this.lightState.isOn;
-
     //update state with actual values asynchronously
-    this.updateLocalState();
-
-    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.displayName);
-    callback(null, isOn);
+    this.getDeviceStatus();
+    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', this.lightState.isOn, this.accessory.context.displayName);
+    callback(null, this.lightState.isOn);
   }
 
   getIsAnimating(callback: CharacteristicGetCallback) {
@@ -382,7 +413,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
    *  
    */
-  updateDeviceState(_timeout = 200) {
+  async updateDeviceState(_timeout = 200) {
 
 
     //**** local variables ****\\
@@ -402,7 +433,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
-    this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
+    await this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
   
 
 
@@ -465,7 +496,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   async restoreCachedLightState(){
     this.lightState.HSL = this.lightStateTemporary.HSL;
-    this.updateDeviceState();
+    await this.updateDeviceState();
   }
   //=================================================
   // End Misc Tools //
@@ -481,7 +512,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     let change = true;
     let count = 0;
 
-    const interval = setInterval(() => {
+    const interval = setInterval( async () => {
 
       if (change) {
         this.lightState.brightness = 0;
@@ -492,14 +523,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       change = !change;
       count++;
-      this.updateDeviceState();
+      await this.updateDeviceState();
 
       if (count >= 20) {
 
         this.lightState.HSL.hue = 0;
         this.lightState.HSL.saturation = 5;
         this.lightState.brightness = 100;
-        this.updateDeviceState();
+        await this.updateDeviceState();
         clearInterval(interval);
         return;
       }
