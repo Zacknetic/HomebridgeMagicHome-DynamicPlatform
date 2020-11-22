@@ -232,7 +232,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const case2 = wheelHueAndSaturationUpdate;
     const case3 = slideBrighnessUpdate;
     const case4 = toggleOnState;
-    const case5 = wheelColorTemperatureUpdate !== null && reason === 'timeout';
+    const case5 = wheelColorTemperatureUpdate;
     
     const printTS = (ts) =>{
       return ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
