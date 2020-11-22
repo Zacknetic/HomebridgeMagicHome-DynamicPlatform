@@ -7,20 +7,23 @@ import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertWhitesToColorTemperatur
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
-import { ILightParameters } from './magichome-interface/types';
+import { ILightState, opMode } from './magichome-interface/types';
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
 const INTRA_MESSAGE_TIME = 5;
 const DEFAULT_LIGHT_STATE: ILightState = {
+  isOn: true,
+  operatingMode: opMode.redBlueGreenMode,
   HSL: { hue: 255, saturation: 100, luminance: 50 },
   RGB: { red: 0, green: 0, blue: 0 },
-  whiteValues: {warmWhite: 0, coldWhite: 0},
-  isOn: true,
+  whiteValues: { warmWhite: 0, coldWhite: 0 },
+  colorTemperature: null,
   brightness: 100,
-  target: { hue: null, saturation: null, brightness: null },
-  onTarget: null,
-  targetColorTemperature: null,
+  targetState: {   targetHSL: { hue:null, saturation:null, luminance:null}, 
+    targetMode: null, targetOnState: null, targetColorTemperature:null,
+    targetBrightness: null,
+  },
 };
 
 const animations = {
@@ -45,8 +48,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected deviceUpdateInProgress = false;
   log = getLogger();
 
-  public lightStateTemporary: ILightState = DEFAULT_LIGHT_STAGE
-  protected lightState: ILightState = DEFAULT_LIGHT_STAGE
+  public lightStateTemporary: ILightState = DEFAULT_LIGHT_STATE
+  protected lightState: ILightState = DEFAULT_LIGHT_STATE
 
   //=================================================
   // Start Constructor //
@@ -151,35 +154,38 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.platform.log.debug(`[ProcessRequest] setHue rxD: ${value}`);
-    this.lightState.target.hue = value;
+    this.lightState.targetState.targetHSL.hue = value as number;
+    this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
     this.processRequest('msg');
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.platform.log.debug(`[ProcessRequest] setSat rxD: ${value}`);
-    this.lightState.target.saturation = value;
+    this.lightState.targetState.targetHSL.saturation = value as number;
+    this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
     this.processRequest('msg');
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.platform.log.debug(`[ProcessRequest] setBri rxD: ${value}`);
-    this.lightState.target.brightness =  value;
+    this.lightState.targetState.targetBrightness =  value as number;
     this.processRequest('msg');
     callback(null);
   }
 
   async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
     this.platform.log.debug(`[ProcessRequest] colorTemp rxD: ${value}`);
-    this.lightState.targetColorTemperature = value;
+    this.lightState.targetState.targetColorTemperature = value as number;
+    this.lightState.targetState.targetMode = opMode.temperatureMode;
     this.processRequest('msg');
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.platform.log.debug(`[ProcessRequest] setOn rxD: ${value}`);
-    this.lightState.onTarget = value;
+    this.lightState.targetState.targetOnState = value as boolean;
     this.processRequest('msg');
     callback(null);
   }
@@ -188,8 +194,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected timestamps = []
   async processRequest(reason: string){
     reason = reason || 'msg';
-    const dbg = () => ( {...this.lightState.target, on: this.lightState.onTarget} );
-    this.platform.log.debug(`[ProcessRequest] Trigger: ${reason}: `, dbg());
+    const dbg = () => ( {...this.lightState.targetState} );
+    this.platform.log.debug(`[ProcessRequest] Triggered by "${reason}". Dbg: `, dbg());
 
     if(reason === 'msg'){
       clearTimeout(this.myTimer);
@@ -203,94 +209,74 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           CASE2: [hue/sat] else if I have only hue and sat, and idle for 100ms (bri missing), send message with last known bri
           CASE3: [bri] else if I have bri, and 100ms has passed from last msg, then send msg
           CASE4: [on/off] else if I have on/off, and 100ms has passed from last msg, then send msg
+          CASE5: [colorTemp]
           CASEx: [error] else if I have only hue XOR sat, and 100ms has passed from last msg, then reset
 
           After performing cases 1,2,3 update the target on state, if any.
           -- Note: if in the future user reports issues, this is the likely cultript
     */
 
-    const on = this.lightState.onTarget;
-    const targetColorTemperature = this.lightState.targetColorTemperature;
-    const { hue, saturation, brightness } = this.lightState.target;
-    const case1 = hue !== null && saturation !== null && brightness !== null;
-    const case2 = hue !== null && saturation !== null && reason === 'timeout';
-    const case3 = brightness !== null && reason === 'timeout';
-    const case4 = on !== null && reason === 'timeout';
-    const case5 = targetColorTemperature !== null && reason === 'timeout';
+    const { targetOnState, targetBrightness, targetColorTemperature, targetHSL } = this.lightState.targetState;
+    const { hue, saturation } = targetHSL; 
+
+
+    const sceneUpdate = hue !== null && saturation !== null && targetBrightness !== null;
+    const wheelHueAndSaturationUpdate = hue !== null && saturation !== null && reason === 'timeout';
+    const wheelColorTemperatureUpdate = targetColorTemperature !== null && reason === 'timeout';
+    const slideBrighnessUpdate = targetBrightness !== null && reason === 'timeout';
+    const slideBrightnessToZero = this.lightState.isOn && targetOnState === false && targetBrightness === 0;
+    const updatePoweredLight = (this.lightState.isOn && targetOnState !== false) || targetOnState === true;
+    const toggleOnState = targetOnState !== null && reason === 'timeout';
+
+    const case1 = sceneUpdate;
+    const case2 = wheelHueAndSaturationUpdate;
+    const case3 = slideBrighnessUpdate;
+    const case4 = toggleOnState;
+    const case5 = wheelColorTemperatureUpdate !== null && reason === 'timeout';
+    
     const printTS = (ts) =>{
       return ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
     };
 
     if( case1 || case2 || case3 || case5) {  
-      if( this.lightState.isOn && this.lightState.onTarget === false && brightness === 0){
-        // Edge Case 1: user just slided brighness bar to zero, causing setBrightness=0 and setOn=Off
-        this.platform.log.debug(`[ProcessRequest] Special case: skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
-        this.applyOnTarget();
-        this.applyTarget();
-        await this.updateDeviceState(); // only transmit if current or target state is on !!!
-      } else if( this.lightState.onTarget || this.lightState.onTarget ===null && this.lightState.isOn){
-        this.applyOnTarget();
-        this.applyTarget();
-        await this.updateDeviceState(); // only transmit if current or target state is on !!!
-        this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} ${case5 ? '"colorTemp"' : ''} `);
+
+      if( slideBrightnessToZero || updatePoweredLight){
+        this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? `"bright=${targetBrightness}"` : ''} ${case5 ? `"colorTemp=${targetColorTemperature}"` : ''} `);
+        this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
+        this.timestamps = [];
+        await this.updateDeviceState(); // Send message to light
+        await this.updateLocalState();  // Read light state, tell homekit and store as current state  
+        this.clearTargetState();        // clear state changes
+        this.platform.log.debug('[ProcessRequest] Transmission complete!');
       } else{
-        // Edge Case 2: User adjusts hue/sat OR colorTemp while lamp is off
-        //    Let's store the target, and apply it when user sets lamp on. 
-        this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case5 ? '"colorTemp"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
+        // Edge Case 2: User adjusts hue/sat OR colorTemp while lamp is off - let's store the target, and apply it when user sets lamp on. 
+        this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} ${case5 ? '"colorTemp"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
       }
-      await this.updateHomekitState();
+
+    } else if(case4 /* targetOn */) {
+      this.platform.log.debug(`[ProcessRequest] Transmission started. type: ${case4 ? `"on=${targetOnState}"` :''}`);
       this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
       this.timestamps = [];
-    } else if(case4) {
-      this.platform.log.debug(`[ProcessRequest] Transmitted type: ${case4 ? '"on"' :''}`);
-      this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
-      this.timestamps = [];
-      this.applyOnTarget();
-      await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-      await this.updateHomekitState();
+      await this.send(targetOnState ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+      await this.updateLocalState(); // get the actual light state
+      this.clearTargetState();
+      this.platform.log.debug('[ProcessRequest] Transmission complete!');
     }else if( reason === 'timeout' ){
-      this.platform.log.debug('[ProcessRequest] Timeout. State: ', dbg() );
+      this.platform.log.info('[ProcessRequest] Timeout with no valid data. State: ', dbg() );
       this.timestamps = [];
-      this.resetTarget();
+      this.clearTargetState();
     } else {
-      this.platform.log.debug(`[ProcessRequest] wait ${INTRA_MESSAGE_TIME}ms timer: `, dbg() );
+      // this.platform.log.debug(`[ProcessRequest] wait ${INTRA_MESSAGE_TIME}ms timer: `, dbg() );
       this.myTimer = setTimeout( () => this.processRequest('timeout'), INTRA_MESSAGE_TIME);
     }
  
   }
 
-  applyOnTarget():void{
-    if(this.lightState.onTarget!== null) {
-      this.lightState.isOn = this.lightState.onTarget;
-      this.lightState.onTarget = null;
-    }
-  }
-
-  applyColorTemperature():void{
-    const { targetColorTemperature } = this.lightState;
-    if(targetColorTemperature!==null){
-      this.lightState.operatingMode = targetColorTemperature;
-    }
-  }
-
-  applyTarget():void{
-    const { hue, saturation, brightness } = this.lightState.target;
-    if(hue!==null){
-      this.lightState.HSL.hue = hue;
-    }
-    if(saturation!==null){
-      this.lightState.HSL.saturation = saturation;
-    }
-    if(brightness!==null){
-      this.lightState.brightness = brightness;
-    }
-    this.resetTarget();
-    return;
-  }
-
-  resetTarget():void {
-    this.lightState.target = { hue: null, saturation: null, brightness: null };
-    return;
+  clearTargetState():void{
+    this.lightState.targetState = {   targetHSL: { hue:null, saturation:null, luminance:null}, 
+      targetMode: null, targetOnState: null, targetColorTemperature:null,
+      targetBrightness: null,
+    };
   }
 
   //=================================================
@@ -362,6 +348,21 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //=================================================
   // Start State Get/Set //
 
+  calculateBrightness():number {
+    const { operatingMode, HSL, whiteValues } = this.lightState;
+    let brightness = 0;
+    if(operatingMode === opMode.redBlueGreenMode){
+      brightness =  HSL.luminance * 2;
+    } else if (operatingMode === opMode.temperatureMode){
+      const { coldWhite, warmWhite} = whiteValues;
+      this.platform.log.debug(`cw: ${coldWhite}, ww: ${warmWhite}`);
+
+      brightness = ( (whiteValues.coldWhite + whiteValues.warmWhite) / 255) *100;
+    } 
+    this.platform.log.debug('Calculated brightness: ', brightness);
+
+    return brightness;
+  }
 
   /**
    ** @updateLocalState
@@ -382,11 +383,26 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         return;
       }
       this.accessory.context.lastKnownState = state;
-      this.updateLocalRGB(state.RGB);
-      this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));
-      this.updateLocalWhiteValues(state.whiteValues);
-      this.updateLocalIsOn(state.isOn);
-      this.updateHomekitState();
+
+      this.lightState.RGB = state.RGB;
+      this.lightState.HSL = convertRGBtoHSL(state.RGB);
+      this.lightState.whiteValues = state.whiteValues;
+      const { mired } = convertWhitesToColorTemperature(state.whiteValues);
+      this.lightState.colorTemperature = mired;
+      this.lightState.isOn = state.isOn;
+      this.lightState.operatingMode = state.operatingMode;
+      this.lightState.brightness = this.calculateBrightness();
+
+      const { red, green, blue } = this.lightState.RGB;
+      const { brightness, isOn} = this.lightState;
+      const { coldWhite:cw, warmWhite:ww} = this.lightState.whiteValues;
+      const mode = this.lightState.operatingMode;
+      const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} , cw:${cw} ww:${ww} (calculated brightness: ${brightness}) raw: `;
+      this.platform.log.debug('[getLampState] Lamp is reporting:', str);
+      this.platform.log.debug('state', state);
+
+
+      await this.updateHomekitState();
 
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
