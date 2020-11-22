@@ -11,7 +11,21 @@ import { ILightState, opMode } from './magichome-interface/types';
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
-const INTRA_MESSAGE_TIME = 5;
+
+/* 
+   Homekit send some "split commands", that is, instead of sending single command message for "TurnOn at Brightness at 50%", it sends two messages one "TurnOn" and another "Set Brightness at 50%".
+   
+   However, the light works better when you send a single command mesasge to it, so our code we wait for some time for a subsequent message. The INTRA_MESSAGE_TIME sets the time we wait since last received message. 
+
+*/
+const INTRA_MESSAGE_TIME = 5; 
+
+/*
+  We notice that if you send a command to the light, and read the status back right away, the status comes back with the old reading.
+  For proper operation, we wait some time between the write and read back, so the lamp reports accurate state.r status
+*/
+const DEVICE_READBACK_DELAY = 500;
+
 const DEFAULT_LIGHT_STATE: ILightState = {
   isOn: true,
   operatingMode: opMode.redBlueGreenMode,
@@ -245,6 +259,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
         this.timestamps = [];
         await this.updateDeviceState(); // Send message to light
+        await this.sleep(DEVICE_READBACK_DELAY);
         await this.updateLocalState();  // Read light state, tell homekit and store as current state  
         this.clearTargetState();        // clear state changes
         this.platform.log.debug('[ProcessRequest] Transmission complete!');
@@ -258,6 +273,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
       this.timestamps = [];
       await this.send(targetOnState ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+      await this.sleep(DEVICE_READBACK_DELAY);
       await this.updateLocalState(); // get the actual light state
       this.clearTargetState();
       this.platform.log.debug('[ProcessRequest] Transmission complete!');
@@ -270,6 +286,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.myTimer = setTimeout( () => this.processRequest('timeout'), INTRA_MESSAGE_TIME);
     }
  
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   clearTargetState():void{
