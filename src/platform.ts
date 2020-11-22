@@ -372,7 +372,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     if(lightVersionOriginal == 0x03){
       lightParameters = lightTypesMap.get(0x25);
     } else {
-      if(!lightTypesMap.has(lightVersionModifier)){
+      if(lightTypesMap.has(lightVersionModifier)){
         this.log.info('Light Version: %o with Firmware Version: %o matches known device type records', 
           lightVersionModifier.toString(16),
           lightVersionOriginal.toString(16));
