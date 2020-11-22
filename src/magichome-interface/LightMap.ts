@@ -26,7 +26,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     {
       controllerType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultaneous',
-      simultaneousCCT: false,
+      simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
     },
