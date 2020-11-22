@@ -153,10 +153,24 @@ export class Transport {
           coldWhite: data.readUInt8(11),
         },
         lightVersion: data.readUInt8(10),
+        operatingMode: parseOperatingMode( data.readUInt8(12) ),
   
       };
     } catch (error) {
       this.log.debug(error);
     }
+  }
+}
+
+import { opMode} from '../magichome-interface/types';
+function parseOperatingMode(opModeCode): opMode{
+  if(opModeCode === 0xF0){
+    return opMode.redBlueGreenMode;
+  } else if( opModeCode === 0x0F){
+    return opMode.temperatureMode;
+  } else if ( opModeCode === 0xFF){
+    return opMode.simultaneous;
+  } else {
+    return opMode.unknown;
   }
 }
