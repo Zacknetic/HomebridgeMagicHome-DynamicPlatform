@@ -262,7 +262,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         await this.sleep(DEVICE_READBACK_DELAY);
         await this.updateLocalState();  // Read light state, tell homekit and store as current state  
         this.clearTargetState();        // clear state changes
-        this.platform.log.debug('[ProcessRequest] Transmission complete!');
+        this.platform.log.debug(`[ProcessRequest] Transmission complete!'. Type: ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? `"bright=${targetBrightness}"` : ''} ${case5 ? `"colorTemp=${targetColorTemperature}"` : ''} `);
+
       } else{
         // Edge Case 2: User adjusts hue/sat OR colorTemp while lamp is off - let's store the target, and apply it when user sets lamp on. 
         this.platform.log.debug(`[ProcessRequest] skip ${case1 ? '"scene"' : ''} ${case2 ? '"hue/sat"' : ''} ${case3 ? '"bright"' : ''} ${case5 ? '"colorTemp"' : ''} update because current and target is off (user tunning hue/sat while light off)`);
@@ -276,7 +277,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       await this.sleep(DEVICE_READBACK_DELAY);
       await this.updateLocalState(); // get the actual light state
       this.clearTargetState();
-      this.platform.log.debug('[ProcessRequest] Transmission complete!');
+      this.platform.log.debug(`[ProcessRequest] Transmission complete! type: ${case4 ? `"on=${targetOnState}"` :''}`);
     }else if( reason === 'timeout' ){
       this.platform.log.info('[ProcessRequest] Timeout with no valid data. State: ', dbg() );
       this.timestamps = [];
@@ -371,15 +372,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   calculateBrightness():number {
     const { operatingMode, HSL, whiteValues } = this.lightState;
     let brightness = 0;
+    let str = '';
     if(operatingMode === opMode.redBlueGreenMode){
       brightness =  HSL.luminance * 2;
+      str = ' - method: luminance';
     } else if (operatingMode === opMode.temperatureMode){
       const { coldWhite, warmWhite} = whiteValues;
-      this.platform.log.debug(`cw: ${coldWhite}, ww: ${warmWhite}`);
-
+      str = `- method: cw/ww:  cw: ${coldWhite}, ww: ${warmWhite}`;
       brightness = ( (whiteValues.coldWhite + whiteValues.warmWhite) / 255) *100;
     } 
-    this.platform.log.debug('Calculated brightness: ', brightness);
+    this.platform.log.debug(`[brightnessCalculation] ${brightness} - ${str}`);
 
     return brightness;
   }
@@ -419,7 +421,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       const mode = this.lightState.operatingMode;
       const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} , cw:${cw} ww:${ww} (calculated brightness: ${brightness}) raw: `;
       this.platform.log.debug('[getLampState] Lamp is reporting:', str);
-      this.platform.log.debug('state', state);
+      this.platform.log.debug('state.debugBuffer', state.debugBuffer);
 
 
       await this.updateHomekitState();
