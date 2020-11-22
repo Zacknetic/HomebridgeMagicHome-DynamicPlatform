@@ -24,18 +24,8 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x07,
     {
-      controllerType: 'RGBWBulb',
-      convenientName: 'RGBW Non-Simultaneous',
-      simultaneousCCT: false,
-      hasColor: true,
-      hasBrightness: true,
-    },
-  ],
-  [
-    0x08,
-    {
-      controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
+      controllerType: 'RGBWWStrip',
+      convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
@@ -52,21 +42,21 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     },
   ],
   [
-    0x33,
-    {
-      controllerType: 'GRBStrip',
-      convenientName: 'Simple GRB',
-      simultaneousCCT: false,
-      hasColor: true,
-      hasBrightness: true,
-    },
-  ],
-  [
     0x25,
     {
       controllerType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
+      hasColor: true,
+      hasBrightness: true,
+    },
+  ],
+  [
+    0x33,
+    {
+      controllerType: 'GRBStrip',
+      convenientName: 'GRB Strip',
+      simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
     },
@@ -102,6 +92,16 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     },
   ],
   [
+    0x52,
+    {
+      controllerType: 'RGBWWBulb',
+      convenientName: 'RGBWW Non-Simultaneous',
+      simultaneousCCT: false,
+      hasColor: true,
+      hasBrightness: true,
+    },
+  ],
+  [
     0x65,
     {
       controllerType: 'DimmerStrip',
@@ -125,7 +125,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     0xa1,
     {
       controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
+      convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
@@ -135,7 +135,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     0xa2,
     {
       controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
+      convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,

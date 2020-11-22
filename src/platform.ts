@@ -272,8 +272,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             continue;
           }
 
-
-        
           this.log.info('\nWarning! Continuing to register cached accessory despite not being seen for %o restarts.',
             accessory.context.restartsSinceSeen);
 
@@ -360,22 +358,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
-    if(lightVersionOriginal == 0x03){
-      lightParameters = lightTypesMap.get(0x25);
+    if(lightTypesMap.has(lightVersionModifier)){
+      this.log.info('Light Version: %o with Firmware Version: %o matches known device type records', 
+        lightVersionModifier.toString(16),
+        lightVersionOriginal.toString(16));
+      lightParameters = lightTypesMap.get(lightVersionModifier);
     } else {
-      if(lightTypesMap.has(lightVersionModifier)){
-        this.log.info('Light Version: %o with Firmware Version: %o matches known device type records', 
-          lightVersionModifier.toString(16),
-          lightVersionOriginal.toString(16));
-        //lightParameters = lightTypesMap_2[lightVersionModifier];
-        lightParameters = lightTypesMap.get(lightVersionModifier);
-      } else {
-        this.log.warn('Unknown device type: %o... type probably cannot be set. Trying anyway with default GRB device', lightVersionModifier.toString(16));
-        this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and post your homebridge.log');
-        lightParameters = lightTypesMap.get(0x01);
-      }
+      this.log.warn('Unknown device version number: %o... unable to create accessory.' , lightVersionModifier.toString(16));
+      this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and upload your homebridge.log');
     }
-
 
     this.log.debug('\nController Type assigned to %o', lightParameters.controllerType);
     
@@ -398,91 +389,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accessory.context.device.lightVersionOriginal,
     accessory.context.device.lightVersionModifier.toString(16));
   }
-
-
-
-
-  
-  /*
-  async discoverAnimations(){
-
-    let registeredAnimations = 0;
-    let newAnimations = 0;
-
-
-    const animationDevices: any = this.config.animations;
-
-    if (animationDevices.length == 0){
-      return;
-    } else {
-      this.log.info('Found %o animations in config.', animationDevices.length);
-    }
-
-    try {
-      // loop over the discovered devices and register each one if it has not already been registered
-      for ( const animationDevice of animationDevices) {  
-
-        // generate a unique id for the accessory this should be generated from
-        // something globally unique, but constant
-        const uuid = this.api.hap.uuid.generate(animationDevice.name);
-        animationDevice.uuid = uuid;
-
-        // check that the device has not already been registered by checking the
-        // cached devices we stored in the `configureAccessory` method above
-        const existingAnimationAccessory = this.accessories.find(accessory => accessory.UUID === uuid);  
-
-
-        if (!existingAnimationAccessory) { 
-          
-          const animationAccessory = new this.api.platformAccessory(animationDevice.name, uuid);
-
-
-          animationAccessory.context.displayName = animationDevice.name;
-
-
-          animationAccessory.context.animationDevice = animationDevice; 
-          // create the accessory handler
-          // this is imported from `platformAccessory.ts`
-          new AnimationPlatformAccessory(this, this.config, this.lightAccessories, animationAccessory);
-
-          // link the accessory to your platform
-          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [animationAccessory]);
-          registeredAnimations++;
-          newAnimations++;
-
-          this.log.info('Registering new animation %o',  
-            animationAccessory.context.displayName,
-          );
-
-          // push into accessory cache
-          this.accessories.push(animationAccessory);
- 
-        } else {
-          // the animation has already been registered
-
-          this.log.info('Registering existing animation %o',  
-            existingAnimationAccessory.context.displayName,
-          );
-
-          // create the accessory handler
-          new AnimationPlatformAccessory(this, this.config, this.lightAccessories, existingAnimationAccessory);
-          registeredAnimations++;
-          // udpate the accessory to your platform
-          this.api.updatePlatformAccessories([existingAnimationAccessory]);
-        }
-      }
-      this.log.info('\n\nRegistered %o total Animation(s)\nNew Animtions: %o \nCached Animations: %o\n',
-        registeredAnimations, 
-        newAnimations, 
-        registeredAnimations-newAnimations,
-      ); 
-    //=================================================
-    // End Cached Devices //
-    } catch (error) {
-      this.log.error(error);
-    }
-  }
-*/
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {
     const buffer = Buffer.from(command);

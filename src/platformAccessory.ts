@@ -9,7 +9,6 @@ import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
-const updateWaitTime = 100;
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
@@ -148,63 +147,28 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-  setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    callback(null);
+  async setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.hue = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(async () => {
-        await this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, updateWaitTime);
-    }
-
+    await this.updateDeviceState();
+    callback(null);
   }
 
-  setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    callback(null);
+  async setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.saturation = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(async () => {
-        await this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, updateWaitTime);
-    }
+    await this.updateDeviceState();
+    callback(null);
   }
 
-  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    callback(null);
+  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.brightness = value as number;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(async () => {
-        await this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, updateWaitTime);
-    }
+    await this.updateDeviceState();
+    callback(null);
   }
 
-  setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    callback(null);
-
+  async setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.isOn = value as boolean;
-
-    if(!this.deviceUpdateInProgress){
-      this.deviceUpdateInProgress = true;
-      setTimeout(async () => {
-        await this.updateDeviceState();
-        this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        this.deviceUpdateInProgress = false;
-      }, updateWaitTime);
-    }
-
+    await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    callback(null);
   }
 
   //=================================================
