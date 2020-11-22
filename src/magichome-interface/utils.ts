@@ -176,8 +176,9 @@ export function convertWhitesToColorTemperature(whites){
   // temperature is determined by the ratio of cold and warm whites
   const { coldWhite, warmWhite } = whites;
   const warmRatio = coldWhite / (coldWhite + warmWhite);
-  const mired = (1-warmRatio) * (TMP_MAX-TMP_MIN) + TMP_MIN; 
-  const tempK = miredToK(mired);
+  let mired = (1-warmRatio) * (TMP_MAX-TMP_MIN) + TMP_MIN; 
+  mired = isNaN(mired) ? null : mired;
+  const tempK = mired !== null ? miredToK(mired) : null;
   return {mired, tempK, ...whites};
 }
 
