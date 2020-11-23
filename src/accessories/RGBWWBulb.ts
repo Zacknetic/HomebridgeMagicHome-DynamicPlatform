@@ -68,7 +68,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     let { hue, saturation } = this.lightState.HSL;
     const { luminance } = this.lightState.HSL;
     let { brightness } = this.lightState;
-    const {isOn } = this.lightState;
+    const { isOn } = this.lightState;
     const { coldWhite, warmWhite } = this.lightState.whiteValues;
 
     if(luminance > 0 && isOn){
@@ -83,20 +83,23 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
         hue = 180.0;
       }
     }
-
-  
-
     brightness = Math.round(brightness);
-    this.platform.log.debug(`Reporting to HomeKit: on=${isOn} hue=${hue} sat=${saturation} bri=${brightness} `);
+    hue = parseFloat( hue.toFixed(3) ) + 0.001;
+    saturation = parseFloat( saturation.toFixed(3) )+ 0.001;
     if( isNaN(hue) || isNaN(saturation) || isNaN(brightness)){
       throw new Error('convertion error in homekit reporting...');
     }
+    this.platform.log.debug(`Reporting to HomeKit: on=${isOn} hue=${hue} sat=${saturation} bri=${brightness} `);
+    // since we just properly calculated it, we might as well update it
+    this.lightState.brightness = brightness;
+
     this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
 
     this.cacheCurrentLightState();
+    return {isOn, hue, saturation, brightness };
   }
     
 }
