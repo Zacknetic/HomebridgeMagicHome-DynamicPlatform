@@ -93,7 +93,14 @@
                     "type": "boolean",
                     "default": false,
                     "required": true
-                    }
+                    },
+                    "useColorTemperature": {
+                        "title": "Color Temperature (beta)",
+                        "description": "This feature is still under development. Use only for evaluation only.",
+                        "type": "boolean",
+                        "default": false,
+                        "required": true
+                        }
                 }
             }
         }
