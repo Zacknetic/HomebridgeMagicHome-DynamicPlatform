@@ -65,21 +65,37 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   async updateHomekitState() {
-    this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
-    this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    } else if (this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp(((this.lightState.whiteValues.coldWhite/2.55) + (this.lightState.whiteValues.warmWhite/2.55)), 0, 100));
-      if(this.lightState.whiteValues.warmWhite>this.lightState.whiteValues.coldWhite){
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255)));
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, 0);
+    let { hue, saturation } = this.lightState.HSL;
+    const { luminance } = this.lightState.HSL;
+    let { brightness } = this.lightState;
+    const {isOn } = this.lightState;
+    const { coldWhite, warmWhite } = this.lightState.whiteValues;
+
+    if(luminance > 0 && isOn){
+      brightness = luminance * 2;
+    } else if (isOn){
+      brightness = clamp(((coldWhite/2.55) + (warmWhite/2.55)), 0, 100);
+      if(warmWhite>coldWhite){
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255));
+        hue = 0.0;
       } else {
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255)));
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255));
+        hue = 180.0;
       }
     }
+
+  
+
+    brightness = Math.round(brightness);
+    this.platform.log.debug(`Reporting to HomeKit: on=${isOn} hue=${hue} sat=${saturation} bri=${brightness} `);
+    if( isNaN(hue) || isNaN(saturation) || isNaN(brightness)){
+      throw new Error('convertion error in homekit reporting...');
+    }
+    this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
+    this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+    this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
+    this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
+
     this.cacheCurrentLightState();
   }
     
