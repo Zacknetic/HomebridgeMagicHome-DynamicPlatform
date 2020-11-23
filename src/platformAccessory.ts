@@ -236,7 +236,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.timestamps = [];
       this.clearTargetState();
     } else if(nextState==='keepState'){
-      this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${stateMsg} `);
+      this.platform.log.debug(`[ProcessRequest] Skipped transmission. Type: ${stateMsg} `);
     } else {
       const timeStart = Date.now();
       this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${stateMsg} `);
@@ -304,7 +304,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if( Date.now() - this.lastTimeCalled > 50 ){
       this.lastTimeCalled = Date.now(); 
       await this.updateLocalState();
-      this.platform.log.debug('status refreshed', this.accessory.displayName);
+      this.platform.log.debug('status refreshed (getLamp and report to homekit)', this.accessory.displayName);
     }
     return;
   }
@@ -338,20 +338,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // Start State Get/Set //
 
   calculateBrightness():number {
-    const { operatingMode, HSL, whiteValues } = this.lightState;
-    let brightness = 0;
-    let str = '';
-    if(operatingMode === opMode.redBlueGreenMode){
-      brightness =  HSL.luminance * 2;
-      str = ' - method: luminance';
-    } else if (operatingMode === opMode.temperatureMode){
-      const { coldWhite, warmWhite} = whiteValues;
-      str = `- method: cw/ww:  cw: ${coldWhite}, ww: ${warmWhite}`;
-      brightness = ( (whiteValues.coldWhite + whiteValues.warmWhite) / 255) *100;
-    } 
-    // this.platform.log.debug(`[brightnessCalculation] ${brightness} - ${str}`);
-
-    return brightness;
+    const { operatingMode, HSL, whiteValues, isOn } = this.lightState;
+    return isOn && HSL.luminance >=0? HSL.luminance * 2 : 0;
   }
 
   /**
@@ -369,7 +357,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       if(state == null){
-        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.displayName);
+        const name = this.accessory.context.displayName;
+        const { ipAddress:ip, uniqueId:mac } = this.accessory.context.device;
+        this.platform.log.info(`No device response: "${name}" "${mac}" "${ip}"`);
+        // TODO: report off-line here so that device shows as "no response". Use reachable?
+        // this.service.updateCharacteristic(this.platform.Characteristic.Reachable, false);
+        // temporary work around: report as off.
+        this.lightState.isOn = false;
+        await this.updateHomekitState();
         return;
       }
       this.accessory.context.lastKnownState = state;
@@ -388,7 +383,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       const { coldWhite:cw, warmWhite:ww} = this.lightState.whiteValues;
       const mode = this.lightState.operatingMode;
       const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} (estimated bri: ${brightness})`;
-      this.platform.log.debug('[getLampState] Lamp is reporting:', str);
+      this.platform.log.debug('[getLampState] Reporting:', str);
       // this.platform.log.debug('state.debugBuffer', state.debugBuffer);
 
 
