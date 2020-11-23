@@ -121,10 +121,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         // register handlers for the On/Off Characteristic
       
         // register handler for Color Temperature Characteristic
-        this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
-          .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this)) 
-          .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));  
 
+        if(this.config.advancedOptions?.useColorTemperature){
+          this.platform.log.info('[EXPERIMENTAL] Registering ColorTemperature for device ',this.accessory.context.displayName);
+          this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
+            .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this)) 
+            .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));  
+        }
+        
       }
     } else {
 
@@ -167,54 +171,50 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.platform.log.debug(`[ProcessRequest] setHue rxD: ${value}`);
     this.lightState.targetState.targetHSL.hue = value as number;
     this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
-    this.processRequest('msg');
+    this.processRequest(`msg: hue=${value}`);
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.platform.log.debug(`[ProcessRequest] setSat rxD: ${value}`);
     this.lightState.targetState.targetHSL.saturation = value as number;
     this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
-    this.processRequest('msg');
+    this.processRequest(`msg: sat=${value}`);
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.platform.log.debug(`[ProcessRequest] setBri rxD: ${value}`);
     this.lightState.targetState.targetBrightness =  value as number;
-    this.processRequest('msg');
+    this.processRequest(`msg: bri=${value}`);
     callback(null);
   }
 
   async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
-    this.platform.log.debug(`[ProcessRequest] colorTemp rxD: ${value}`);
     this.lightState.targetState.targetColorTemperature = value as number;
     this.lightState.targetState.targetMode = opMode.temperatureMode;
-    this.processRequest('msg');
+    this.processRequest(`msg: cct=${value}`);
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.platform.log.debug(`[ProcessRequest] setOn rxD: ${value}`);
     this.lightState.targetState.targetOnState = value as boolean;
-    this.processRequest('msg');
+    this.processRequest(`msg: on=${value}`);
     callback(null);
   }
 
   protected myTimer = null
   protected timestamps = []
   async processRequest(reason: string){
-    reason = reason || 'msg';
-    const dbg = () => ( {...this.lightState.targetState} );
-    this.platform.log.debug(`[ProcessRequest] Triggered by "${reason}". Dbg: `, dbg());
+    this.platform.log.debug(`[ProcessRequest] Triggered "${reason}"`);
 
-    if(reason === 'msg'){
+    // if a new message arrives, restart the timer
+    if(reason !== 'timeout'){
       clearTimeout(this.myTimer);
       this.timestamps.push(Date.now());
     }
+
+    // TODO: if transmission started, then do what if new message arrives?
 
     /*
       Message Transmission Logic
@@ -279,7 +279,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.clearTargetState();
       this.platform.log.debug(`[ProcessRequest] Transmission complete! type: ${case4 ? `"on=${targetOnState}"` :''}`);
     }else if( reason === 'timeout' ){
-      this.platform.log.info('[ProcessRequest] Timeout with no valid data. State: ', dbg() );
+      this.platform.log.warn('[ProcessRequest] Timeout with no valid data. State: ', this.lightState.targetState );
       this.timestamps = [];
       this.clearTargetState();
     } else {
