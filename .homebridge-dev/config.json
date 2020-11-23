@@ -7,7 +7,7 @@
     "port": 51826,
     "pin": "031-45-154"
   },
-  "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
+  "description": "This configuration file is to assist developers only. It is not used in a customer installantion of the plugin. ",
   "ports": {
     "start": 52100,
     "end": 52150,
@@ -29,11 +29,12 @@
         "colorOffThresholdSimultaniousDevices": 5
       },
       "deviceManagement": {
-        "blacklistOrWhitelist": "blacklist",
-        "blacklistedUniqueIDs": [""]
+        "blacklistOrWhitelist": "whitelist",
+        "blacklistedUniqueIDs": ["50029122F481"]
       },
       "advancedOptions": {
-        "namesWithMacAddress": true
+        "namesWithMacAddress": true,
+        "useColorTemperature": false
       }
     }
   ]
