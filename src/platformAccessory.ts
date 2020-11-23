@@ -20,7 +20,7 @@ const animations = {
  */
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected service: Service;
-  protected transport = new Transport(this.accessory.context.device.cachedIPAddress, this.config);
+  protected transport = new Transport(this.accessory.context.cachedIPAddress, this.config);
   protected colorWhiteThreshold = this.config.whiteEffects.colorWhiteThreshold;
   protected colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
   protected colorOffThresholdSimultaniousDevices = this.config.whiteEffects.colorOffThresholdSimultaniousDevices;
@@ -73,13 +73,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
-    if(this.accessory.context.device.lightParameters.hasBrightness || this.accessory.context.device.lightParameters.hasBrightness == undefined){
+    if(this.accessory.context.lightParameters.hasBrightness || this.accessory.context.lightParameters.hasBrightness == undefined){
             
       if (this.accessory.getService(this.platform.Service.Switch)) {
         this.accessory.removeService(this.accessory.getService(this.platform.Service.Switch));
       }
       this.service = this.accessory.getService(this.platform.Service.Lightbulb) ?? this.accessory.addService(this.platform.Service.Lightbulb);
-      this.accessory.context.device.lightParameters.hasBrightness = true;
+      this.accessory.context.lightParameters.hasBrightness = true;
 
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
@@ -92,7 +92,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
-      if( this.accessory.context.device.lightParameters.hasColor){
+      if( this.accessory.context.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
           .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
@@ -147,27 +147,27 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-  setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.hue = value as number;
-    this.updateDeviceState();
+    await this.updateDeviceState();
     callback(null);
   }
 
-  setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.saturation = value as number;
-    this.updateDeviceState();
+    await this.updateDeviceState();
     callback(null);
   }
 
-  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.brightness = value as number;
-    this.updateDeviceState();
+    await this.updateDeviceState();
     callback(null);
   }
 
-  setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  async setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.isOn = value as boolean;
-    this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
     callback(null);
   }
 
@@ -195,7 +195,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // dont update the actual values from brightness, it is impossible to determine by rgb values alone
     //this.getState();
 
-    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.device.displayName);
+    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.displayName);
     this.updateLocalState();
 
     callback(null, brightness);
@@ -213,8 +213,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //update state with actual values asynchronously
     this.updateLocalState();
 
-    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.device.displayName);
+    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.displayName);
     callback(null, isOn);
+  }
+
+  getIsAnimating(callback: CharacteristicGetCallback) {
+    let isAnimating = true;
+
+    if(this.activeAnimation == animations.none) {
+      isAnimating = false;
+    }
+    this.platform.log.debug('Get Characteristic isAnimating -> %o for device: %o ', isAnimating, this.accessory.context.displayName);
+    callback(null, isAnimating);
   }
 
   //=================================================
@@ -239,10 +249,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       if(state == null){
-        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.device.displayName);
+        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.displayName);
         return;
       }
-      this.accessory.context.device.lastKnownState = state;
+      this.accessory.context.lastKnownState = state;
       this.updateLocalRGB(state.RGB);
       this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));
       this.updateLocalWhiteValues(state.whiteValues);
@@ -293,7 +303,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   /**
    ** @updateDeviceState
    *  determine RGB and warmWhite/coldWhite values  from homekit's HSL
-   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.device.lightVersion"
+   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
    *  
    */
   async updateDeviceState(_timeout = 200) {

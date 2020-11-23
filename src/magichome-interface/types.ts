@@ -1,4 +1,4 @@
-export interface IDeviceDiscoveredProps {
+export interface IDeviceBroadcastProps {
     ipAddress: string;
     uniqueId: string;
     modelNumber: string;
@@ -6,29 +6,18 @@ export interface IDeviceDiscoveredProps {
 
 export interface IDeviceQueriedProps {
     lightParameters: ILightParameters;
-    controllerHardwareVersion: string;
-    controllerFirmwareVersion: string;
+    lightVersionOriginal: string;
+    lightVersionModifier: string;
 }
 
 export interface ILightParameters {
-    controllerLogicType: string;
+    controllerType: string;
     convenientName: string;
     simultaneousCCT: boolean;
     hasColor:  boolean;
     hasBrightness: boolean;
 }
 
-export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
+export type IDeviceProps = IDeviceBroadcastProps & IDeviceQueriedProps & {
     uuid: string;
-    cachedIPAddress: string;
-    displayName: string;
-    restartsSinceSeen: number;
-    lastKnownState;
-}
-
-export type IStateProps = {
-    
-}
-
-;
-
+};

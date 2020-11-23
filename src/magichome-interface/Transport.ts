@@ -141,7 +141,7 @@ export class Transport {
       return {
       
         debugBuffer: data,
-        controllerHardwareVersion: data.readUInt8(1),
+        lightVersionModifier: data.readUInt8(1),
         isOn: data.readUInt8(2) === 0x23,
         RGB: {
           red: data.readUInt8(6),
@@ -152,7 +152,7 @@ export class Transport {
           warmWhite: data.readUInt8(9),
           coldWhite: data.readUInt8(11),
         },
-        controllerFirmwareVersion: data.readUInt8(10),
+        lightVersion: data.readUInt8(10),
   
       };
     } catch (error) {
