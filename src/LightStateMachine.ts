@@ -49,17 +49,23 @@ export class LightStateMachine{
     message = 'setColor.';
     if(hue!==null){
       lightState.HSL.hue = hue;
-      message += ` hue=${hue}`;
+      message += ` hue=${hue}*`;
+    } else {
+      message += ` hue=${lightState.HSL.hue}`;
     }
 
     if(saturation!==null){
       lightState.HSL.saturation = saturation;
-      message += ` sat=${saturation}`;
+      message += ` sat=${saturation}*`;
+    } else {
+      message += ` sat=${lightState.HSL.saturation}`;
     }
 
     if(targetBrightness!==null){
       lightState.brightness = targetBrightness;
-      message += ` bri=${targetBrightness}`;
+      message += ` bri=${targetBrightness}*`;
+    } else {
+      message += ` bri=${lightState.brightness}||${Math.round(lightState.HSL.luminance*2)}`;
     }
 
     return { nextState: 'setColor', message};
