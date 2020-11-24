@@ -2,7 +2,7 @@
 const prompt = require('prompt-sync')({sigint: true});
 const fetch = require('node-fetch');
 
-const TEST_DEVICE_NAME = "50029122F481";
+const TEST_DEVICE_NAME = "500291236D10";
 const SERVER = "http://localhost:51826";
 
 ;(async () => {
