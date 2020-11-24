@@ -66,6 +66,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //protected interval;
   public activeAnimation = animations.none;
   protected deviceWriteInProgress = false;
+  protected deviceWriteRetry: any = null;
+
   log = getLogger();
 
   public lightStateTemporary: ILightState = DEFAULT_LIGHT_STATE
@@ -182,8 +184,61 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   identifyLight() {
     this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
-    this.flashEffect();
+    // this.flashEffect();
+    this.readBackTest();
   }
+
+  async readBackTest(){
+    this.processRequest({msg: 'test123'});
+    this.processRequest({msg: 'test123'});
+    this.processRequest({msg: 'test123'});
+
+    await this.sleep(100);
+    this.processRequest({msg: 'test123'});
+    this.processRequest({msg: 'test123'});
+    this.processRequest({msg: 'test123'});
+
+    let state;
+    const delay = 500;
+    this.platform.log.info('Performing read back test: %o!',this.accessory.displayName);
+    // set device on
+    await this.send(COMMAND_POWER_OFF);
+    // wait 1 sec to proagate2
+
+    await this.sleep(2000);
+    // set off
+    await this.send(COMMAND_POWER_ON);
+    await this.sleep(delay);
+    state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
+    // 
+
+    if(state.isOn === true){
+      this.platform.log.info(`Test SUCCESS - decrease delay ${delay}`);
+    } else {
+      this.platform.log.info(`Test FAILED - increase delay ${delay}`);
+      this.platform.log.info(`Test result: ${this.accessory.displayName}: `, state);
+    }
+    await this.send([0x31, 127, 127, 127, 127, 127, 0x0F, 0x0F], true, 1000); //9th byte checksum calculated later in send()
+    await this.sleep(1000);
+
+    await this.send([0x31, 127, 127, 127, 127, 127, 0xFF, 0x0F], true, 1000); //9th byte checksum calculated later in send()
+    await this.sleep(delay);
+    state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
+    // 
+
+    if(state.whiteValues.warmWhite === 127){
+      this.platform.log.info(`Test2 SUCCESS ${state.whiteValues.warmWhite} - decrease delay ${delay}`);
+    } else {
+      this.platform.log.info(`Test2 FAILED ${state.whiteValues.warmWhite}- increase delay ${delay}`);
+      //this.platform.log.info(`Test2 result: ${this.accessory.displayName}: `, state);
+    }
+    this.platform.log.info(`Test2 result: ${this.accessory.displayName}: `, state);
+
+    //read
+    // compare
+
+  }
+
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.targetState.targetHSL.hue = value as number;
@@ -225,9 +280,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected timestamps = []
   async processRequest(props: IProcessRequest): Promise<void>{
     const { displayName } = this.accessory.context;
+
     try{ 
-      this.deviceWriteInProgress = true; //block reads of device while
       const { msg, timeout } = props;
+
+      if(this.deviceWriteInProgress){
+        this.platform.log.warn(`[ProcessRequest] Got message while TRANSMISSION in PROGRESS for '${displayName}'. Schedule a check in 100ms`);
+        if(this.deviceWriteRetry === null){
+          this.deviceWriteRetry = setTimeout( () => this.processRequest({timeout:true}), 100 );
+
+        }
+      } else {
+        this.deviceWriteRetry = null;
+      }
 
       // if a new message arrives, restart the timer
       if(msg){
@@ -237,6 +302,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.myTimer = setTimeout( () => this.processRequest({timeout: true}), INTRA_MESSAGE_TIME);
         return;
       }
+      this.deviceWriteInProgress = true; //block reads of device while
+
       this.platform.log.debug(`[ProcessRequest] Triggered "timeout" for device '${displayName}'`);
 
       const printTS = (ts) => ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
@@ -263,8 +330,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           :
           await this.updateDeviceState(); // Send message to light
         const writeElapsedTime = Date.now() - writeStartTime;
-
+        
+        this.platform.log.debug(`[ProcessRequest] waiting ${DEVICE_READBACK_DELAY} for device '${displayName}' propagation`);
         await this.sleep(DEVICE_READBACK_DELAY);
+
         const readStartTime = Date.now();
         await this.updateLocalState();  // Read light state, tell homekit and store as current state  
         const readElapsedTime = Date.now() - readStartTime;

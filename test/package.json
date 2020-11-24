@@ -1,0 +1,17 @@
+{
+    "name": "test",
+    "version": "1.0.0",
+    "description": "Simple script to test magic-home plugin",
+    "main": "tester.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+      "node-fetch": "^2.6.1",
+      "prompt-sync": "^4.2.0"
+    }
+  }
+  
