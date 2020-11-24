@@ -480,13 +480,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.lightState.colorTemperature = mired;
       this.lightState.isOn = state.isOn;
       this.lightState.operatingMode = state.operatingMode;
-      this.lightState.brightness = -1;
+
+      // TODO: right now, the brighness is calculated in the updateHomekitState because
+      //   each lamp model may have their way to calculate the brightness.
+      this.lightState.brightness = 0;
 
       const { red, green, blue } = this.lightState.RGB;
       const { brightness, isOn} = this.lightState;
       const { coldWhite:cw, warmWhite:ww} = this.lightState.whiteValues;
       const mode = this.lightState.operatingMode;
-      const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} (estimated bri: ${brightness})`;
+      const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} (bri:${brightness} - calculation is pending)`;
       this.platform.log.debug('[getLampState] Reporting:', str);
       // this.platform.log.debug('state.debugBuffer', state.debugBuffer);
 
@@ -505,14 +508,21 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * send state to homekit
    */
   async updateHomekitState():Promise<any> {
+    const { isOn } = this.lightState;
+    const { hue, saturation, luminance } = this.lightState.HSL;
 
-    this.service.updateCharacteristic(this.platform.Characteristic.On,  this.lightState.isOn);
-    this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-      this.updateLocalBrightness(this.lightState.HSL.luminance * 2);
+    let brightness = this.lightState.brightness;
+    if( luminance > 0 && isOn ){
+      brightness = luminance * 2;
+      this.lightState.brightness = brightness;
     }
-    this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  this.lightState.brightness);
+
+    this.service.updateCharacteristic(this.platform.Characteristic.On,  isOn);
+    this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+    this.service.updateCharacteristic(this.platform.Characteristic.Saturation, saturation);
+    this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  brightness);
+
+    this.platform.log.debug(`Reporting to HomeKit: on=${isOn} hue=${hue} sat=${saturation} bri=${brightness} `);
   }
 
   updateLocalHSL(_hsl){
