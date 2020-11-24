@@ -65,7 +65,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
-  protected deviceUpdateInProgress = false;
+  protected deviceWriteInProgress = false;
   log = getLogger();
 
   public lightStateTemporary: ILightState = DEFAULT_LIGHT_STATE
@@ -224,18 +224,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected myTimer = null
   protected timestamps = []
   async processRequest(props: IProcessRequest): Promise<void>{
-    try{   
+    const { displayName } = this.accessory.context;
+    try{ 
+      this.deviceWriteInProgress = true; //block reads of device while
       const { msg, timeout } = props;
 
       // if a new message arrives, restart the timer
       if(msg){
-        this.platform.log.debug(`[ProcessRequest] Triggered "${msg}"`);
+        this.platform.log.debug(`[ProcessRequest] Triggered "${msg}" for device '${displayName}'`);
         this.timestamps.push(Date.now()); // log timestamps
         clearTimeout(this.myTimer);
         this.myTimer = setTimeout( () => this.processRequest({timeout: true}), INTRA_MESSAGE_TIME);
         return;
       }
-      this.platform.log.debug('[ProcessRequest] Triggered "timeout"');
+      this.platform.log.debug(`[ProcessRequest] Triggered "timeout" for device '${displayName}'`);
 
       const printTS = (ts) => ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
 
@@ -244,30 +246,37 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       const {nextState, message: stateMsg} = LightStateMachine.nextState(this.lightState);
 
       if(nextState === 'unchanged'){
-        this.platform.log.warn('[ProcessRequest] Timeout with no valid data. State: ', this.lightState.targetState );
+        this.platform.log.warn(`[ProcessRequest] Timeout with no valid data. State: '${this.lightState.targetState}' for device '${displayName}' `);
         this.timestamps = [];
         this.clearTargetState();
       } else if(nextState==='keepState'){
-        this.platform.log.debug(`[ProcessRequest] Skipped transmission. Type: ${stateMsg} `);
+        this.platform.log.debug(`[ProcessRequest] Skipped transmission. Type: ${stateMsg} for device '${displayName}'`);
       } else {
         const timeStart = Date.now();
-        this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${stateMsg} `);
+        this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${stateMsg} for device '${displayName}'`);
         this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
         this.timestamps = [];
 
+        const writeStartTime = Date.now();
         nextState === 'toggleState' ?
           await this.send(this.lightState.targetState.targetOnState ? COMMAND_POWER_ON : COMMAND_POWER_OFF)
           :
           await this.updateDeviceState(); // Send message to light
+        const writeElapsedTime = Date.now() - writeStartTime;
 
         await this.sleep(DEVICE_READBACK_DELAY);
-        await this.getDeviceStatus();  // Read light state, tell homekit and store as current state  
+        const readStartTime = Date.now();
+        await this.updateLocalState();  // Read light state, tell homekit and store as current state  
+        const readElapsedTime = Date.now() - readStartTime;
+        
         this.clearTargetState();        // clear state changes
         const elapsed = Date.now() - timeStart;
-        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}!'. Type: ${stateMsg}\n`);
+        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}! (w:${writeElapsedTime},r:${readElapsedTime}'. Type: ${stateMsg} for device '${displayName}'\n`);
       }
+      this.deviceWriteInProgress = false; //allow reads to occur
     } catch(err){
-      this.platform.log.error('[ProcessRequest] ERROR:', err);
+      this.platform.log.error(`[ProcessRequest] ERROR for device '${displayName}':`, err);
+      this.deviceWriteInProgress = false; //allow reads to occur
     }
   }
 
@@ -315,10 +324,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected lastTimeCalled = Date.now()
   async getDeviceStatus(){ //updateLocalState
+
     if( Date.now() - this.lastTimeCalled > 100 ){
       this.lastTimeCalled = Date.now(); 
-      this.updateLocalState(); // prevent 
-      // this.platform.log.debug('status refreshed (getLamp and report to homekit)', this.accessory.displayName);
+      // if a write is inprogress, we don't bother reading lightbulb state
+      // because at the end of a write, there's a read anyway
+      if(this.deviceWriteInProgress === false){
+        this.updateLocalState();
+      } else {
+        this.platform.log.debug(`Skipping read of ${this.accessory.context.displayName}, as we're about to do as part of the write`);
+      }
     }
     return;
   }
@@ -366,14 +381,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     try {
       let state;
       let scans = 0;
+
+      const timer = Date.now();
+
       while(state == null && scans <= 5){
         state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
         scans++;
       } 
+      const elapsed = Date.now() - timer;
+      this.platform.log.debug(`[updateLocalState] NETWORK ACCESS for '${this.accessory.context.displayName}' is ${elapsed} ms (tries: ${scans})` );
+
       if(state == null){
         const name = this.accessory.context.displayName;
         const { ipAddress:ip, uniqueId:mac } = this.accessory.context.device;
-        this.platform.log.info(`No device response: "${name}" "${mac}" "${ip}"`);
+        this.platform.log.error(`No device response: "${name}" "${mac}" "${ip}"`);
         // TODO: report off-line here so that device shows as "no response". Use reachable?
         // this.service.updateCharacteristic(this.platform.Characteristic.Reachable, false);
         // temporary work around: report as off.
@@ -400,8 +421,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.platform.log.debug('[getLampState] Reporting:', str);
       // this.platform.log.debug('state.debugBuffer', state.debugBuffer);
 
-
+      const updateHomeKitStartTime = Date.now();
       await this.updateHomekitState();
+      const elapsedHomeKitUpdateTime = Date.now() - updateHomeKitStartTime;
+      this.platform.log.debug(`[updateLocalState] elapsedHomeKitUpdateTime for '${this.accessory.context.displayName}' is ${elapsedHomeKitUpdateTime} ms` );
 
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
