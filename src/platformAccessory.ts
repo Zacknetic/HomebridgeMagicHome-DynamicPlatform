@@ -25,7 +25,7 @@ const INTRA_MESSAGE_TIME = 5;
   We notice that if you send a command to the light, and read the status back right away, the status comes back with the old reading.
   For proper operation, we wait some time between the write and read back, so the lamp reports accurate state.r status
 */
-const DEVICE_READBACK_DELAY = 500;
+const DEVICE_READBACK_DELAY = 1200;
 
 const DEFAULT_LIGHT_STATE: ILightState = {
   isOn: true,
@@ -189,53 +189,28 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   async readBackTest(){
-    this.processRequest({msg: 'test123'});
-    this.processRequest({msg: 'test123'});
-    this.processRequest({msg: 'test123'});
-
-    await this.sleep(100);
-    this.processRequest({msg: 'test123'});
-    this.processRequest({msg: 'test123'});
-    this.processRequest({msg: 'test123'});
 
     let state;
-    const delay = 500;
-    this.platform.log.info('Performing read back test: %o!',this.accessory.displayName);
-    // set device on
-    await this.send(COMMAND_POWER_OFF);
-    // wait 1 sec to proagate2
-
-    await this.sleep(2000);
-    // set off
     await this.send(COMMAND_POWER_ON);
-    await this.sleep(delay);
-    state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
-    // 
-
-    if(state.isOn === true){
-      this.platform.log.info(`Test SUCCESS - decrease delay ${delay}`);
-    } else {
-      this.platform.log.info(`Test FAILED - increase delay ${delay}`);
-      this.platform.log.info(`Test result: ${this.accessory.displayName}: `, state);
-    }
-    await this.send([0x31, 127, 127, 127, 127, 127, 0x0F, 0x0F], true, 1000); //9th byte checksum calculated later in send()
     await this.sleep(1000);
-
-    await this.send([0x31, 127, 127, 127, 127, 127, 0xFF, 0x0F], true, 1000); //9th byte checksum calculated later in send()
-    await this.sleep(delay);
-    state = await this.transport.getState(1000); //retrieve a state object from transport class showing light's current r,g,b,ww,cw, etc
-    // 
-
-    if(state.whiteValues.warmWhite === 127){
-      this.platform.log.info(`Test2 SUCCESS ${state.whiteValues.warmWhite} - decrease delay ${delay}`);
-    } else {
-      this.platform.log.info(`Test2 FAILED ${state.whiteValues.warmWhite}- increase delay ${delay}`);
-      //this.platform.log.info(`Test2 result: ${this.accessory.displayName}: `, state);
+    for (let delay=50; delay<=2000; delay = delay + 50){
+      this.platform.log.info(`Performing read back test: ${this.accessory.displayName} with ${delay}ms delay!`);
+      await this.send(COMMAND_POWER_OFF);
+      await this.sleep(5000);
+      await this.send(COMMAND_POWER_ON);
+      await this.sleep(delay);
+      state = await this.transport.getState(1000); //read state
+      if(state.isOn === true){
+        this.platform.log.info(`Test at ${delay}ms: SUCCESS. (${this.accessory.displayName})`);
+        this.platform.log.info(`TEST COMPLETE! ${this.accessory.displayName}`);
+        return;
+      } else {
+        this.platform.log.info(`\tTest at ${delay}ms: FAIL. (${this.accessory.displayName})`);
+        // this.platform.log.info(`Test result: ${this.accessory.displayName}: `, state);
+      }
     }
-    this.platform.log.info(`Test2 result: ${this.accessory.displayName}: `, state);
+    this.platform.log.info(`TEST COMPLETE! ${this.accessory.displayName}`);
 
-    //read
-    // compare
 
   }
 
@@ -458,7 +433,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       const elapsed = Date.now() - timer;
-      this.platform.log.debug(`[updateLocalState] NETWORK ACCESS for '${this.accessory.context.displayName}' is ${elapsed} ms (tries: ${scans})` );
+      // this.platform.log.debug(`[updateLocalState] NETWORK ACCESS for '${this.accessory.context.displayName}' is ${elapsed} ms (tries: ${scans})` );
 
       if(state == null){
         const name = this.accessory.context.displayName;
