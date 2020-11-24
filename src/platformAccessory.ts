@@ -145,8 +145,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
             .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));  
         }
 
-        this.platform.log.info('[EXPERIMENTAL] Accessory context: ',this.accessory.context);
-
       }
     } else {
 
