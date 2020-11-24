@@ -116,6 +116,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     try {
       // loop over the discovered devices and register each one if it has not already been registered
       for ( const deviceBroadcast of devicesBroadcast) {  
+        this.log.info('\n********************\n', deviceBroadcast);
 
         // generate a unique id for the accessory this should be generated from
         // something globally unique, but constant, for example, the device serial
@@ -193,8 +194,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         } else {
 
           // Just in case user has a misconfigued device, drop it.
-          if(!existingAccessory.context.device.lightParameters.controllerType){
-            this.log.warn(`The previously registered device "${existingAccessory.context.device}" is being unregister because is not currently supported.` );
+          if(!existingAccessory.context.device.lightParameters?.controllerType){
+            this.log.error(`The previously registered device "${existingAccessory.context.device.uniqueId}" is being unregister because is not currently supported. Device:`, existingAccessory.context.device );
+            //TODO: ensure that we taking proper action when a device is not supported.
             this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
             continue;
           }
