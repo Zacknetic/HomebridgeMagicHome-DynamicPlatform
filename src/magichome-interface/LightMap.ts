@@ -24,19 +24,9 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x07,
     {
-      controllerType: 'RGBWBulb',
-      convenientName: 'RGBW Non-Simultaneous',
-      simultaneousCCT: false,
-      hasColor: true,
-      hasBrightness: true,
-    },
-  ],
-  [
-    0x08,
-    {
-      controllerType: 'RGBStrip',
-      convenientName: 'Simple RGB',
-      simultaneousCCT: false,
+      controllerType: 'RGBWWStrip',
+      convenientName: 'RGBWW Simultaneous',
+      simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
     },
@@ -52,21 +42,21 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     },
   ],
   [
-    0x33,
-    {
-      controllerType: 'GRBStrip',
-      convenientName: 'Simple GRB',
-      simultaneousCCT: false,
-      hasColor: true,
-      hasBrightness: true,
-    },
-  ],
-  [
     0x25,
     {
       controllerType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
+      hasColor: true,
+      hasBrightness: true,
+    },
+  ],
+  [
+    0x33,
+    {
+      controllerType: 'GRBStrip',
+      convenientName: 'GRB Strip',
+      simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
     },
@@ -96,6 +86,16 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     {
       controllerType: 'RGBWBulb',
       convenientName: 'RGBW Non-Simultaneous',
+      simultaneousCCT: false,
+      hasColor: true,
+      hasBrightness: true,
+    },
+  ],
+  [
+    0x52,
+    {
+      controllerType: 'RGBWWBulb',
+      convenientName: 'RGBWW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
