@@ -35,10 +35,6 @@ const DEFAULT_LIGHT_STATE: ILightState = {
   whiteValues: { warmWhite: 0, coldWhite: 0 },
   colorTemperature: null,
   brightness: 100,
-  targetState: {   targetHSL: { hue:null, saturation:null, luminance:null}, 
-    targetMode: null, targetOnState: null, targetColorTemperature:null,
-    targetBrightness: null,
-  },
 };
 
 const animations = {
@@ -49,6 +45,7 @@ interface IProcessRequest {
   msg?: string;
   timeout?: boolean;
 }
+
 
 /**
  * Platform Accessory
@@ -67,11 +64,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   public activeAnimation = animations.none;
   protected deviceWriteInProgress = false;
   protected deviceWriteRetry: any = null;
-
   log = getLogger();
 
-  public lightStateTemporary: ILightState = DEFAULT_LIGHT_STATE
   protected lightState: ILightState = DEFAULT_LIGHT_STATE
+  public lightStateTemporary: ILightState = Object.assign({},this.lightState)
 
   //=================================================
   // Start Constructor //
@@ -214,125 +210,99 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.targetState.targetHSL.hue = value as number;
-    this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
     this.lightState.HSL.hue = value as number; 
     this.processRequest({ msg: `hue=${value}`});
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.targetState.targetHSL.saturation = value as number;
-    this.lightState.targetState.targetMode = opMode.redBlueGreenMode;
     this.lightState.HSL.saturation = value as number; 
     this.processRequest({ msg: `sat=${value}`});
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.targetState.targetBrightness =  value as number;
     this.lightState.brightness = value as number; 
     this.processRequest({msg: `bri=${value}`});
     callback(null);
   }
 
   async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
-    this.lightState.targetState.targetColorTemperature = value as number;
-    this.lightState.targetState.targetMode = opMode.temperatureMode;
+    this.lightState.operatingMode = opMode.temperatureMode;
     this.processRequest({msg: `cct=${value}`} );
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.targetState.targetOnState = value as boolean;
+    this.lightState.isOn = value as boolean;
     this.processRequest({msg: `on=${value}`});
     callback(null);
   }
 
   protected myTimer = null
   protected timestamps = []
+
   async processRequest(props: IProcessRequest): Promise<void>{
     const { displayName } = this.accessory.context;
-
+    
     try{ 
       const { msg, timeout } = props;
 
-      if(this.deviceWriteInProgress){
-        this.platform.log.warn(`[ProcessRequest] Got message while TRANSMISSION in PROGRESS for '${displayName}'. Schedule a check in 100ms`);
-        if(this.deviceWriteRetry === null){
-          this.deviceWriteRetry = setTimeout( () => this.processRequest({timeout:true}), 100 );
-
-        }
-      } else {
-        this.deviceWriteRetry = null;
-      }
-
-      // if a new message arrives, restart the timer
       if(msg){
-        this.platform.log.debug(`[ProcessRequest] Triggered "${msg}" for device '${displayName}'`);
-        this.timestamps.push(Date.now()); // log timestamps
+        this.platform.log.warn(`[ProcessRequest] User message received '${displayName}': `, msg);
         clearTimeout(this.myTimer);
         this.myTimer = setTimeout( () => this.processRequest({timeout: true}), INTRA_MESSAGE_TIME);
         return;
       }
+      
+      if(this.deviceWriteInProgress){
+        this.platform.log.debug(`[ProcessRequest] Transmission in progress '${displayName}'. Will retry in 100ms.`);
+        this.deviceWriteRetry = setTimeout( () => this.processRequest({timeout:true}), 100 );
+      } else {
+        this.deviceWriteRetry = null;
+      }
+      const printTS = (ts) => ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
+
+      // At this point we're ready to transmit,
+      //  determine if a transmission is actually needed
+      //    check the delta between current state and last transmitted
+      // (or should be last read back?)
+
+      const {nextState, message: stateMsg} = LightStateMachine.nextState(this.lightState, this.lightStateTemporary);
+
       this.deviceWriteInProgress = true; //block reads of device while
 
       this.platform.log.debug(`[ProcessRequest] Triggered "timeout" for device '${displayName}'`);
-
-      const printTS = (ts) => ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
-
-      // TODO: if transmission started, then do what if new message arrives?
-
-      const {nextState, message: stateMsg} = LightStateMachine.nextState(this.lightState);
-
-      if(nextState === 'unchanged'){
-        this.platform.log.warn(`[ProcessRequest] Timeout with no valid data. State: '${this.lightState.targetState}' for device '${displayName}' `);
-        this.timestamps = [];
-        this.clearTargetState();
-      } else if(nextState==='keepState'){
+      // keep, toggle, setcolor
+      if(nextState==='keepState'){
         this.platform.log.debug(`[ProcessRequest] Skipped transmission. Type: ${stateMsg} for device '${displayName}'`);
       } else {
         const timeStart = Date.now();
-        this.platform.log.debug(`[ProcessRequest] Transmission started. Type: ${stateMsg} for device '${displayName}'`);
+        this.platform.log.debug(`[ProcessRequest] Transmission started. ${nextState}-${stateMsg} for device '${displayName}'`);
         this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
         this.timestamps = [];
 
         const writeStartTime = Date.now();
         nextState === 'toggleState' ?
-          await this.send(this.lightState.targetState.targetOnState ? COMMAND_POWER_ON : COMMAND_POWER_OFF)
+          await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF)
           :
           await this.updateDeviceState(); // Send message to light
         const writeElapsedTime = Date.now() - writeStartTime;
         
-        this.platform.log.debug(`[ProcessRequest] waiting ${DEVICE_READBACK_DELAY} for device '${displayName}' propagation`);
-        await this.sleep(DEVICE_READBACK_DELAY);
-
-        const readStartTime = Date.now();
-        await this.updateLocalState();  // Read light state, tell homekit and store as current state  
-        const readElapsedTime = Date.now() - readStartTime;
-        
-        this.clearTargetState();        // clear state changes
         const elapsed = Date.now() - timeStart;
-        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}! (w:${writeElapsedTime},r:${readElapsedTime}'. Type: ${stateMsg} for device '${displayName}'\n`);
+        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}! (w:${writeElapsedTime} '. Type: ${stateMsg} for device '${displayName}'\n`);
       }
-      this.deviceWriteInProgress = false; //allow reads to occur
     } catch(err){
       this.platform.log.error(`[ProcessRequest] ERROR for device '${displayName}':`, err);
-      this.deviceWriteInProgress = false; //allow reads to occur
     }
+    this.deviceWriteInProgress = false; //allow reads to occur
+    this.timeOfLastWrite = Date.now();
+    setTimeout( () => this.getDeviceStatus(), 1000);
   }
 
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  clearTargetState():void{
-    this.lightState.targetState = {   targetHSL: { hue:null, saturation:null, luminance:null}, 
-      targetMode: null, targetOnState: null, targetColorTemperature:null,
-      targetBrightness: null,
-    };
   }
 
   //=================================================
@@ -366,18 +336,34 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     callback(null, mired);
   }
 
-  protected lastTimeCalled = Date.now()
-  async getDeviceStatus(){ //updateLocalState
+  protected timeOfLastRead = null; 
+  protected timeOfLastWrite = null; 
 
-    if( Date.now() - this.lastTimeCalled > 100 ){
-      this.lastTimeCalled = Date.now(); 
+  async getDeviceStatus(){ //updateLocalState
+    const now = Date.now();
+    const timeSinceLastRead = this.timeOfLastRead ? (now - this.timeOfLastRead) : Infinity;
+    const timeSinceLastWrite = this.timeOfLastWrite ? (now - this.timeOfLastWrite) : Infinity;
+    this.platform.log.debug(`getDeviceStatus triggered (read for ${this.accessory.context.displayName})`);
+
+    if( timeSinceLastRead > 1000 && timeSinceLastWrite > 1000 ){
+      this.platform.log.debug('\ttimers expired');
+
       // if a write is inprogress, we don't bother reading lightbulb state
       // because at the end of a write, there's a read anyway
-      if(this.deviceWriteInProgress === false){
-        this.updateLocalState();
+      if(this.deviceWriteInProgress === true){
+        this.platform.log.debug(`READ scheduling for 1sec (${this.accessory.context.displayName})`);
+        setTimeout( () => this.getDeviceStatus(), 1000);
       } else {
-        this.platform.log.debug(`Skipping read of ${this.accessory.context.displayName}, as we're about to do as part of the write`);
+
+        const readStartTime = Date.now();
+        await this.updateLocalState();  // Read light state, tell homekit and store as current state  
+        const readElapsedTime = Date.now() - readStartTime;
+        
+        this.platform.log.debug(`[readBulb/HkUpdate] for of ${this.accessory.context.displayName}, elapsed: ${readElapsedTime}ms`);
       }
+    } else {
+      this.platform.log.debug('\ttimers NOT expired yet');
+
     }
     return;
   }
@@ -421,7 +407,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * once values are available, update homekit with actual values
    */
   async updateLocalState() {
-
+    this.timeOfLastRead = Date.now();
     try {
       let state;
       let scans = 0;
@@ -472,6 +458,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       await this.updateHomekitState();
       const elapsedHomeKitUpdateTime = Date.now() - updateHomeKitStartTime;
       this.platform.log.debug(`[updateLocalState] elapsedHomeKitUpdateTime for '${this.accessory.context.displayName}' is ${elapsedHomeKitUpdateTime} ms` );
+      this.lightStateTemporary = Object.assign({},this.lightState); // store last value sent to light
 
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
@@ -604,14 +591,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   } //send
 
-  cacheCurrentLightState(){
-    this.lightStateTemporary.HSL = this.lightState.HSL;
-  }
-
-  async restoreCachedLightState(){
-    this.lightState.HSL = this.lightStateTemporary.HSL;
-    await this.updateDeviceState();
-  }
   //=================================================
   // End Misc Tools //
 

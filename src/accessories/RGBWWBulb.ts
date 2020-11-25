@@ -98,7 +98,6 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
 
-    this.cacheCurrentLightState();
     return {isOn, hue, saturation, brightness };
   }
     

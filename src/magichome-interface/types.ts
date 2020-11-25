@@ -40,15 +40,6 @@ export interface ILightState {
     debugBuffer?: Buffer;
     lightVersion?: number;
     lightVersionModifier?: number;
-    targetState: ITargetLightState;
-}
-
-export interface ITargetLightState {
-    targetMode: opMode;
-    targetOnState: boolean | null
-    targetHSL: IColorHSL;
-    targetColorTemperature?: number;
-    targetBrightness?: number
 }
 export interface IColorRGB {
     red: number; 
