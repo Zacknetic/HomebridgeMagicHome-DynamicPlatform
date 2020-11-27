@@ -13,6 +13,8 @@ const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
 
+
+const INTRA_MESSAGE_TIME = 20; 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -29,6 +31,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //protected interval;
   public activeAnimation = animations.none;
 
+  protected colorCommand = false;
+  protected deviceWriteInProgress = false;
+  protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
@@ -148,26 +153,36 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.HSL.hue = value as number;
-    this.updateDeviceState();
+    this.lightState.HSL.hue = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.HSL.saturation = value as number;
-    this.updateDeviceState();
+    this.lightState.HSL.saturation = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.brightness = value as number;
-    this.updateDeviceState();
+    this.lightState.brightness = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
+  /*
+  async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
+    this.lightState.operatingMode = opMode.temperatureMode;
+    this.processRequest({msg: `cct=${value}`} );
+    callback(null);
+  }*/
+
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.isOn = value as boolean;
-    this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    this.processRequest();
     callback(null);
   }
 
@@ -426,79 +441,40 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //clearInterval(this.interval);
   }
 
-  /*
-  async rainbowEffect(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    const isOn = value as boolean;
-    if(!isOn){
-      this.stopAnimation();
-    }else{ 
-      let hue = 0;
-      const increment = 10;
-      const waitTime = 0;
-      let wait = waitTime;
-      const isWaiting = false;
-      
-      this.interval = setInterval(() => {
-        this.lightState.HSL.saturation = 100 as number;
-        this.lightState.HSL.hue = hue as number;
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
-
-        if(wait > 0 && hue % (360/increment)){
-          wait --;
-        } else {
-          wait = waitTime;
-          hue += increment;
-        }
-        
-        this.updateDeviceState(10);
-
-        if(hue>359){
-          hue = 0;
-        }
-
-      }, 125);
-     
-    }
-    callback(null);
-  } //rainbowEffect
-*/
-
-
   //=================================================
   // End LightEffects //
 
+  protected myTimer = null
+  protected timestamps = []
 
-  speedToDelay(speed: number) {
-    speed = clamp(speed, 0, 100);
-    return (30 - ((speed / 100) * 30)) + 1;
+  protected timeOfLastRead = null; 
+  protected timeOfLastWrite = null; 
+
+
+
+  processRequest(){
+
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(  () =>  {
+        if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
+
+          if(!this.lightState.isOn){      // if we are turning the power off...
+            this.send(COMMAND_POWER_ON);  // set an extra on command in case the device is in a bugged state
+          }                               // it sounds counterintuitive, but this wont effect a non-bugged device
+          this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
+        
+          this.log.warn ('no color only power', this.lightState.isOn);
+        } else {
+          
+          this.updateDeviceState(); // set color
+          this.log.warn ('no power only color');
+        }
+        this.colorCommand = false;
+        this.deviceUpdateInProgress = false;
+      }, INTRA_MESSAGE_TIME);
+    }
+    return;
   }
-
-  /**
-	 * Sets the controller to display one of the predefined patterns
-	 * @param {String} pattern Name of the pattern
-	 * @param {Number} speed between 0 and 100
-	 * @param {function} callback 
-	 * @returns {Promise<boolean>}
-	 */
-  setPattern(pattern: number, speed: number) {
-
-    const delay = this.speedToDelay(speed);
-
-    //const cmd_buf = Buffer.from();
-
-    //const promise = new Promise((resolve, reject) => {
-    this.send([0x61, pattern, delay, 0x0f]);
-    //}).then(data => {
-    //return (data.length > 0 || !this._options.ack.pattern); 
-    //});
-
-    // if (callback && typeof callback == 'function') {
-    // promise.then(callback.bind(null, null), callback);
-    //}
-
-    //return promise;
-  }
-
-  
 } // ZackneticMagichomePlatformAccessory class
 

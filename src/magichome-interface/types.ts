@@ -26,9 +26,31 @@ export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
     lastKnownState;
 }
 
-export type IStateProps = {
-    
+export interface ILightState {
+    isOn: boolean;
+    RGB: IColorRGB;
+    HSL?: IColorHSL;
+    whiteValues:  IWhites;
+    brightness?: number;
+    colorTemperature?: number;
+    debugBuffer?: Buffer;
+    controllerHardwareVersion?: string;
+    controllerFirmwareVersion?: string;
 }
 
-;
+export interface IColorRGB {
+    red: number; 
+    green: number; 
+    blue:number;
+}
 
+export interface IColorHSL {
+    hue: number; 
+    saturation: number; 
+    luminance: number;
+}
+
+export interface IWhites {
+    warmWhite: number; 
+    coldWhite: number; 
+}
