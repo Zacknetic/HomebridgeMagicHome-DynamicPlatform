@@ -285,7 +285,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     if(lightTypesMap.has(controllerHardwareVersion)){
-      this.log.info('Hardware Version: %o with Firmware Version: %o matches known device type records', 
+      this.log.warn('Hardware Version: %o with Firmware Version: %o matches known device type records', 
         controllerHardwareVersion.toString(16),
         controllerFirmwareVersion.toString(16));
       lightParameters = lightTypesMap.get(controllerHardwareVersion);
@@ -393,7 +393,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   printDeviceInfo(message: string, accessory: PlatformAccessory){
     this.log.info( '%o -' + message +
-    '\n%o Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o\n',  
+    '\n Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
     this.count++,
     accessory.context.device.displayName,
     accessory.context.device.lightParameters.controllerLogicType,
