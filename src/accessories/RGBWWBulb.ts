@@ -6,12 +6,12 @@ import { cloneDeep } from 'lodash';
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   addHomekitProps(state:ILightState):void {
-    Common.convertRGBWWtoHSB(state, this);
+    Common.convertRGBWWtoHSB(state, this as any);
     return;
   }
 
   addMagicHomeProps(state:ILightState):void {
-    Common.convertHSBtoRGBWW(state, this);
+    Common.convertHSBtoRGBWW(state, this as any);
     return;
   }
 

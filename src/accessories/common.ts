@@ -6,8 +6,11 @@ import { ILightState, opMode } from '../magichome-interface/types';
 import { convertRGBtoHSL, convertHSLtoRGB, convertWhitesToColorTemperature, clamp } from '../magichome-interface/utils';
 
 interface IConvProps {
+  //this.config.whiteEffects.colorWhiteThreshold
   config?: {
-    colorWhiteThreshold?: number
+    whiteEffects?: {
+      colorWhiteThreshold?: number;
+    }
   }
 }
 export default class CommonClass{
@@ -41,7 +44,7 @@ export default class CommonClass{
   }
 
   static convertHSBtoRGBW(state: ILightState, props: IConvProps):void {
-    const { colorWhiteThreshold } = props?.config;
+    const { colorWhiteThreshold } = props?.config?.whiteEffects;
     const hsl = state.HSL;
     
     //if saturation is below config set threshold or if user asks for warm white / cold white  
@@ -87,7 +90,7 @@ export default class CommonClass{
     Homekit uses HSB, MagicHome uses RGB
   */
   static convertHSBtoRGBWW(state:ILightState, props:IConvProps ):ILightState{
-    const { colorWhiteThreshold } = props.config;
+    const { colorWhiteThreshold } = props.config.whiteEffects;
     //**** local variables ****\\
     const hsl = state.HSL;
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
@@ -170,7 +173,7 @@ export default class CommonClass{
     state.HSL = convertRGBtoHSL(state.RGB);
     const { mired } = convertWhitesToColorTemperature(state.whiteValues);
     state.colorTemperature = mired;
-    const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, {});
+    const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, props);
     state.brightness = _brightness;
     state.HSL.hue = _hue;
     state.HSL.saturation = _saturation;
@@ -179,7 +182,9 @@ export default class CommonClass{
   }   
 
   static estimateBrightness(lightState:ILightState, props:IConvProps):any {
-    const { colorWhiteThreshold } = props.config;
+    // eslint-disable-next-line no-console
+    console.log('props: ', props);
+    const { colorWhiteThreshold } = props?.config?.whiteEffects;
     let { hue, saturation } = lightState.HSL;
     const { luminance } = lightState.HSL;
     let brightness = 0;

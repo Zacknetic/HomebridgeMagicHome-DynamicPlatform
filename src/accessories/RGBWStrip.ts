@@ -7,12 +7,12 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   public eightByteProtocol = 2;
 
   addHomekitProps(state:ILightState):void {
-    Common.convertRGBWtoHSB(state, this);
+    Common.convertRGBWtoHSB(state, this as any);
     return;
   }
 
   addMagicHomeProps(state:ILightState):void {
-    Common.convertHSBtoRGBW(state, this);
+    Common.convertHSBtoRGBW(state, this as any);
     return;
   }
 

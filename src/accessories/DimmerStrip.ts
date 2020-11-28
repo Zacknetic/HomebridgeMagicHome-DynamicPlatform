@@ -7,13 +7,13 @@ export class DimmerStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   addHomekitProps(state:ILightState):void {
     // convert Dimmer to HSB
-    Common.convertDimmerToHSB(state, this);
+    Common.convertDimmerToHSB(state, this as any);
     return;
   }
 
   addMagicHomeProps(state:ILightState):void {
     // convert HSB to Dimmer
-    Common.convertHSBtoDimmer(state, this);
+    Common.convertHSBtoDimmer(state, this as any);
     return;
   }
 
