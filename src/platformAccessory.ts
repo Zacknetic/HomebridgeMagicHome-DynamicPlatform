@@ -316,29 +316,25 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
 
       this.platform.log.debug(`[ProcessRequest] Triggered "${txType}" for device '${displayName}' ('${this.nextCommand}')`);
-      // keep, toggle, setcolor
-      if(nextState==='keepState'){
-        this.platform.log.debug(`[ProcessRequest] Transmission skipped type (${nextState}). Detail:${stateMsg} for device '${displayName}'`);
-      } else {
-        const timeStart = Date.now();
- 
-        this.platform.log.debug('\t timestamps', this.printTimestamp(this.timestamps) );
-        this.timestamps = [];
 
-        const writeStartTime = Date.now();
-        if( nextState === 'setPower') {
-          this.platform.log.info('Commiting writing setPower=', desiredLocked.isOn);
-          await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
-        } else {
-          const lockedStr = getStateString(desiredLocked);
-          this.platform.log.info(`Commiting writing ${nextState}: `, lockedStr);
-          await this.updateDeviceState(null,desiredLocked); // Send message to light
-        }
-        const writeElapsedTime = Date.now() - writeStartTime;
-        
-        const elapsed = Date.now() - timeStart;
-        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}ms. (w:${writeElapsedTime} '. Type: ${stateMsg} for device '${displayName}'\n`);
+      const timeStart = Date.now();
+      this.platform.log.debug('\t timestamps', this.printTimestamp(this.timestamps) );
+      this.timestamps = [];
+
+      const writeStartTime = Date.now();
+      if( nextState === 'setPower') {
+        this.platform.log.info('Commiting writing setPower=', desiredLocked.isOn);
+        await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+      } else {
+        const lockedStr = getStateString(desiredLocked);
+        this.platform.log.info(`Commiting writing ${nextState}: `, lockedStr);
+        await this.updateDeviceState(null,desiredLocked); // Send message to light
       }
+      const writeElapsedTime = Date.now() - writeStartTime;
+      
+      const elapsed = Date.now() - timeStart;
+      this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}ms. (w:${writeElapsedTime} '. Type: ${stateMsg} for device '${displayName}'\n`);
+    
     } catch(err){
       this.platform.log.error(`[ProcessRequest] ERROR for device '${displayName}':`, err);
     }

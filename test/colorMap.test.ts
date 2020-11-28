@@ -31,7 +31,7 @@ function tester(){
           console.log('input: ', state);
           console.log('output: ', restored);
           console.log(`Expected output h:${h} s:${s} b:${b} state mismatch.`);
-          return;
+          process.exit(0);
         }
           
       }
@@ -57,7 +57,7 @@ function tester2(){
           console.log('input: ', state);
           console.log('output: ', restored);
           console.log(`Expected output r:${r} g:${g} b:${b}.`);
-          return;
+          process.exit(0);
         }
           
       }
@@ -82,7 +82,7 @@ function tester3(){
         console.log('input: ', state);
         console.log('output: ', restored);
         console.log(`Expected output cw:${cw} ww:${ww}.`);
-        return;
+        process.exit(0);
       }
           
     }
