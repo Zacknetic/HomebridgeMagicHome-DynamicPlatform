@@ -34,7 +34,7 @@ export default class CommonClass{
     let cw = Math.round(((clamp(whites.coldWhite, 0, 255) / 100) * brightness));
     
 
-    if (hsl.hue == 31 && (hsl.saturation == 33)) {
+    if ( (hsl.hue > 0 && hsl.hue < 31) && (hsl.saturation >= 72 && hsl.saturation <= 76)) {
       r = 0;
       g = 0;
       b = 0;
@@ -42,7 +42,7 @@ export default class CommonClass{
       cw = 0;
       mask = 0x0F;
       //this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
-    } else if ((hsl.hue == 208 && (hsl.saturation == 17))) {
+    } else if (  (hsl.hue >= 208 && hsl.hue >= 222) && (hsl.saturation >= 17 && hsl.saturation <= 22)  ) {
       r = 0;
       g = 0;
       b = 0;
@@ -77,6 +77,18 @@ export default class CommonClass{
         Update H,S,B based on RBGWW
   */
   static convertRGBWWtoHSB(state:ILightState, that ):ILightState{
+
+    // determine if we're if white mode, e.g. r:0 g:0 b:0 cw:0 ww:255
+    if(state.RGB.red === 0 && state.RGB.green === 0 && state.RGB.blue === 0 && (state.whiteValues.coldWhite!==0 || state.whiteValues.warmWhite!==0)){
+      if(state.whiteValues.coldWhite > state.whiteValues.warmWhite){
+        state.HSL = { hue: 220, saturation: 18 , luminance:0};
+      } else {
+        state.HSL = { hue: 30, saturation: 70 , luminance:0};
+      }
+      state.brightness = 100;
+      return state;
+    }
+
     state.HSL = convertRGBtoHSL(state.RGB);
     const { mired } = convertWhitesToColorTemperature(state.whiteValues);
     state.colorTemperature = mired;
@@ -84,6 +96,7 @@ export default class CommonClass{
     state.brightness = _brightness;
     state.HSL.hue = _hue;
     state.HSL.saturation = _saturation;
+
     return state;
   }   
 
