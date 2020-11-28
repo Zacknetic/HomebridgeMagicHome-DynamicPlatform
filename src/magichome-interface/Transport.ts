@@ -3,6 +3,7 @@ import Queue from 'promise-queue';
 import { checksum } from './utils';
 import type { PlatformConfig } from 'homebridge';
 import { getLogger } from '../instance';
+import Common from '../accessories/common';
 
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
@@ -153,24 +154,11 @@ export class Transport {
           coldWhite: data.readUInt8(11),
         },
         lightVersion: data.readUInt8(10),
-        operatingMode: parseOperatingMode( data.readUInt8(12) ),
+        operatingMode: Common.parseOperatingMode( data.readUInt8(12) ),
   
       };
     } catch (error) {
       this.log.debug(error);
     }
-  }
-}
-
-import { opMode} from '../magichome-interface/types';
-function parseOperatingMode(opModeCode): opMode{
-  if(opModeCode === 0xF0){
-    return opMode.redBlueGreenMode;
-  } else if( opModeCode === 0x0F){
-    return opMode.temperatureMode;
-  } else if ( opModeCode === 0xFF){
-    return opMode.simultaneous;
-  } else {
-    return opMode.unknown;
   }
 }
