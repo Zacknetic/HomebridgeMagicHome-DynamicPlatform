@@ -1,31 +1,26 @@
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
+import { ILightState } from '../magichome-interface/types';
+import { cloneDeep } from 'lodash'; 
+import Common from './common'; 
 
 export class DimmerStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   
-  /**
-   ** @updateHomekitState
-   * send state to homekit
-   */
-  async updateHomekitState() {
-
-    this.lightState.brightness = this.lightState.RGB.red / 2.5; //create local constant for brightness
-    this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
-
-    if(  this.lightState.isOn ){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.brightness);
-    }
-
+  addHomekitProps(state:ILightState):void {
+    // convert Dimmer to HSB
+    Common.convertDimmerToHSB(state, this);
+    return;
   }
-    
-  async setColor() {
 
-    //**** local variables ****\\
-    const brightness = Math.round((2.5 * this.lightState.brightness));
+  addMagicHomeProps(state:ILightState):void {
+    // convert HSB to Dimmer
+    Common.convertHSBtoDimmer(state, this);
+    return;
+  }
 
-    await this.send([0x31, brightness, 0x00, 0x00, 0x03, 0x01, 0x0F]); //8th byte checksum calculated later in send()
-
-    
-  }//setColor
-    
+  async updateDeviceState(_timeout = 200, state:ILightState) {
+    this.addMagicHomeProps(state);
+    this.lightLastWrittenState = cloneDeep(state);   
+    await this.send([0x31, state.RGB.red, 0x00, 0x00, 0x03, 0x01, 0x0F]); //8th byte checksum calculated later in send()
+  }
     
 }
