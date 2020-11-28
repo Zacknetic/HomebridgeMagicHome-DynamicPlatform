@@ -47,7 +47,7 @@ export class Discover {
       socket.on('listening', () => {
         socket.setBroadcast(true);
         
-        const addressAlreadyScanned = [];
+        const addressAlreadyScanned: any[] = [];
         for (const userInterface of userInterfaces){
           if( addressAlreadyScanned.includes(userInterface.broadcast)){
             this.log.info('Already scanned broadcast-address %o for Magichome devices. Skipping.\n', userInterface.broadcast);

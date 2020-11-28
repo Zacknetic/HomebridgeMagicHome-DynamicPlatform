@@ -26,7 +26,7 @@ import { getPrettyName, lightTypesMap} from './magichome-interface/LightMap';
 const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
-const accessoryType = {
+const accessoryType: {[key:string]: any} = {
   Switch,
   DimmerStrip,
   GRBStrip,
@@ -310,7 +310,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }//discoveredDevices
 
 
-  async isAllowed(uniqueId){
+  async isAllowed(uniqueId: string | number){
  
     const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs;
     let isAllowed = true;
@@ -332,7 +332,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     return isAllowed;
   }
 
-  async getInitialState(ipAddress, _timeout = 500){
+  async getInitialState(ipAddress:string, _timeout = 500){
 
     const transport = new Transport(ipAddress, this.config);
     try{
@@ -356,7 +356,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
   }
  
-  async determineController(device):Promise<IDeviceQueriedProps> {
+  async determineController(device:IDeviceBroadcastProps):Promise<IDeviceQueriedProps> {
     const initialState = await this.getInitialState (device.ipAddress, 10000);
     if( initialState == undefined){
       return undefined;
@@ -495,7 +495,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }
 */
 
-  async send(transport, command: number[], useChecksum = true, _timeout = 200) {
+  async send(transport:any, command: number[], useChecksum = true, _timeout = 200) {
     const buffer = Buffer.from(command);
 
     const output = await transport.send(buffer, useChecksum, _timeout);

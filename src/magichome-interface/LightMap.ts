@@ -158,7 +158,7 @@ function getPrettyName(uniqueId:string, controllerType:string | null):string{
   return `${deviceType} ${uniqueIdTruc}`;
 }
 
-function isType(a,b){
+function isType(a:string,b:string){
   return a.toLowerCase().indexOf(b) > -1;
 }
 

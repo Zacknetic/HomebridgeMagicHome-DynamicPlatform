@@ -241,7 +241,7 @@ export default class CommonClass{
   }
 
   
-  static parseOperatingMode(opModeCode): opMode{
+  static parseOperatingMode(opModeCode: number): opMode{
     if(opModeCode === 0xF0){
       return opMode.redBlueGreenMode;
     } else if( opModeCode === 0x0F){

@@ -3,9 +3,9 @@ import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformCon
 export class DiscoveredDevice {
 
   constructor(  
-       public ipAddress, 
-       public uniqueId, 
-       public modelNumber,
+       public ipAddress:string, 
+       public uniqueId:string | number, 
+       public modelNumber: string | number,
   ){}
 
   public readonly log: Logger;

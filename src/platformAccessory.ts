@@ -77,12 +77,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //protected interval;
   public activeAnimation = animations.none;
   protected deviceWriteInProgress = false;
-  protected periodicTimer = null;
   protected pendingConsistencyCheck = false
-  protected nextCommand = null;
-  protected myTimer = null
-  protected timestamps = []
-  protected timeOfLastUserInteraction = null
+  protected nextCommand: string = null;
+  protected timestamps: number[] = []
+  protected timeOfLastUserInteraction: number | null = null
+  protected periodicTimer: NodeJS.Timeout | null = null;
+  protected myTimer: NodeJS.Timeout | null = null
+
   log = getLogger();
 
   protected lightState: ILightState = DEFAULT_LIGHT_STATE
@@ -387,8 +388,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.periodicTimer = setInterval( () => this.consistencyCheck(), 300);
   }
 
-  protected timeOfLastRead = null; 
-  protected timeOfLastWrite = null; 
+  protected timeOfLastRead:number | null = null; 
+  protected timeOfLastWrite:number | null = null; 
 
 
 
@@ -650,15 +651,15 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     return { isOn, hue: HSL?.hue, saturation: HSL?.saturation, brightness, colorTemperature };
   }
 
-  sleep(ms) {
+  sleep(ms:number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  printTimestamp(timestampArray) {
+  printTimestamp(timestampArray: number[]) {
     if(timestampArray.length=== 0){
       return [];
     } else {
-      return timestampArray.map( e=> e-timestampArray[0]);
+      return timestampArray.map( (e:number)=> e-timestampArray[0]);
     }
   }
   

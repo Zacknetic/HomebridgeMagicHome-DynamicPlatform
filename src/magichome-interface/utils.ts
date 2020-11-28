@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
+import { IColorHSL, IColorRGB, IWhites } from './types';
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -22,7 +23,8 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // Start Convert RGBtoHSL //
-export function convertRGBtoHSL({red, green, blue}) {
+export function convertRGBtoHSL(rgb:IColorRGB) {
+  const {red, green, blue} = rgb;
   const r = red / 255;
   const g = green / 255;
   const b = blue / 255;
@@ -87,7 +89,8 @@ export function hue2rgb(p: number, q: number, t: number) {
         
 //=================================================
 // Start Convert HSLtoRGB //
-export function convertHSLtoRGB ({hue, saturation, luminance}) {
+export function convertHSLtoRGB (hsl:IColorHSL) {
+  const {hue, saturation, luminance} = hsl;
   const h = hue / 360;
   const s = saturation / 100;
   const l = 50 / 100;
@@ -156,23 +159,23 @@ export function loadJson<T>(file: string, replacement: T): T {
 const TMP_MAX = 500;
 const TMP_MIN = 140;
 
-function miredToK(mired){
+function miredToK(mired:number){
   return Math.round( 1000000/mired) ;
 }
 
-function Ktomired(tempK){
+function Ktomired(tempK:number){
   return Math.round( 1000000/tempK );
 }
 
-export function convertColorTemperatureToWhites(mired) {
-  mired = parseInt(mired);
+export function convertColorTemperatureToWhites(miredInput: string) {
+  const mired = parseInt(miredInput);
   const coldWhite  = Math.round( (((mired - TMP_MIN) / (TMP_MAX - TMP_MIN)) * (0 - 255)) + 255 );
   const warmWhite = 255-coldWhite;
   const tempK = miredToK(mired);
   return { coldWhite, warmWhite, tempK, mired };
 }
 
-export function convertWhitesToColorTemperature(whites){
+export function convertWhitesToColorTemperature(whites:IWhites){
   // temperature is determined by the ratio of cold and warm whites
   const { coldWhite, warmWhite } = whites;
   const warmRatio = coldWhite / (coldWhite + warmWhite);

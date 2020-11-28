@@ -1,6 +1,6 @@
 let logger: any;
 
-export function setLogger(log) {
+export function setLogger(log:any) {
   logger = log;
 }
 
