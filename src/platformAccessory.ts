@@ -3,12 +3,13 @@ import type {
   Service, PlatformConfig, PlatformAccessory, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback,
 } from 'homebridge';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertWhitesToColorTemperature } from './magichome-interface/utils';
+import { clamp, convertWhitesToColorTemperature } from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 import { ILightState, opMode } from './magichome-interface/types';
 import { LightStateMachine} from './LightStateMachine';
+import _ from 'lodash'; // Import the entire lodash library
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
@@ -27,6 +28,10 @@ const INTRA_MESSAGE_TIME = 5;
 */
 const DEVICE_READBACK_DELAY = 1200;
 
+// amount of time with no user message
+//
+const USER_IDLE_TIME = 1000;
+
 const DEFAULT_LIGHT_STATE: ILightState = {
   isOn: true,
   operatingMode: opMode.redBlueGreenMode,
@@ -37,13 +42,23 @@ const DEFAULT_LIGHT_STATE: ILightState = {
   brightness: 100,
 };
 
+const OFFLINE_STATE: ILightState = {
+  isOn: false,
+  operatingMode: opMode.unknown,
+  HSL: { hue: 0, saturation: 0, luminance: 0 },
+  RGB: { red: 0, green: 0, blue: 0 },
+  whiteValues: { warmWhite: 0, coldWhite: 0 },
+  colorTemperature: null,
+  brightness: 0,
+};
+
 const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
 
 interface IProcessRequest {
   msg?: string;
-  timeout?: boolean;
+  txType?: 'endOfFrame' | 'consistencyFix';
 }
 
 
@@ -63,11 +78,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //protected interval;
   public activeAnimation = animations.none;
   protected deviceWriteInProgress = false;
-  protected deviceWriteRetry: any = null;
+  protected periodicTimer = null;
+  protected pendingConsistencyCheck = false
+  protected nextCommand = null;
+  protected myTimer = null
+  protected timestamps = []
+  protected timeOfLastUserInteraction = null
   log = getLogger();
 
   protected lightState: ILightState = DEFAULT_LIGHT_STATE
-  public lightStateTemporary: ILightState = Object.assign({},this.lightState)
+  protected lightLastWrittenState: ILightState = _.cloneDeep(this.lightState) 
+  public lightLastReadState: ILightState = _.cloneDeep(this.lightState)
 
   //=================================================
   // Start Constructor //
@@ -156,12 +177,33 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
       .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
     //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
+    
+    // TODO: should we use the last know state here? this should contain the last user desire.
+    //   this.accessory.context.lastKnownState
+    this.platform.log.info(`Last Known state for ${this.accessory.displayName}: `, this.accessory.context.lastKnownState );
     this.updateLocalState();
+
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name, this.accessory.displayName);
   
+  }
 
+  addHomekitProps(state:ILightState):void{
+    const {controllerType } = this.accessory.context.device.lightParameters;
+    throw new Error(`This abstract method  ("addHomekitProps")  must be implemented for device type "${controllerType}"`);
+  }
+
+  addMagicHomeProps(state:ILightState):void{
+    const {controllerType } = this.accessory.context.device.lightParameters;
+    throw new Error(`This abstract method ("addMagicHomeProps") must be implemented for device type "${controllerType}"`);
+  }
+
+  async consistencyCheck(){
+    clearInterval(this.periodicTimer);
+    await this.updateLocalState();
+    this.platform.log.debug('consistencyCheck NOT implemented');
+    return;
   }
 
   //=================================================
@@ -185,7 +227,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   async readBackTest(){
-
     let state;
     await this.send(COMMAND_POWER_ON);
     await this.sleep(1000);
@@ -206,103 +247,106 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
     }
     this.platform.log.info(`TEST COMPLETE! ${this.accessory.displayName}`);
-
-
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.hue = value as number; 
+    this.nextCommand = 'setColor';
     this.processRequest({ msg: `hue=${value}`});
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.HSL.saturation = value as number; 
+    this.nextCommand = 'setColor';
     this.processRequest({ msg: `sat=${value}`});
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.brightness = value as number; 
+    this.nextCommand = 'setColor';
     this.processRequest({msg: `bri=${value}`});
     callback(null);
   }
 
   async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
     this.lightState.operatingMode = opMode.temperatureMode;
+    this.nextCommand = 'setColor';
     this.processRequest({msg: `cct=${value}`} );
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.isOn = value as boolean;
+    if(this.lightState.isOn === false || this.nextCommand === null){
+      this.nextCommand = 'setPower';
+    }
     this.processRequest({msg: `on=${value}`});
     callback(null);
   }
 
-  protected myTimer = null
-  protected timestamps = []
-
   async processRequest(props: IProcessRequest): Promise<void>{
     const { displayName } = this.accessory.context;
-    
+    const {getStateString} = HomebridgeMagichomeDynamicPlatformAccessory;
+
     try{ 
-      const { msg, timeout } = props;
+      const { msg, txType } = props;
 
       if(msg){
+        this.timeOfLastUserInteraction = Date.now();
         this.platform.log.warn(`[ProcessRequest] User message received '${displayName}': `, msg);
-        clearTimeout(this.myTimer);
-        this.myTimer = setTimeout( () => this.processRequest({timeout: true}), INTRA_MESSAGE_TIME);
+        clearTimeout(this.myTimer); //Restart the time since last message
+        this.myTimer = setTimeout( () => this.processRequest({txType: 'endOfFrame'}), INTRA_MESSAGE_TIME);
         return;
       }
       
       if(this.deviceWriteInProgress){
-        this.platform.log.debug(`[ProcessRequest] Transmission in progress '${displayName}'. Will retry in 100ms.`);
-        this.deviceWriteRetry = setTimeout( () => this.processRequest({timeout:true}), 100 );
-      } else {
-        this.deviceWriteRetry = null;
+        return;
       }
-      const printTS = (ts) => ts.length=== 0 ? [] : ts.map( e=> e-ts[0]);
+      this.deviceWriteInProgress = true; //block reads of device while
 
       // At this point we're ready to transmit,
       //  determine if a transmission is actually needed
       //    check the delta between current state and last transmitted
       // (or should be last read back?)
+    
+      const nextState = this.nextCommand;
+      const stateMsg = '';
+      const desiredLocked: ILightState = _.cloneDeep(this.lightState);
 
-      const {nextState, message: stateMsg} = LightStateMachine.nextState(this.lightState, this.lightStateTemporary);
 
-      this.deviceWriteInProgress = true; //block reads of device while
-
-      this.platform.log.debug(`[ProcessRequest] Triggered "timeout" for device '${displayName}'`);
+      this.platform.log.debug(`[ProcessRequest] Triggered "${txType}" for device '${displayName}' ('${this.nextCommand}')`);
       // keep, toggle, setcolor
       if(nextState==='keepState'){
-        this.platform.log.debug(`[ProcessRequest] Skipped transmission. Type: ${stateMsg} for device '${displayName}'`);
+        this.platform.log.debug(`[ProcessRequest] Transmission skipped type (${nextState}). Detail:${stateMsg} for device '${displayName}'`);
       } else {
         const timeStart = Date.now();
-        this.platform.log.debug(`[ProcessRequest] Transmission started. ${nextState}-${stateMsg} for device '${displayName}'`);
-        this.platform.log.debug('\t timestamps', printTS(this.timestamps) );
+ 
+        this.platform.log.debug('\t timestamps', this.printTimestamp(this.timestamps) );
         this.timestamps = [];
 
         const writeStartTime = Date.now();
-        nextState === 'toggleState' ?
-          await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF)
-          :
-          await this.updateDeviceState(); // Send message to light
+        if( nextState === 'setPower') {
+          this.platform.log.info('Commiting writing setPower=', desiredLocked.isOn);
+          await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        } else {
+          const lockedStr = getStateString(desiredLocked);
+          this.platform.log.info(`Commiting writing ${nextState}: `, lockedStr);
+          await this.updateDeviceState(null,desiredLocked); // Send message to light
+        }
         const writeElapsedTime = Date.now() - writeStartTime;
         
         const elapsed = Date.now() - timeStart;
-        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}! (w:${writeElapsedTime} '. Type: ${stateMsg} for device '${displayName}'\n`);
+        this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}ms. (w:${writeElapsedTime} '. Type: ${stateMsg} for device '${displayName}'\n`);
       }
     } catch(err){
       this.platform.log.error(`[ProcessRequest] ERROR for device '${displayName}':`, err);
     }
     this.deviceWriteInProgress = false; //allow reads to occur
     this.timeOfLastWrite = Date.now();
-    setTimeout( () => this.getDeviceStatus(), 1000);
-  }
-
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    clearInterval(this.periodicTimer);
+    this.periodicTimer = setTimeout( () => this.consistencyCheck(), 1000);
   }
 
   //=================================================
@@ -336,37 +380,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     callback(null, mired);
   }
 
+  getDeviceStatus(){
+    // we already responsed with an infered state. Now we check for the real value
+    this.platform.log.info('set interval of 300 to report actual state');
+
+    this.pendingConsistencyCheck = true;
+    clearInterval(this.periodicTimer);
+    this.periodicTimer = setInterval( () => this.consistencyCheck(), 300);
+  }
+
   protected timeOfLastRead = null; 
   protected timeOfLastWrite = null; 
 
-  async getDeviceStatus(){ //updateLocalState
-    const now = Date.now();
-    const timeSinceLastRead = this.timeOfLastRead ? (now - this.timeOfLastRead) : Infinity;
-    const timeSinceLastWrite = this.timeOfLastWrite ? (now - this.timeOfLastWrite) : Infinity;
-    this.platform.log.debug(`getDeviceStatus triggered (read for ${this.accessory.context.displayName})`);
 
-    if( timeSinceLastRead > 1000 && timeSinceLastWrite > 1000 ){
-      this.platform.log.debug('\ttimers expired');
-
-      // if a write is inprogress, we don't bother reading lightbulb state
-      // because at the end of a write, there's a read anyway
-      if(this.deviceWriteInProgress === true){
-        this.platform.log.debug(`READ scheduling for 1sec (${this.accessory.context.displayName})`);
-        setTimeout( () => this.getDeviceStatus(), 1000);
-      } else {
-
-        const readStartTime = Date.now();
-        await this.updateLocalState();  // Read light state, tell homekit and store as current state  
-        const readElapsedTime = Date.now() - readStartTime;
-        
-        this.platform.log.debug(`[readBulb/HkUpdate] for of ${this.accessory.context.displayName}, elapsed: ${readElapsedTime}ms`);
-      }
-    } else {
-      this.platform.log.debug('\ttimers NOT expired yet');
-
-    }
-    return;
-  }
 
   /**
    ** @getOn
@@ -396,9 +422,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //=================================================
   // Start State Get/Set //
 
-  calculateBrightness():number {
-    const { operatingMode, HSL, whiteValues, isOn } = this.lightState;
-    return isOn && HSL.luminance >=0? Math.round(HSL.luminance * 2) : 0;
+
+  static getStateString(state:ILightState):string{
+    let str;
+    try{
+      const { red, green, blue } = state.RGB;
+      const { brightness, isOn} = state;
+      const { coldWhite:cw, warmWhite:ww} = state.whiteValues;
+      const mode = state.operatingMode;
+      str =  `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} ~bri:${brightness}`;
+    } catch(err){
+      str = '(unable to get state string)';
+    }
+    return str;
   }
 
   /**
@@ -407,7 +443,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * once values are available, update homekit with actual values
    */
   async updateLocalState() {
-    this.timeOfLastRead = Date.now();
     try {
       let state;
       let scans = 0;
@@ -419,49 +454,37 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       const elapsed = Date.now() - timer;
-      // this.platform.log.debug(`[updateLocalState] NETWORK ACCESS for '${this.accessory.context.displayName}' is ${elapsed} ms (tries: ${scans})` );
+
+      const name = this.accessory.context.displayName;
+      const { ipAddress:ip, uniqueId:mac } = this.accessory.context.device;
 
       if(state == null){
-        const name = this.accessory.context.displayName;
-        const { ipAddress:ip, uniqueId:mac } = this.accessory.context.device;
-        this.platform.log.error(`No device response: "${name}" "${mac}" "${ip}"`);
+
+        this.platform.log.error(`No device response: "${name}" "${mac}" "${ip}" (offline)`);
         // TODO: report off-line here so that device shows as "no response". Use reachable?
         // this.service.updateCharacteristic(this.platform.Characteristic.Reachable, false);
         // temporary work around: report as off.
-        this.lightState.isOn = false;
-        await this.updateHomekitState();
-        return;
+        this.lightState.isOn = false; //FIXME: we're changing the user intent, but not letting them know. Add (!)
+        state = OFFLINE_STATE;
+      } else {
+        this.addHomekitProps(state);
       }
-      this.accessory.context.lastKnownState = state;
 
-      this.lightState.RGB = state.RGB;
-      this.lightState.HSL = convertRGBtoHSL(state.RGB);
-      this.lightState.whiteValues = state.whiteValues;
-      const { mired } = convertWhitesToColorTemperature(state.whiteValues);
-      this.lightState.colorTemperature = mired;
-      this.lightState.isOn = state.isOn;
-      this.lightState.operatingMode = state.operatingMode;
+      
+      this.accessory.context.lastKnownState = _.cloneDeep(state); // useful after a Homebridge restart?
+      this.lightLastReadState = _.cloneDeep(state); // store last value sent to light
+      this.timeOfLastRead = Date.now();
 
-      // TODO: right now, the brighness is calculated in the updateHomekitState because
-      //   each lamp model may have their way to calculate the brightness.
-      this.lightState.brightness = 0;
+      const { getStateString } = HomebridgeMagichomeDynamicPlatformAccessory;
+      this.platform.log.debug('[updateLocalState] lastWritten:', getStateString(this.lightLastWrittenState));
+      this.platform.log.debug('[updateLocalState] desired    :', getStateString(this.lightState));
+      this.platform.log.debug('[updateLocalState] lastRead   :', getStateString(this.lightLastReadState));
 
-      const { red, green, blue } = this.lightState.RGB;
-      const { brightness, isOn} = this.lightState;
-      const { coldWhite:cw, warmWhite:ww} = this.lightState.whiteValues;
-      const mode = this.lightState.operatingMode;
-      const str = `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} (bri:${brightness} - calculation is pending)`;
-      this.platform.log.debug('[getLampState] Reporting:', str);
-      // this.platform.log.debug('state.debugBuffer', state.debugBuffer);
-
-      const updateHomeKitStartTime = Date.now();
-      await this.updateHomekitState();
-      const elapsedHomeKitUpdateTime = Date.now() - updateHomeKitStartTime;
-      this.platform.log.debug(`[updateLocalState] elapsedHomeKitUpdateTime for '${this.accessory.context.displayName}' is ${elapsedHomeKitUpdateTime} ms` );
-      this.lightStateTemporary = Object.assign({},this.lightState); // store last value sent to light
+      await this.updateHomekitState(this.lightLastReadState);
+      this.platform.log.debug(`[updateLocalState] for '${this.accessory.context.displayName}' is complete` );
 
     } catch (error) {
-      this.platform.log.error('getState() error: ', error);
+      this.platform.log.error('[updateLocalState] error: ', error);
     }
   }
 
@@ -469,44 +492,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    ** @updateHomekitState
    * send state to homekit
    */
-  async updateHomekitState():Promise<any> {
-    const { isOn } = this.lightState;
-    const { hue, saturation, luminance } = this.lightState.HSL;
+  async updateHomekitState(state:ILightState):Promise<any> {
+    const { getHomeKitProps } = HomebridgeMagichomeDynamicPlatformAccessory;
 
-    let brightness = this.lightState.brightness;
-    if( luminance > 0 && isOn ){
-      brightness = luminance * 2;
-      this.lightState.brightness = brightness;
-    }
+    const { isOn, hue, saturation, brightness } = getHomeKitProps(state);
+    isOn       && this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
+    hue        && this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+    saturation && this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
+    brightness && this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
 
-    this.service.updateCharacteristic(this.platform.Characteristic.On,  isOn);
-    this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation, saturation);
-    this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  brightness);
-
-    this.platform.log.debug(`Reporting to HomeKit: on=${isOn} hue=${hue} sat=${saturation} bri=${brightness} `);
+    this.platform.log.info(`updateHomekitState for '${this.accessory.context.displayName}' isOn:${isOn} h:${hue} s:${saturation} b:${brightness}` );
   }
-
-  updateLocalHSL(_hsl){
-    this.lightState.HSL = _hsl;
-  }
-
-  updateLocalRGB(_rgb){
-    this.lightState.RGB = _rgb;
-  }
-
-  updateLocalWhiteValues(_whiteValues){
-    this.lightState.whiteValues = _whiteValues;
-  }
-
-  updateLocalIsOn(_isOn){
-    this.lightState.isOn = _isOn;
-  }
-
-  updateLocalBrightness(_brightness){
-    this.lightState.brightness = _brightness;
-  }
-
 
   /**
    ** @updateDeviceState
@@ -514,74 +510,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
    *  
    */
-  async updateDeviceState(_timeout = 200) {
-
-
-    //**** local variables ****\\
-    const hsl = this.lightState.HSL;
-    const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-    const brightness = this.lightState.brightness;
-    /*
-    this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-    */
-    const mask = 0xF0; // the 'mask' byte tells the controller which LEDs to turn on color(0xF0), white (0x0F), or both (0xFF)
-    //we default the mask to turn on color. Other values can still be set, they just wont turn on
-    
-    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
-    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
-    const r = Math.round(((clamp(red, 0, 255) / 100) * brightness));
-    const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
-    const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
-
-    await this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
-  
-
-
-  }//updateDeviceState
+  async updateDeviceState(_timeout = 200, lockedState:ILightState) {
+    const {controllerType } = this.accessory.context.device.lightParameters;
+    throw new Error(`This abstract method  ("updateDeviceState")  must be implemented for device type "${controllerType}"`);
+  }
 
   //=================================================
   // End State Get/Set //
 
   //=================================================
   // Start Misc Tools //
-
-
-  /**
-   ** @calculateWhiteColor
-   *  determine warmWhite/coldWhite values from hue
-   *  the closer to 0/360 the weaker coldWhite brightness becomes
-   *  the closer to 180 the weaker warmWhite brightness becomes
-   *  the closer to 90/270 the stronger both warmWhite and coldWhite become simultaniously
-   */
-  hueToWhiteTemperature() {
-    const hsl = this.lightState.HSL;
-    let multiplier = 0;
-    const whiteTemperature = { warmWhite: 0, coldWhite: 0 };
-
-
-    if (hsl.hue <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
-      whiteTemperature.warmWhite = 255;
-      multiplier = ((hsl.hue / 90));
-      whiteTemperature.coldWhite = Math.round((255 * multiplier));
-    } else if (hsl.hue > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
-      whiteTemperature.warmWhite = 255;
-      multiplier = (1 - (hsl.hue - 270) / 90);
-      whiteTemperature.coldWhite = Math.round((255 * multiplier));
-    } else if (hsl.hue > 180 && hsl.hue <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
-      whiteTemperature.coldWhite = 255;
-      multiplier = ((hsl.hue - 180) / 90);
-      whiteTemperature.warmWhite = Math.round((255 * multiplier));
-    } else if (hsl.hue > 90 && hsl.hue <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
-      whiteTemperature.coldWhite = 255;
-      multiplier = (1 - (hsl.hue - 90) / 90);
-      whiteTemperature.warmWhite = Math.round((255 * multiplier));
-    }
-    return whiteTemperature;
-  } //hueToWhiteTemperature
-
-  
-
 
   async send(command: number[], useChecksum = true, _timeout = 200) {
     const buffer = Buffer.from(command);
@@ -616,14 +554,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       change = !change;
       count++;
-      await this.updateDeviceState();
+      await this.updateDeviceState(null, this.lightState);
 
       if (count >= 20) {
 
         this.lightState.HSL.hue = 0;
         this.lightState.HSL.saturation = 5;
         this.lightState.brightness = 100;
-        await this.updateDeviceState();
+        await this.updateDeviceState(null, this.lightState);
         clearInterval(interval);
         return;
       }
@@ -709,6 +647,22 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //return promise;
   }
 
+  static getHomeKitProps(state:ILightState){
+    const { isOn, HSL, brightness, colorTemperature } = state;
+    return { isOn, hue: HSL?.hue, saturation: HSL?.saturation, brightness, colorTemperature };
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  printTimestamp(timestampArray) {
+    if(timestampArray.length=== 0){
+      return [];
+    } else {
+      return timestampArray.map( e=> e-timestampArray[0]);
+    }
+  }
   
 } // ZackneticMagichomePlatformAccessory class
 
