@@ -494,10 +494,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const { getHomeKitProps } = HomebridgeMagichomeDynamicPlatformAccessory;
 
     const { isOn, hue, saturation, brightness } = getHomeKitProps(state);
-    isOn       && this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
-    hue        && this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
-    saturation && this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
-    brightness && this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
+    isOn       !== null && this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
+    hue        !== null && this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
+    saturation !== null && this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
+    brightness !== null && this.service.updateCharacteristic(this.platform.Characteristic.Brightness, brightness);
 
     this.platform.log.info(`updateHomekitState for '${this.accessory.context.displayName}' isOn:${isOn} h:${hue} s:${saturation} b:${brightness}` );
   }
