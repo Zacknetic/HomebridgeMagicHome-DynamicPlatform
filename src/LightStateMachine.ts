@@ -1,7 +1,7 @@
 import { ILightState } from './magichome-interface/types';
 
 export interface ILightStateMachine {
-    nextState: 'setColor' | 'setColorTemperature' | 'toggleState' | 'unchanged' | 'setBrightness' | 'keepState';
+    nextState: 'setColor' | 'setColorTemperature' | 'setPower' | 'keepState';
     message?: string;
 }
 
@@ -34,12 +34,12 @@ export class LightStateMachine{
     if(currentOnState === false &&  targetOnState === true && noHueSatBriChange){
       // user wants lights on, no HSB
       message = `Toggle: on=${currentOnState}>${targetOnState}`;
-      return { nextState: 'toggleState', message};
+      return { nextState: 'setPower', message};
     }
     if(currentOnState === true &&  targetOnState === false){
       // user wants lights off, disregard HSL
       message = `Toggle: on=${currentOnState}>${targetOnState}`;
-      return { nextState: 'toggleState', message};
+      return { nextState: 'setPower', message};
     }
     // user want light on at a certain h/s/b    
     return { nextState: 'setColor', message};
