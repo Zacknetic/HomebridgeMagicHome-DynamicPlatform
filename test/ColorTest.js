@@ -14,14 +14,24 @@ const SERVER = "http://localhost:51826";
     return null
   }
 
+  const setPower = 9
+  const hue = 12
+  const sat = 13
+  const bri = 11
   const value = false
   const payload = (iid, value) => ({ characteristics:[{ aid:device.aid,iid:Number(iid), value}]})
   console.log('Sending command');
-  await sendCommand(payload(iid, true))
-  await sleep(250)
-  await sendCommand(payload(iid, false))
-  await sleep(250)
-  await sendCommand(payload(iid, true))
+  await sendCommand(payload(hue, 30))
+  await sendCommand(payload(sat, 77))
+  await sleep(1000)
+  await sendCommand(payload(bri, 255))
+  await sendCommand(payload(setPower, true))
+  await sleep(1000)
+  await sendCommand(payload(hue, 222))
+  await sendCommand(payload(sat, 20))
+
+  // await sendCommand(payload(hue, 222))
+  // await sendCommand(payload(sat, 20))
 
 
   // console.log('Put response code: ', putRes.status)
