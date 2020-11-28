@@ -1,4 +1,4 @@
-import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 import { ILightState } from '../magichome-interface/types';
 import { cloneDeep } from 'lodash'; 
 import Common from './common'; 
