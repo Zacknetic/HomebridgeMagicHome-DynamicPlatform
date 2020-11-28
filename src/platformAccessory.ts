@@ -177,9 +177,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
     //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
     
-    // TODO: should we use the last know state here? this should contain the last user desire.
-    //   this.accessory.context.lastKnownState
-    this.platform.log.info(`Last Known state for ${this.accessory.displayName}: `, this.accessory.context.lastKnownState );
+
     this.updateLocalState();
 
     // set the service name, this is what is displayed as the default name on the Home app
@@ -201,7 +199,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   async consistencyCheck(){
     clearInterval(this.periodicTimer);
     await this.updateLocalState();
-    this.platform.log.debug('consistencyCheck NOT implemented');
+    if( this.lightLastReadState.operatingMode === opMode.unknown){
+      this.platform.log.debug('Device offline or unreacheable. Add (!)');
+    } else {
+      this.platform.log.debug('consistencyCheck NOT implemented');
+    }
     return;
   }
 
@@ -295,6 +297,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if(msg){
         this.timeOfLastUserInteraction = Date.now();
         this.platform.log.warn(`[ProcessRequest] User message received '${displayName}': `, msg);
+        this.timestamps.push(Date.now());
         clearTimeout(this.myTimer); //Restart the time since last message
         this.myTimer = setTimeout( () => this.processRequest({txType: 'endOfFrame'}), INTRA_MESSAGE_TIME);
         return;

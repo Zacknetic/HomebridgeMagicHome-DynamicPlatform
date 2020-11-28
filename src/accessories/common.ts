@@ -181,6 +181,13 @@ export default class CommonClass{
       return 0xFF;
     }
   }
+
+  static getRGBWWfromState(lightState:ILightState):any{
+    const { red:r, green:g, blue:b } = lightState.RGB;
+    const { coldWhite:cw, warmWhite:ww } = lightState.whiteValues;
+    const mask = this.getMaskFromOpMode(lightState.operatingMode);
+    return { r,g,b,cw,ww,mask};
+  }
 }
 
 

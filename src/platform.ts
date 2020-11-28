@@ -116,7 +116,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     try {
       // loop over the discovered devices and register each one if it has not already been registered
       for ( const deviceBroadcast of devicesBroadcast) {  
-        this.log.info('\n********************\n', deviceBroadcast);
 
         // generate a unique id for the accessory this should be generated from
         // something globally unique, but constant, for example, the device serial
@@ -152,7 +151,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           
           //check if device is on blacklist or is not on whitelist
           if(!await this.isAllowed(deviceBroadcast.uniqueId)){
-            this.log.warn('Warning! New device with Unique ID: %o is blacklisted or is not whitelisted.\n', 
+            this.log.warn('Warning! New device with Unique ID: %o is blacklisted or is not whitelisted.', 
               deviceBroadcast.uniqueId);
 
             //exit the loop
@@ -222,7 +221,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           }
           
           if(!await this.isAllowed(existingAccessory.context.device.uniqueId)){
-            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
+            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.', 
               existingAccessory.context.displayName, existingAccessory.context.device.uniqueId);
             this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
             continue;
@@ -276,7 +275,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         //logic for removing blacklisted devices
     
           if( !await this.isAllowed(accessory.context.device.uniqueId)){
-            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
+            this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.', 
               accessory.context.displayName, accessory.context.device.uniqueId);
             this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
             continue;
@@ -388,7 +387,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
 
 
-    this.log.debug('\nController Type assigned to %o', lightParameters.controllerType);
+    this.log.debug('Controller Type assigned to %o', lightParameters.controllerType);
     
     return {
       lightParameters,
