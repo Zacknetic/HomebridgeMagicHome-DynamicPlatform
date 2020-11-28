@@ -8,7 +8,6 @@ import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 import { ILightState, opMode } from './magichome-interface/types';
-import { LightStateMachine} from './LightStateMachine';
 import _ from 'lodash'; // Import the entire lodash library
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
