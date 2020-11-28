@@ -1,6 +1,6 @@
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
-
+import Commom from './common';
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     
   async updateDeviceState() {
@@ -8,7 +8,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     let [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-    const whites = this.hueToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    const whites = Commom.hueToWhiteTemperature(this.lightState); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
     const brightness = this.lightState.brightness;
     
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
