@@ -6,11 +6,21 @@ import { cloneDeep } from 'lodash';
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   addHomekitProps(state:ILightState):void {
+    if(this.config.advancedOptions?.useColorTemperature){
+      this.platform.log.info('EXPRIMENTAL MAPPER - addHomekitProps: convertRGBWWtoHSB_v2');
+      Common.convertRGBWWtoHSB_v2(state, this as any);
+      return;
+    }
     Common.convertRGBWWtoHSB(state, this as any);
     return;
   }
 
   addMagicHomeProps(state:ILightState):void {
+    if(this.config.advancedOptions?.useColorTemperature){
+      this.platform.log.info('EXPRIMENTAL MAPPER - addMagicHomeProps: convertHSBtoRGBWW_v2');
+      Common.convertHSBtoRGBWW_v2(state, this as any);
+      return;
+    }
     Common.convertHSBtoRGBWW(state, this as any);
     return;
   }

@@ -3,7 +3,7 @@
 
 */
 import { ILightState, opMode } from '../magichome-interface/types';
-import { convertRGBtoHSL, convertHSLtoRGB, convertWhitesToColorTemperature, clamp } from '../magichome-interface/utils';
+import { convertRGBtoHSL, convertHSLtoRGB, convertWhitesToColorTemperature, clamp, convertColorTemperatureToWhites, estimateBrightnessFromWhites } from '../magichome-interface/utils';
 
 interface IConvProps {
   //this.config.whiteEffects.colorWhiteThreshold
@@ -14,6 +14,72 @@ interface IConvProps {
   }
 }
 export default class CommonClass{
+  static convertHSBtoRGBWW_v2(state:ILightState, props:IConvProps ):void{
+
+    if(state.operatingMode === opMode.temperatureMode){
+      state.RGB = { red:0, green:0, blue: 0}; // must be zero, so we can stuff tx message to device?
+      state.whiteValues = convertColorTemperatureToWhites(state.colorTemperature, state.brightness);
+      state.brightness = estimateBrightnessFromWhites(state.whiteValues);
+      return;
+    }
+
+    const { colorWhiteThreshold } = props.config.whiteEffects;
+    //**** local variables ****\\
+    const hsl = state.HSL;
+    const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
+    const whites = CommonClass.hueToWhiteTemperature(state); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    const brightness = state.brightness;
+       
+    let mask = 0xF0; // the 'mask' byte tells the controller which LEDs to turn on color(0xF0), white (0x0F), or both (0xFF)
+    //we default the mask to turn on color. Other values can still be set, they just wont turn on
+    
+    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
+    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
+    let r = Math.round(((clamp(red, 0, 255) / 100) * brightness));
+    let g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
+    let b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
+    let ww = Math.round(((clamp(whites.warmWhite, 0, 255) / 100) * brightness));
+    let cw = Math.round(((clamp(whites.coldWhite, 0, 255) / 100) * brightness));
+    
+
+    if ( (hsl.hue > 0 && hsl.hue < 31) && (hsl.saturation >= 72 && hsl.saturation <= 76)) {
+      r = 0;
+      g = 0;
+      b = 0;
+      ww = Math.round((255 / 100) * brightness);
+      cw = 0;
+      mask = 0x0F;
+      //this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+    } else if (  (hsl.hue >= 208 && hsl.hue >= 222) && (hsl.saturation >= 17 && hsl.saturation <= 22)  ) {
+      r = 0;
+      g = 0;
+      b = 0;
+      ww = 0;
+      cw = Math.round((255 / 100) * brightness);
+      mask = 0x0F;
+      // this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
+
+      //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+      //White colors were already calculated above
+    } else if ((hsl.saturation < colorWhiteThreshold)) {
+      r = 0;
+      g = 0;
+      b = 0;
+      mask = 0x0F;
+      // this.platform.log.debug('Setting warmWhite and coldWhite without colors: ww:%o cw:%o', ww, cw);
+    } else { //else set warmWhite and coldWhite to zero. Color mask already set at top
+
+      ww = 0;
+      cw = 0;
+      //this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
+
+    }
+    state.RGB = { red:r, green:g, blue: b};
+    state.whiteValues= { coldWhite:cw, warmWhite:ww};
+    state.operatingMode = CommonClass.parseOperatingMode(mask);
+
+    return;
+  }
 
   static convertHSBtoRGB(state: ILightState, props: any):void {
     const [red, green, blue] = convertHSLtoRGB(state.HSL);
@@ -89,7 +155,7 @@ export default class CommonClass{
     converts HSB to RGBWW
     Homekit uses HSB, MagicHome uses RGB
   */
-  static convertHSBtoRGBWW(state:ILightState, props:IConvProps ):ILightState{
+  static convertHSBtoRGBWW(state:ILightState, props:IConvProps ):void{
     const { colorWhiteThreshold } = props.config.whiteEffects;
     //**** local variables ****\\
     const hsl = state.HSL;
@@ -148,13 +214,51 @@ export default class CommonClass{
     state.whiteValues= { coldWhite:cw, warmWhite:ww};
     state.operatingMode = CommonClass.parseOperatingMode(mask);
 
-    return state;
+    return;
   }
 
   /*
         Update H,S,B based on RBGWW
   */
-  static convertRGBWWtoHSB(state:ILightState, props:IConvProps ):ILightState{
+  static convertRGBWWtoHSB_v2(state:ILightState, props:IConvProps ):void{
+    if(state.operatingMode === opMode.temperatureMode){
+      // since we're in color temperature mode, all we need is to respond with mired
+      // state.HSL = {hue:0, saturation:0, luminance:0};
+      //state.HSL = {hue:null, saturation:null, luminance:null};
+      
+
+      state.colorTemperature = convertWhitesToColorTemperature(state.whiteValues);
+      state.brightness = estimateBrightnessFromWhites(state.whiteValues);
+      state.HSL = {hue:0, saturation:0, luminance:0}; // TODO: must fix this
+      return;
+    }
+    // determine if we're if white mode, e.g. r:0 g:0 b:0 cw:0 ww:255
+    const zeroRGB = state.RGB.red === 0 && state.RGB.green === 0 && state.RGB.blue === 0;
+    const hasSomeWhite = state.whiteValues.coldWhite > 0 || state.whiteValues.warmWhite > 0;
+
+    if( zeroRGB && hasSomeWhite){
+      if(state.whiteValues.coldWhite > state.whiteValues.warmWhite){
+        state.HSL = { hue: 220, saturation: 18 , luminance:0};
+      } else {
+        state.HSL = { hue: 30, saturation: 70 , luminance:0};
+      }
+      state.brightness = 100;
+      return;
+    }
+
+    state.colorTemperature = null;
+    state.HSL = convertRGBtoHSL(state.RGB);
+    const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, props);
+    state.brightness = _brightness;
+    state.HSL.hue = _hue;
+    state.HSL.saturation = _saturation;
+
+  }
+
+  /*
+        Update H,S,B based on RBGWW
+  */
+  static convertRGBWWtoHSB(state:ILightState, props:IConvProps ):void{
 
     // determine if we're if white mode, e.g. r:0 g:0 b:0 cw:0 ww:255
     const zeroRGB = state.RGB.red === 0 && state.RGB.green === 0 && state.RGB.blue === 0;
@@ -167,18 +271,18 @@ export default class CommonClass{
         state.HSL = { hue: 30, saturation: 70 , luminance:0};
       }
       state.brightness = 100;
-      return state;
+      return;
     }
 
     state.HSL = convertRGBtoHSL(state.RGB);
-    const { mired } = convertWhitesToColorTemperature(state.whiteValues);
+    const mired = convertWhitesToColorTemperature(state.whiteValues);
     state.colorTemperature = mired;
     const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, props);
     state.brightness = _brightness;
     state.HSL.hue = _hue;
     state.HSL.saturation = _saturation;
 
-    return state;
+    return;
   }   
 
   static estimateBrightness(lightState:ILightState, props:IConvProps):any {

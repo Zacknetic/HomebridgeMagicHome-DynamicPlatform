@@ -167,12 +167,15 @@ function Ktomired(tempK:number){
   return Math.round( 1000000/tempK );
 }
 
-export function convertColorTemperatureToWhites(miredInput: string) {
-  const mired = parseInt(miredInput);
-  const coldWhite  = Math.round( (((mired - TMP_MIN) / (TMP_MAX - TMP_MIN)) * (0 - 255)) + 255 );
-  const warmWhite = 255-coldWhite;
-  const tempK = miredToK(mired);
-  return { coldWhite, warmWhite, tempK, mired };
+// brightness range?
+export function convertColorTemperatureToWhites(mired: number, brightness: number) {
+  let coldWhite  = Math.round( (((mired - TMP_MIN) / (TMP_MAX - TMP_MIN)) * (0 - 255)) + 255 );
+  let warmWhite = 255-coldWhite;
+  if(brightness!== null){
+    coldWhite = Math.round(((clamp(coldWhite, 0, 255) / 100) * brightness));
+    warmWhite = Math.round(((clamp(warmWhite, 0, 255) / 100) * brightness));
+  }
+  return { coldWhite, warmWhite };
 }
 
 export function convertWhitesToColorTemperature(whites:IWhites){
@@ -180,9 +183,15 @@ export function convertWhitesToColorTemperature(whites:IWhites){
   const { coldWhite, warmWhite } = whites;
   const warmRatio = coldWhite / (coldWhite + warmWhite);
   let mired = (1-warmRatio) * (TMP_MAX-TMP_MIN) + TMP_MIN; 
-  mired = isNaN(mired) ? null : mired;
-  const tempK = mired !== null ? miredToK(mired) : null;
-  return {mired, tempK, ...whites};
+  mired = isNaN(mired) ? null : Math.round(clamp(mired, TMP_MIN, TMP_MAX));
+  return mired;
+}
+
+export function estimateBrightnessFromWhites(whites:IWhites){
+  const { coldWhite, warmWhite } = whites;
+  const brightnessRatio = (coldWhite + warmWhite) / 255;
+  const brightnessPercentage = Math.round(clamp(brightnessRatio*100, 0, 100));
+  return brightnessPercentage;
 }
 
 //Unused
