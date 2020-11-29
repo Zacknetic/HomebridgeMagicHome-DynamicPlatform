@@ -157,7 +157,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.colorCommand = true;
     this.processRequest();
     callback(null);
-    this.updateHomekitState();
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -165,7 +164,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.colorCommand = true;
     this.processRequest();
     callback(null);
-    this.updateHomekitState();
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -173,7 +171,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.colorCommand = true;
     this.processRequest();
     callback(null);
-    this.updateHomekitState();
   }
 
   /*
@@ -188,7 +185,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.lightState.isOn = value as boolean;
     this.processRequest();
     callback(null);
-    this.updateHomekitState();
   }
 
   //=================================================
@@ -458,6 +454,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   processRequest(){
+    this.updateHomekitState();
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
       setTimeout(  () =>  {
