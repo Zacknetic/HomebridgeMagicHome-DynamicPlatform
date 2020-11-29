@@ -183,7 +183,6 @@ export default class CommonClass{
 
   static estimateBrightness(lightState:ILightState, props:IConvProps):any {
     // eslint-disable-next-line no-console
-    console.log('props: ', props);
     const { colorWhiteThreshold } = props?.config?.whiteEffects;
     let { hue, saturation } = lightState.HSL;
     const { luminance } = lightState.HSL;
