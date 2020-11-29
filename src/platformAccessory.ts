@@ -454,7 +454,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   processRequest(){
-    this.updateHomekitState();
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
       setTimeout(  () =>  {
