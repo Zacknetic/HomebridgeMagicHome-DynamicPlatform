@@ -134,16 +134,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
-      // //get, set
-      // this.service.getCharacteristic(this.platform.Characteristic.Brightness.CharacteristicValueTransitionControl)
-      //   .on(CharacteristicEventTypes.SET, this.setCVT.bind(this))
-      //   .on(CharacteristicEventTypes.GET, this.getCVT.bind(this));
-        
-      // // get
-      // this.service.getCharacteristic(this.platform.Characteristic.Brightness.SupportedCharacteristicValueTransitionConfiguration)
-      //   .on(CharacteristicEventTypes.GET, this.getSupportedCVT.bind(this));
-
-
       if( this.accessory.context.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
@@ -153,11 +143,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         // register handlers for the Saturation Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Saturation)
           .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this))        // SET - bind to the 'setSaturation` method below
-        // TODO: why get saturation is not needed?
           .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
-        // register handler for Color Temperature Characteristic
+        // (optional) register handler for Color Temperature Characteristic
         if(this.config.advancedOptions?.useColorTemperature){
           this.platform.log.info('[EXPERIMENTAL] Registering ColorTemperature for device ',this.accessory.context.displayName);
           this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
@@ -176,9 +165,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.On)
       .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
-      .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
-    //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
-    
+      .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below 
 
     this.updateLocalState();
 
@@ -196,6 +183,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   addMagicHomeProps(state:ILightState):void{
     const {controllerType } = this.accessory.context.device.lightParameters;
     throw new Error(`This abstract method ("addMagicHomeProps") must be implemented for device type "${controllerType}"`);
+  }
+
+  /**
+   ** @updateDeviceState
+   *  determine RGB and warmWhite/coldWhite values  from homekit's HSL
+   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
+   *  
+   */
+  async updateDeviceState(_timeout = 200, state:ILightState) {
+    const {controllerType } = this.accessory.context.device.lightParameters;
+    throw new Error(`This abstract method  ("updateDeviceState")  must be implemented for device type "${controllerType}"`);
   }
 
   /*
@@ -517,17 +515,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     colorTemperature !== null && this.service.updateCharacteristic(this.platform.Characteristic.ColorTemperature, colorTemperature);
 
     this.platform.log.info(`updateHomekitState for '${this.accessory.context.displayName}' isOn:${isOn} h:${hue} s:${saturation} b:${brightness} cct:${colorTemperature}`, getHomeKitProps(state) );
-  }
-
-  /**
-   ** @updateDeviceState
-   *  determine RGB and warmWhite/coldWhite values  from homekit's HSL
-   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
-   *  
-   */
-  async updateDeviceState(_timeout = 200, lockedState:ILightState) {
-    const {controllerType } = this.accessory.context.device.lightParameters;
-    throw new Error(`This abstract method  ("updateDeviceState")  must be implemented for device type "${controllerType}"`);
   }
 
   //=================================================
