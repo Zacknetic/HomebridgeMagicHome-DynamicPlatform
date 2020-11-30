@@ -132,11 +132,13 @@ export default class CommonClass{
   }
 
   static convertRGBWtoHSB(state: ILightState, props: IConvProps):void {
-    const { hue, saturation } = state.HSL;
-    const { luminance } = state.HSL;
+    state.HSL = convertRGBtoHSL(state.RGB);
+    const { hue, saturation, luminance } = state.HSL;
     const { isOn } = state;
     const { coldWhite, warmWhite } = state.whiteValues;
 
+    //TODO: implement HSB output in case white(s) are non-zero
+    
     let brightness;
     if(luminance > 0 && isOn){
       brightness = luminance * 2;
