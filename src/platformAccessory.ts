@@ -27,8 +27,9 @@ const INTRA_MESSAGE_TIME = 5;
 */
 const DEVICE_READBACK_DELAY = 1200;
 
-// amount of time with no user message
-//
+/*
+   amount of time with no user message
+*/
 const USER_IDLE_TIME = 1000;
 
 const DEFAULT_LIGHT_STATE: ILightState = {
@@ -81,7 +82,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected nextCommand: 'setPower' | 'setColor' | 'setCCT' | null = null;
   protected timestamps: number[] = []
   protected timeOfLastUserInteraction: number | null = null
-  protected periodicTimer: NodeJS.Timeout | null = null;
+  protected consistencyCheckTimer: NodeJS.Timeout | null = null;
   protected myTimer: NodeJS.Timeout | null = null
 
   log = getLogger();
@@ -197,12 +198,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     throw new Error(`This abstract method ("addMagicHomeProps") must be implemented for device type "${controllerType}"`);
   }
 
+  /*
+      The purpose of consistencyCheck is to:
+      (1) identify unknown device state, report to user
+      (2) identify discrepancies between user intent and actual device state, and repair it
+      (3) if unable to repair state, indicate that to user 
+  */
   async consistencyCheck(){
-    clearInterval(this.periodicTimer);
-    await this.updateLocalState();
+    clearInterval(this.consistencyCheckTimer);
+    this.platform.log.info('Performing scheduled consistency Check.');
+    await this.updateLocalState(); // broadcasts status to other devices
     if( this.lightLastReadState.operatingMode === opMode.unknown){
-      this.platform.log.debug('Device offline or unreacheable. Add (!)');
-    } else {
+      this.platform.log.info('Device offline or unreacheable. TODO: Alert user.');
+    } else if(this.pendingConsistencyCheck){
+      this.pendingConsistencyCheck = false;
       this.platform.log.debug('consistencyCheck NOT implemented');
     }
     return;
@@ -293,7 +302,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   async processRequest(props: IProcessRequest): Promise<void>{
     const { displayName } = this.accessory.context;
-    const {getStateString} = HomebridgeMagichomeDynamicPlatformAccessory;
+    const {getStateString } = HomebridgeMagichomeDynamicPlatformAccessory;
 
     try{ 
       const { msg, txType } = props;
@@ -332,9 +341,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.platform.log.info('Commiting writing setPower=', desiredLocked.isOn);
         await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
       } else {
-        const lockedStr = getStateString(desiredLocked);
-        this.platform.log.info(`Commiting writing ${nextState}: `, lockedStr);
         await this.updateDeviceState(null,desiredLocked); // Send message to light
+        const writtenStr = getStateString(this.lightLastWrittenState);
+        this.platform.log.info(`Commiting writing ${nextState}: `, writtenStr);
       }
       
       const elapsed = Date.now() - timeStart;
@@ -345,8 +354,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
     this.deviceWriteInProgress = false; //allow reads to occur
     this.timeOfLastWrite = Date.now();
-    clearInterval(this.periodicTimer);
-    this.periodicTimer = setTimeout( () => this.consistencyCheck(), 1000);
+
+    this.scheduleConsistencyCheck();
   }
 
   //=================================================
@@ -356,37 +365,36 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // Start Getters //
 
   getHue(callback: CharacteristicGetCallback) {
-    this.getDeviceStatus();
+    this.scheduleConsistencyCheck();
     this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', this.lightState.HSL.hue, this.accessory.context.displayName);
     callback(null, this.lightState.HSL.hue);
   }
 
   getBrightness(callback: CharacteristicGetCallback) {
-    this.getDeviceStatus();
+    this.scheduleConsistencyCheck();
     this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', Math.round( this.lightState.brightness ) , this.accessory.context.displayName);
     callback(null, Math.round( this.lightState.brightness ) );
   }
 
   getSaturation(callback: CharacteristicGetCallback) {
-    this.getDeviceStatus();
+    this.scheduleConsistencyCheck();
     this.platform.log.debug('Get Characteristic Saturation -> %o for device: %o ', this.lightState.HSL.saturation, this.accessory.context.displayName);
     callback(null, this.lightState.HSL.saturation);
   }
 
   getColorTemperature(callback: CharacteristicGetCallback){
-    this.getDeviceStatus();
+    this.scheduleConsistencyCheck();
     const mired = this.lightState.colorTemperature;
     this.platform.log.debug('Get Characteristic Color Temperature -> %o for device: %o ', mired, this.accessory.context.displayName);
     callback(null, mired);
   }
 
-  getDeviceStatus(){
-    // we already responsed with an infered state. Now we check for the real value
-    this.platform.log.info('set interval of 300 to report actual state');
-
+  scheduleConsistencyCheck(){
+    // Schedule a consistency check to happen after some idle time. 
+    // Idle time should be several milliseconds after a user interaction and write operation.
     this.pendingConsistencyCheck = true;
-    clearInterval(this.periodicTimer);
-    this.periodicTimer = setInterval( () => this.consistencyCheck(), 300);
+    clearInterval(this.consistencyCheckTimer);
+    this.consistencyCheckTimer = setTimeout( () => this.consistencyCheck(), USER_IDLE_TIME);
   }
 
   protected timeOfLastRead:number | null = null; 
@@ -401,7 +409,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   getOn(callback: CharacteristicGetCallback) {
     //update state with actual values asynchronously
-    this.getDeviceStatus();
+    this.scheduleConsistencyCheck();
     this.platform.log.debug('Get Characteristic On -> %o for device: %o ', this.lightState.isOn, this.accessory.context.displayName);
     callback(null, this.lightState.isOn);
   }
@@ -426,11 +434,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   static getStateString(state:ILightState):string{
     let str;
     try{
+      const { hue:h, saturation:s} = state.HSL;
       const { red, green, blue } = state.RGB;
-      const { brightness, isOn, colorTemperature} = state;
+      const { brightness:b, isOn, colorTemperature:cct} = state;
       const { coldWhite:cw, warmWhite:ww} = state.whiteValues;
       const mode = state.operatingMode;
-      str =  `on:${isOn} ${mode} r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} ~bri:${brightness} cct:${colorTemperature}`;
+      str =  `on:${isOn} m:${mode} h:${h} s:${s} b:${b} cct:${cct} =>  r:${red} g:${green} b:${blue} cw:${cw} ww:${ww} (~bri:${b}) `;
     } catch(err){
       str = '(unable to get state string)';
     }
@@ -470,8 +479,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.addHomekitProps(state);
       }
 
+      // ISSUE: it replaces the read state(RGB), but disregards last intent (HSB)
       this.lightLastReadState = _.cloneDeep(state); // store last value sent to light
-      await this.updateHomekitState(this.lightLastReadState);
+      await this.updateHomekitState(this.lightLastReadState); //TODO: do not just disregard last commanded!!!
+
       this.accessory.context.lastKnownState = _.cloneDeep(this.lightLastReadState); // useful after a Homebridge restart?
       
 
@@ -497,8 +508,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateHomekitState(state:ILightState):Promise<any> {
     const { getHomeKitProps } = HomebridgeMagichomeDynamicPlatformAccessory;
-
     const { isOn, hue, saturation, brightness, colorTemperature } = getHomeKitProps(state);
+
     isOn       !== null && this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
     hue        !== null && this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
     saturation !== null && this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  saturation);
