@@ -4,7 +4,7 @@
 */
 import { ILightState, opMode } from '../magichome-interface/types';
 import { convertRGBtoHSL, convertHSLtoRGB, convertWhitesToColorTemperature, clamp, convertColorTemperatureToWhites, estimateBrightnessFromWhites } from '../magichome-interface/utils';
-
+import {ColorUtils} from '../util/colorUtils';
 interface IConvProps {
   //this.config.whiteEffects.colorWhiteThreshold
   config?: {
@@ -225,11 +225,11 @@ export default class CommonClass{
       // since we're in color temperature mode, all we need is to respond with mired
       // state.HSL = {hue:0, saturation:0, luminance:0};
       //state.HSL = {hue:null, saturation:null, luminance:null};
-      
-
+  
       state.colorTemperature = convertWhitesToColorTemperature(state.whiteValues);
       state.brightness = estimateBrightnessFromWhites(state.whiteValues);
-      state.HSL = {hue:0, saturation:0, luminance:0}; // TODO: must fix this
+      const r = ColorUtils.colorTemperatureToHueAndSaturation(state.colorTemperature);
+      state.HSL = {hue:r.hue, saturation:r.saturation, luminance:0}; // TODO: must fix this
       return;
     }
     // determine if we're if white mode, e.g. r:0 g:0 b:0 cw:0 ww:255
@@ -263,24 +263,30 @@ export default class CommonClass{
     // determine if we're if white mode, e.g. r:0 g:0 b:0 cw:0 ww:255
     const zeroRGB = state.RGB.red === 0 && state.RGB.green === 0 && state.RGB.blue === 0;
     const hasSomeWhite = state.whiteValues.coldWhite > 0 || state.whiteValues.warmWhite > 0;
+    const hasSomeRGB = state.RGB.red > 0 || state.RGB.green > 0 || state.RGB.blue > 0;
 
     if( zeroRGB && hasSomeWhite){
+      // TODO: improve mapping of cw/ww to HSB
+      // if H and S are user inputs, and we must watch to not corrupt them.
       if(state.whiteValues.coldWhite > state.whiteValues.warmWhite){
         state.HSL = { hue: 220, saturation: 18 , luminance:0};
       } else {
-        state.HSL = { hue: 30, saturation: 70 , luminance:0};
+        state.HSL = { hue: 0, saturation: 0 , luminance:50};
       }
       state.brightness = 100;
+      state.colorTemperature = null;
       return;
     }
-
+    if( hasSomeRGB && hasSomeWhite ){
+      throw new Error('Combined RGB and White brightness not implemented');
+    }
+    
     state.HSL = convertRGBtoHSL(state.RGB);
     const mired = convertWhitesToColorTemperature(state.whiteValues);
-    state.colorTemperature = mired;
-    const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, props);
-    state.brightness = _brightness;
-    state.HSL.hue = _hue;
-    state.HSL.saturation = _saturation;
+    state.colorTemperature = null;
+    const rgb_2 = convertHSLtoRGB(state.HSL);
+    // const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightnessFromRGB(state, props);
+    state.brightness = state.HSL.luminance * 2;
 
     return;
   }   
