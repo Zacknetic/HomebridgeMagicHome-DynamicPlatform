@@ -83,7 +83,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected timestamps: number[] = []
   protected timeOfLastUserInteraction: number | null = null
   protected consistencyCheckTimer: NodeJS.Timeout | null = null;
-  protected myTimer: NodeJS.Timeout | null = null
+  protected endOfFrameTimer: NodeJS.Timeout | null = null
 
   log = getLogger();
 
@@ -231,31 +231,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   identifyLight() {
     this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
-    // this.flashEffect();
-    this.readBackTest();
-  }
-
-  async readBackTest(){
-    let state;
-    await this.send(COMMAND_POWER_ON);
-    await this.sleep(1000);
-    for (let delay=50; delay<=2000; delay = delay + 50){
-      this.platform.log.info(`Performing read back test: ${this.accessory.displayName} with ${delay}ms delay!`);
-      await this.send(COMMAND_POWER_OFF);
-      await this.sleep(5000);
-      await this.send(COMMAND_POWER_ON);
-      await this.sleep(delay);
-      state = await this.transport.getState(1000); //read state
-      if(state.isOn === true){
-        this.platform.log.info(`Test at ${delay}ms: SUCCESS. (${this.accessory.displayName})`);
-        this.platform.log.info(`TEST COMPLETE! ${this.accessory.displayName}`);
-        return;
-      } else {
-        this.platform.log.info(`\tTest at ${delay}ms: FAIL. (${this.accessory.displayName})`);
-        // this.platform.log.info(`Test result: ${this.accessory.displayName}: `, state);
-      }
-    }
-    this.platform.log.info(`TEST COMPLETE! ${this.accessory.displayName}`);
+    this.flashEffect();
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -309,8 +285,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.timeOfLastUserInteraction = Date.now();
         this.platform.log.warn(`[ProcessRequest] User message received '${displayName}': `, msg);
         this.timestamps.push(Date.now());
-        clearTimeout(this.myTimer); //Restart the time since last message
-        this.myTimer = setTimeout( () => this.processRequest({txType: 'endOfFrame'}), INTRA_MESSAGE_TIME);
+        clearTimeout(this.endOfFrameTimer); //Restart the time since last message
+        this.endOfFrameTimer = setTimeout( () => this.processRequest({txType: 'endOfFrame'}), INTRA_MESSAGE_TIME);
         return;
       }
 
@@ -319,15 +295,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
       this.deviceWriteInProgress = true; //block reads of device while
 
-      // At this point we're ready to transmit,
-      //  determine if a transmission is actually needed
-      //    check the delta between current state and last transmitted
-      // (or should be last read back?)
-    
-      const nextState = this.nextCommand;
-      const stateMsg = '';
+      // At this point we're ready to transmit,  
+      const nextCommand = this.nextCommand;
       const desiredLocked: ILightState = _.cloneDeep(this.lightState);
-
 
       this.platform.log.debug(`[ProcessRequest] Triggered "${txType}" for device '${displayName}' ('${this.nextCommand}')`);
 
@@ -335,17 +305,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.platform.log.debug('\t timestamps', this.printTimestamp(this.timestamps) );
       this.timestamps = [];
 
-      if( nextState === 'setPower') {
+      if( nextCommand === 'setPower') {
         this.platform.log.info('Commiting writing setPower=', desiredLocked.isOn);
         await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
       } else {
-        await this.updateDeviceState(null,desiredLocked); // Send message to light
-        const writtenStr = getStateString(this.lightLastWrittenState);
-        this.platform.log.info(`Commiting writing ${nextState}: `, writtenStr);
+        await this.updateDeviceState(null, desiredLocked);
+        // Hack: send the on command after color command. Why?
+        await this.send(desiredLocked.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+        this.platform.log.info(`Commiting writing ${nextCommand}: `, getStateString(this.lightLastWrittenState) );
       }
       
       const elapsed = Date.now() - timeStart;
-      this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}ms.'. Type: ${stateMsg} for device '${displayName}'\n`);
+      this.platform.log.debug(`[ProcessRequest] Transmission complete in ${elapsed}ms.'. Type: "${nextCommand}" for device '${displayName}'\n`);
     
     } catch(err){
       this.platform.log.error(`[ProcessRequest] ERROR for device '${displayName}':`, err);
