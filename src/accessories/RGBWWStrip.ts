@@ -1,5 +1,5 @@
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/utils';
-import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     

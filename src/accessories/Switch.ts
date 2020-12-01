@@ -1,4 +1,4 @@
-import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class Switch extends HomebridgeMagichomeDynamicPlatformAccessory {
   
