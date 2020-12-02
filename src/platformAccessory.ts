@@ -182,6 +182,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const hue = this.lightState.HSL.hue;
 
     //update state with actual values asynchronously
+    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.accessory.context.displayName);
     this.updateLocalState();
 
     callback(null, hue);
@@ -249,7 +250,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       if(state == null){
-        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.displayName);
+        const { displayName } = this.accessory.context;
+        const { ipAddress, uniqueId } = this.accessory.context.device;
+        this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
         return;
       }
       this.accessory.context.lastKnownState = state;
