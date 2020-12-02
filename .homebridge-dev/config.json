@@ -30,11 +30,11 @@
       },
       "deviceManagement": {
         "blacklistOrWhitelist": "whitelist",
-        "blacklistedUniqueIDs": ["500291236D10"]
+        "blacklistedUniqueIDs": ["50029122F481"]
       },
       "advancedOptions": {
         "namesWithMacAddress": true,
-        "useColorTemperature": false
+        "useColorTemperature": true
       }
     }
   ]
