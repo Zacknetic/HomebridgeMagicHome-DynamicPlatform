@@ -8,7 +8,7 @@ import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
 import { ILightState, opMode } from './magichome-interface/types';
-import _ from 'lodash'; // Import the entire lodash library
+import { cloneDeep } from 'lodash';
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
 const COMMAND_POWER_OFF = [0x71, 0x24, 0x0f];
@@ -88,8 +88,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   log = getLogger();
 
   protected lightState: ILightState = DEFAULT_LIGHT_STATE
-  protected lightLastWrittenState: ILightState = _.cloneDeep(this.lightState) 
-  public lightLastReadState: ILightState = _.cloneDeep(this.lightState)
+  protected lightLastWrittenState: ILightState = cloneDeep(this.lightState) 
+  public lightLastReadState: ILightState = cloneDeep(this.lightState)
 
   //=================================================
   // Start Constructor //
@@ -297,7 +297,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       // At this point we're ready to transmit,  
       const nextCommand = this.nextCommand;
-      const desiredLocked: ILightState = _.cloneDeep(this.lightState);
+      if( nextCommand === 'setCCT'){
+        this.lightState.HSL = { hue: null, saturation: null, luminance: null};
+      }
+      const desiredLocked: ILightState = cloneDeep(this.lightState);
 
       this.platform.log.debug(`[ProcessRequest] Triggered "${txType}" for device '${displayName}' ('${this.nextCommand}')`);
 
@@ -449,10 +452,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
 
       // ISSUE: it replaces the read state(RGB), but disregards last intent (HSB)
-      this.lightLastReadState = _.cloneDeep(state); // store last value sent to light
+      this.lightLastReadState = cloneDeep(state); // store last value sent to light
       await this.updateHomekitState(this.lightLastReadState); //TODO: do not just disregard last commanded!!!
 
-      this.accessory.context.lastKnownState = _.cloneDeep(this.lightLastReadState); // useful after a Homebridge restart?
+      this.accessory.context.lastKnownState = cloneDeep(this.lightLastReadState); // useful after a Homebridge restart?
       
 
       const { getStateString } = HomebridgeMagichomeDynamicPlatformAccessory;
@@ -462,7 +465,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.platform.log.debug(`[updateLocalState] for '${this.accessory.context.displayName}' is complete` );
 
       if(this.timeOfLastRead === null){
-        this.lightState = _.cloneDeep(this.lightLastReadState); 
+        this.lightState = cloneDeep(this.lightLastReadState); 
         this.platform.log.info(`[updateLocalState] initializing state for '${this.accessory.context.displayName}' state:`,  this.lightState ); 
       }
       this.timeOfLastRead = Date.now();
