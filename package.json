@@ -52,6 +52,7 @@
   ],
   "dependencies": {
     "color-convert": "^2.0.1",
+    "lodash": "^4.17.20",
     "lodash.debounce": "^4.0.8",
     "promise-queue": "^2.2.5"
   },
