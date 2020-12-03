@@ -4,7 +4,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x04,
     {
-      controllerType: 'RGBWStrip',
+      controllerLogicType: 'RGBWStrip',
       convenientName: 'RGBW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -14,7 +14,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x06,
     {
-      controllerType: 'RGBWStrip',
+      controllerLogicType: 'RGBWStrip',
       convenientName: 'RGBW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -24,7 +24,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x07,
     {
-      controllerType: 'RGBWWStrip',
+      controllerLogicType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -34,7 +34,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x21,
     {
-      controllerType: 'DimmerStrip',
+      controllerLogicType: 'DimmerStrip',
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -44,7 +44,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x25,
     {
-      controllerType: 'RGBWWStrip',
+      controllerLogicType: 'RGBWWStrip',
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -54,9 +54,9 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x33,
     {
-      controllerType: 'GRBStrip',
-      convenientName: 'GRB Strip',
-      simultaneousCCT: false,
+      controllerLogicType: 'GRBWStrip',
+      convenientName: 'GRBW Strip',
+      simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
     },
@@ -64,7 +64,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x35,
     {
-      controllerType: 'RGBWWBulb',
+      controllerLogicType: 'RGBWWBulb',
       convenientName: 'RGBWW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -74,7 +74,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x41,
     {
-      controllerType: 'DimmerStrip',
+      controllerLogicType: 'DimmerStrip',
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -84,7 +84,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x44,
     {
-      controllerType: 'RGBWBulb',
+      controllerLogicType: 'RGBWBulb',
       convenientName: 'RGBW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -94,7 +94,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x52,
     {
-      controllerType: 'RGBWWBulb',
+      controllerLogicType: 'RGBWWBulb',
       convenientName: 'RGBWW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -104,7 +104,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x65,
     {
-      controllerType: 'DimmerStrip',
+      controllerLogicType: 'DimmerStrip',
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -114,7 +114,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x97,
     {
-      controllerType: 'Switch',
+      controllerLogicType: 'Switch',
       convenientName: 'Power Socket',
       simultaneousCCT: false,
       hasColor: false,
@@ -124,7 +124,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0xa1,
     {
-      controllerType: 'RGBStrip',
+      controllerLogicType: 'RGBStrip',
       convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,
@@ -134,7 +134,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0xa2,
     {
-      controllerType: 'RGBStrip',
+      controllerLogicType: 'RGBStrip',
       convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,
@@ -143,15 +143,15 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   ],
 ]);
 
-function getPrettyName(uniqueId:string, controllerType:string | null):string{
+function getPrettyName(uniqueId:string, controllerLogicType:string | null):string{
   const uniqueIdTruc = uniqueId.slice(-6);
   let deviceType = 'LED';
-  if(controllerType){
-    if( isType(controllerType, 'bulb') ) {
+  if(controllerLogicType){
+    if( isType(controllerLogicType, 'bulb') ) {
       deviceType = 'Bulb';
-    } else if( isType(controllerType, 'strip') ){
+    } else if( isType(controllerLogicType, 'strip') ){
       deviceType = 'Strip';
-    }else if( isType(controllerType, 'switch') ){
+    }else if( isType(controllerLogicType, 'switch') ){
       deviceType = 'Switch';
     }
   }

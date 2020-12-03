@@ -13,6 +13,8 @@ const animations = {
   none: { name: 'none', brightnessInterrupt: true, hueSaturationInterrupt: true },
 };
 
+
+const INTRA_MESSAGE_TIME = 20; 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -20,7 +22,7 @@ const animations = {
  */
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected service: Service;
-  protected transport = new Transport(this.accessory.context.cachedIPAddress, this.config);
+  protected transport = new Transport(this.accessory.context.device.cachedIPAddress, this.config);
   protected colorWhiteThreshold = this.config.whiteEffects.colorWhiteThreshold;
   protected colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
   protected colorOffThresholdSimultaniousDevices = this.config.whiteEffects.colorOffThresholdSimultaniousDevices;
@@ -29,6 +31,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //protected interval;
   public activeAnimation = animations.none;
 
+  protected colorCommand = false;
+  protected deviceWriteInProgress = false;
+  protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
@@ -73,13 +78,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
-    if(this.accessory.context.lightParameters.hasBrightness || this.accessory.context.lightParameters.hasBrightness == undefined){
+    if(this.accessory.context.device.lightParameters.hasBrightness || this.accessory.context.device.lightParameters.hasBrightness == undefined){
             
       if (this.accessory.getService(this.platform.Service.Switch)) {
         this.accessory.removeService(this.accessory.getService(this.platform.Service.Switch));
       }
       this.service = this.accessory.getService(this.platform.Service.Lightbulb) ?? this.accessory.addService(this.platform.Service.Lightbulb);
-      this.accessory.context.lightParameters.hasBrightness = true;
+      this.accessory.context.device.lightParameters.hasBrightness = true;
 
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
@@ -92,7 +97,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
-      if( this.accessory.context.lightParameters.hasColor){
+      if( this.accessory.context.device.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
           .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
@@ -121,7 +126,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.updateLocalState();
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, this.accessory.displayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name,  this.accessory.context.device.displayName);
   
 
   }
@@ -135,39 +140,50 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const name: string = value.toString();
     this.platform.log.debug('Renaming device to %o', name);
-    this.accessory.context.displayName = name;
+    this.accessory.context.device.displayName = name;
     this.platform.api.updatePlatformAccessories([this.accessory]);
 
     callback(null);
   }
 
   identifyLight() {
-    this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
+    this.platform.log.info('Identifying accessory: %o!', this.accessory.context.device.displayName);
     this.flashEffect();
 
   }
 
-  async setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.HSL.hue = value as number;
-    await this.updateDeviceState();
+  setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.HSL.hue = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
-  async setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.HSL.saturation = value as number;
-    await this.updateDeviceState();
+  setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.HSL.saturation = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
-  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.lightState.brightness = value as number;
-    await this.updateDeviceState();
+  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.lightState.brightness = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
     callback(null);
   }
 
-  async setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+  /*
+  async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
+    this.lightState.operatingMode = opMode.temperatureMode;
+    this.processRequest({msg: `cct=${value}`} );
+    callback(null);
+  }*/
+
+  setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    
     this.lightState.isOn = value as boolean;
-    await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF);
+    this.processRequest();
     callback(null);
   }
 
@@ -196,7 +212,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // dont update the actual values from brightness, it is impossible to determine by rgb values alone
     //this.getState();
 
-    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.displayName);
+    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.accessory.context.device.displayName);
     this.updateLocalState();
 
     callback(null, brightness);
@@ -214,18 +230,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //update state with actual values asynchronously
     this.updateLocalState();
 
-    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.displayName);
+    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.accessory.context.device.displayName);
     callback(null, isOn);
-  }
-
-  getIsAnimating(callback: CharacteristicGetCallback) {
-    let isAnimating = true;
-
-    if(this.activeAnimation == animations.none) {
-      isAnimating = false;
-    }
-    this.platform.log.debug('Get Characteristic isAnimating -> %o for device: %o ', isAnimating, this.accessory.context.displayName);
-    callback(null, isAnimating);
   }
 
   //=================================================
@@ -250,12 +256,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         scans++;
       } 
       if(state == null){
+<<<<<<< HEAD
         const { displayName } = this.accessory.context;
         const { ipAddress, uniqueId } = this.accessory.context.device;
         this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
+=======
+        this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.device.displayName);
+>>>>>>> object-repair
         return;
       }
-      this.accessory.context.lastKnownState = state;
+      this.accessory.context.device.lastKnownState = state;
       this.updateLocalRGB(state.RGB);
       this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));
       this.updateLocalWhiteValues(state.whiteValues);
@@ -306,7 +316,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   /**
    ** @updateDeviceState
    *  determine RGB and warmWhite/coldWhite values  from homekit's HSL
-   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.lightVersion"
+   *  perform different logic based on light's capabilities, detimined by "this.accessory.context.device.lightVersion"
    *  
    */
   async updateDeviceState(_timeout = 200) {
@@ -439,79 +449,39 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //clearInterval(this.interval);
   }
 
-  /*
-  async rainbowEffect(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    const isOn = value as boolean;
-    if(!isOn){
-      this.stopAnimation();
-    }else{ 
-      let hue = 0;
-      const increment = 10;
-      const waitTime = 0;
-      let wait = waitTime;
-      const isWaiting = false;
-      
-      this.interval = setInterval(() => {
-        this.lightState.HSL.saturation = 100 as number;
-        this.lightState.HSL.hue = hue as number;
-        this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);
-
-        if(wait > 0 && hue % (360/increment)){
-          wait --;
-        } else {
-          wait = waitTime;
-          hue += increment;
-        }
-        
-        this.updateDeviceState(10);
-
-        if(hue>359){
-          hue = 0;
-        }
-
-      }, 125);
-     
-    }
-    callback(null);
-  } //rainbowEffect
-*/
-
-
   //=================================================
   // End LightEffects //
 
+  protected myTimer = null
+  protected timestamps = []
 
-  speedToDelay(speed: number) {
-    speed = clamp(speed, 0, 100);
-    return (30 - ((speed / 100) * 30)) + 1;
+  protected timeOfLastRead = null; 
+  protected timeOfLastWrite = null; 
+
+
+
+  processRequest(){
+    if(!this.deviceUpdateInProgress){
+      this.deviceUpdateInProgress = true;
+      setTimeout(  () =>  {
+        if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
+
+          if(!this.lightState.isOn){      // if we are turning the power off...
+            this.send(COMMAND_POWER_ON);  // set an extra on command in case the device is in a bugged state
+          }                               // it sounds counterintuitive, but this wont effect a non-bugged device
+          this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
+        
+          this.log.warn ('no color only power', this.lightState.isOn);
+        } else {
+          
+          this.updateDeviceState(); // set color
+          this.log.warn ('no power only color');
+        }
+        this.colorCommand = false;
+        this.deviceUpdateInProgress = false;
+      }, INTRA_MESSAGE_TIME);
+    }
+    return;
   }
-
-  /**
-	 * Sets the controller to display one of the predefined patterns
-	 * @param {String} pattern Name of the pattern
-	 * @param {Number} speed between 0 and 100
-	 * @param {function} callback 
-	 * @returns {Promise<boolean>}
-	 */
-  setPattern(pattern: number, speed: number) {
-
-    const delay = this.speedToDelay(speed);
-
-    //const cmd_buf = Buffer.from();
-
-    //const promise = new Promise((resolve, reject) => {
-    this.send([0x61, pattern, delay, 0x0f]);
-    //}).then(data => {
-    //return (data.length > 0 || !this._options.ack.pattern); 
-    //});
-
-    // if (callback && typeof callback == 'function') {
-    // promise.then(callback.bind(null, null), callback);
-    //}
-
-    //return promise;
-  }
-
-  
 } // ZackneticMagichomePlatformAccessory class
 

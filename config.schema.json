@@ -22,7 +22,7 @@
                         "required": true
                     },
                     "pruneAllAccessoriesNextRestart": {
-                        "title": " Prune All Accessories Next Restart (WARNING: Dangerous!)",
+                        "title": " Prune All MagicHome Accessories Next Restart (WARNING: Dangerous!)",
                         "type": "boolean",
                         "default" : false,
                         "required": true
