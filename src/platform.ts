@@ -270,12 +270,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         data = await transport.getState(_timeout);
         scans++;
       }
-       
-      return {      
-        debugBuffer: data,
-        controllerHardwareVersion: data.controllerHardwareVersion,
-        controllerFirmwareVersion: data.controllerFirmwareVersion,
-      };
+
+      return data;
     
     } catch (error) {
       this.log.debug(error);
