@@ -130,7 +130,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           newDevices++;
           
         } else {
-          if(existingAccessory.context.device == undefined) {
+          if(existingAccessory.context.device.deviceData == undefined) {
             const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
             if( initialState == undefined){
               return undefined;
