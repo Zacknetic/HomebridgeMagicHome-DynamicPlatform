@@ -22,7 +22,7 @@ import { Transport } from './magichome-interface/Transport';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 import { IDeviceProps, IDeviceDiscoveredProps, IDeviceQueriedProps, ILightParameters } from './magichome-interface/types';
 import { getPrettyName as getUniqueIdName, lightTypesMap} from './magichome-interface/LightMap';
-
+import { MagicHomeAccessory } from './magichome-interface/types';
 const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
@@ -46,7 +46,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly Service = this.api.hap.Service;
   public readonly Characteristic = this.api.hap.Characteristic;
   // this is used to track restored cached accessories
-  public readonly accessories: PlatformAccessory[] = [];
+  public readonly accessories: MagicHomeAccessory[] = [];
   public readonly lightAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = [];
   public count = 1;
   //public readonly log: Logger;
@@ -77,7 +77,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    * This function is invoked when homebridge restores cached accessories from disk at startup.
    * It should be used to setup event handlers for characteristics and update respective values.
    */
-  configureAccessory(accessory: PlatformAccessory) {
+  configureAccessory(accessory: MagicHomeAccessory) {
 
     this.log.debug('%o - Loading accessory from cache...', this.count++, accessory.context.displayName);
     // set cached accessory as not recently seen 
@@ -208,13 +208,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             continue;
           }
 
-<<<<<<< HEAD
           this.log.info('Warning! Continuing to register cached accessory despite not being seen for %o restarts.',
-            accessory.context.restartsSinceSeen);
-=======
-          this.log.info('\nWarning! Continuing to register cached accessory despite not being seen for %o restarts.',
             accessory.context.device.restartsSinceSeen);
->>>>>>> object-repair
 
           // create the accessory handler
           const lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
@@ -286,7 +281,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   async determineController(discoveredDevice):Promise<IDeviceQueriedProps> {
     const initialState = await this.getInitialState (discoveredDevice.ipAddress, 10000);
     if( initialState == undefined){
-      this.log.debug('Cannot determine controller. Device unreacheable.', device);
+      this.log.debug('Cannot determine controller. Device unreacheable.', discoveredDevice);
       return undefined;
     }
 
@@ -345,7 +340,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       deviceQueryData.lightParameters.convenientName = uniqueIdName;
     }
 
-    const accessory = new this.api.platformAccessory(deviceQueryData.lightParameters.convenientName, generatedUUID);
+    const accessory = new this.api.platformAccessory(deviceQueryData.lightParameters.convenientName, generatedUUID) as MagicHomeAccessory;
 
     // set its restart prune counter to 0 as it has been seen this session
     const deviceData: IDeviceProps = Object.assign({uuid: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: deviceQueryData.lightParameters.convenientName}, deviceDiscovered, deviceQueryData);        
@@ -406,17 +401,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     return true;
   }
 
-  printDeviceInfo(message: string, accessory: PlatformAccessory){
+  printDeviceInfo(message: string, accessory: MagicHomeAccessory){
     this.log.info( '%o -' + message +
     '\n Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
     this.count++,
-<<<<<<< HEAD
     accessory.context.displayName,
-    accessory.context.device.lightParameters?.controllerType,
-=======
-    accessory.context.device.displayName,
-    accessory.context.device.lightParameters.controllerLogicType,
->>>>>>> object-repair
+    accessory.context.device.lightParameters?.controllerLogicType,
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,
