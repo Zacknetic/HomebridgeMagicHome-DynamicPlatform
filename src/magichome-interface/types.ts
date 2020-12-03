@@ -1,3 +1,5 @@
+import type { PlatformAccessory } from 'homebridge';
+
 export interface IDeviceDiscoveredProps {
     ipAddress: string;
     uniqueId: string;
@@ -54,3 +56,10 @@ export interface IWhites {
     warmWhite: number; 
     coldWhite: number; 
 }
+
+export interface MagicHomeAccessory extends PlatformAccessory{
+    context: {
+      displayName: string;
+      device: IDeviceProps
+    }
+  } 
