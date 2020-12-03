@@ -466,12 +466,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
             this.send(COMMAND_POWER_ON);  // set an extra on command in case the device is in a bugged state
           }                               // it sounds counterintuitive, but this wont effect a non-bugged device
           this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
-        
-          this.log.warn ('no color only power', this.lightState.isOn);
         } else {
           
           this.updateDeviceState(); // set color
-          this.log.warn ('no power only color');
         }
         this.colorCommand = false;
         this.deviceUpdateInProgress = false;
