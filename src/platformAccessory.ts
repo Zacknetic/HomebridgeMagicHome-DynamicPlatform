@@ -126,7 +126,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.updateLocalState();
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, this.accessory.displayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name,  this.accessory.context.device.displayName);
   
 
   }
@@ -140,14 +140,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const name: string = value.toString();
     this.platform.log.debug('Renaming device to %o', name);
-    this.accessory.context.displayName = name;
+    this.accessory.context.device.displayName = name;
     this.platform.api.updatePlatformAccessories([this.accessory]);
 
     callback(null);
   }
 
   identifyLight() {
-    this.platform.log.info('Identifying accessory: %o!',this.accessory.displayName);
+    this.platform.log.info('Identifying accessory: %o!', this.accessory.context.device.displayName);
     this.flashEffect();
 
   }
@@ -258,6 +258,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.device.displayName);
         return;
       }
+
+      this.log(state, this.accessory.context.device.displayName);
       this.accessory.context.device.lastKnownState = state;
       this.updateLocalRGB(state.RGB);
       this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));

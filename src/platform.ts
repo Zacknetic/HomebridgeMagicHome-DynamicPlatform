@@ -135,7 +135,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             if( initialState == undefined){
               return undefined;
             }
-        
+            const oldName = existingAccessory.context.displayName;
       
           
             const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
@@ -146,7 +146,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
               continue;
             }
 
-            const deviceData: IDeviceProps = Object.assign({uuid: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: deviceQueryData.lightParameters.convenientName, lastKnownState: initialState}, deviceDiscovered, deviceQueryData);        
+            const deviceData: IDeviceProps = Object.assign({uuid: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: oldName, lastKnownState: initialState}, deviceDiscovered, deviceQueryData);        
             existingAccessory.context.device = deviceData; 
           }
           if(!this.registerExistingAccessory(deviceDiscovered, existingAccessory)){
@@ -169,7 +169,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     for (const accessory of this.accessories){
       try {
-      
+        if(accessory.context.device == undefined) {
+    
+          this.log.warn('Device was not seen during discovery and is outdated (pre v1.8.6). Skipping for now, try restarting Homebridge to perform another scan.');
+        }
    
         if(accessory.context.device.displayName.toString().toLowerCase().includes('delete')){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
