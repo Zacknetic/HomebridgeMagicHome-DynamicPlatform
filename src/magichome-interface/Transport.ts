@@ -82,9 +82,10 @@ export class Transport {
     } catch (e) {
       const { code, address, port } = e;
       if(code){
-        this.log.warn(`Unable to connect to ${address} ${port} (code: ${code})`);
+        // No need to show error here, shown upstream
+        // this.log.debug(`Unable to connect to ${address} ${port} (code: ${code})`);
       } else {
-        this.log.error('transport.ts error keys', e);
+        this.log.error('transport.ts error:', e);
       }
     } finally {
       this.socket.end();
@@ -156,7 +157,7 @@ export class Transport {
   
       };
     } catch (error) {
-      this.log.debug(error);
+      this.log.debug('Transport getState() error:', error);
     }
   }
 }

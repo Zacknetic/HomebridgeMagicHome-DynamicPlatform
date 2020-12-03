@@ -208,8 +208,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             continue;
           }
 
-          this.log.info('\nWarning! Continuing to register cached accessory despite not being seen for %o restarts.',
-            accessory.context.device.restartsSinceSeen);
+          this.log.info('Warning! Continuing to register cached accessory despite not being seen for %o restarts.',
+            accessory.context.restartsSinceSeen);
 
           // create the accessory handler
           const lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
@@ -281,6 +281,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   async determineController(discoveredDevice):Promise<IDeviceQueriedProps> {
     const initialState = await this.getInitialState (discoveredDevice.ipAddress, 10000);
     if( initialState == undefined){
+      this.log.debug('Cannot determine controller. Device unreacheable.', device);
       return undefined;
     }
 
@@ -404,8 +405,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.log.info( '%o -' + message +
     '\n Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
     this.count++,
-    accessory.context.device.displayName,
-    accessory.context.device.lightParameters.controllerLogicType,
+    accessory.context.displayName,
+    accessory.context.device.lightParameters?.controllerLogicType,
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,

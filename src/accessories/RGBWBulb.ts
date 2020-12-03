@@ -1,5 +1,5 @@
 import { clamp, convertHSLtoRGB } from '../magichome-interface/utils';
-import { HomebridgeMagichomeDynamicPlatformAccessory } from '../PlatformAccessory';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   public eightByteProtocol = 2;
