@@ -130,13 +130,19 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           newDevices++;
           
         } else {
-          if(existingAccessory.context.device.deviceData == undefined) {
-            this.log.warn('Warning! Outdated object data detected. Attempting to repair');  
+
+          // Trigger for an object repair is missing 'controllerLogicType' property
+          if(!existingAccessory.context.device?.lightParameters?.controllerLogicType) {
+            const { uniqueId = 'n/a' } = existingAccessory.context.device || {};
+            this.log.warn(`Warning! Outdated object data detected. Attempting to repair "${uniqueId}"`);  
             const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
             if( initialState == undefined){
               return undefined;
             }
-            const oldName = existingAccessory.context.displayName;
+
+            const oldName = existingAccessory.context.displayName || 
+                            existingAccessory.context.device?.lightParameters?.convenientName || 
+                            'MagicHome Device';
       
           
             const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
@@ -175,7 +181,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           this.log.warn('Device was not seen during discovery and is outdated (pre v1.8.6). Skipping for now, try restarting Homebridge to perform another scan.');
         }
    
-        if(accessory.context.device.displayName.toString().toLowerCase().includes('delete')){
+        if(accessory.context.device.displayName?.toString().toLowerCase().includes('delete')){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
           this.log.warn('Successfully pruned accessory: ', accessory.context.device.displayName,
             'due to being marked for deletion\n');
@@ -216,6 +222,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     
       } catch (error) {
         this.log.error('platform.ts discoverDevices() accessory pruning has thrown the following error: %o',error);
+        this.log.error('The context object is: ',accessory.context);
+
       }
     }
 
@@ -360,7 +368,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  * @param deviceDiscovered 
  * @param existingAccessory 
  */
-  registerExistingAccessory(deviceDiscovered, existingAccessory){
+  registerExistingAccessory(deviceDiscovered, existingAccessory):boolean{
 
     // set its restart prune counter to 0 as it has been seen this session
     existingAccessory.context.device.restartsSinceSeen = 0;
@@ -393,6 +401,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     // udpate the accessory to your platform
     this.api.updatePlatformAccessories([existingAccessory]);
+    return true;
   }
 
   printDeviceInfo(message: string, accessory: PlatformAccessory){
