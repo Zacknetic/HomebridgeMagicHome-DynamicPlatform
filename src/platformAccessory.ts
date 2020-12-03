@@ -258,8 +258,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         this.platform.log.debug('Warning. Was unable to determine state for device: %o', this.accessory.context.device.displayName);
         return;
       }
-
-      this.log(state, this.accessory.context.device.displayName);
       this.accessory.context.device.lastKnownState = state;
       this.updateLocalRGB(state.RGB);
       this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));
