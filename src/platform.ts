@@ -131,6 +131,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           
         } else {
           if(existingAccessory.context.device.deviceData == undefined) {
+            this.log.warn('Warning! Outdated object data detected. Attempting to repair');  
             const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
             if( initialState == undefined){
               return undefined;
@@ -403,8 +404,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,
-    accessory.context.device.controllerHardwareVersion,
-    accessory.context.device.controllerFirmwareVersion);
+    accessory.context.device.controllerHardwareVersion.toString(),
+    accessory.context.device.controllerFirmwareVersion.toString());
   }
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {
