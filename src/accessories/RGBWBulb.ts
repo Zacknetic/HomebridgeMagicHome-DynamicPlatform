@@ -19,7 +19,7 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   async updateDeviceState(_timeout = 200, lockedState:ILightState) {
     this.addMagicHomeProps(lockedState);
     this.lightLastWrittenState = cloneDeep(lockedState);   
-    const { r, g, b, ww, mask } = Common.getRGBWfromState(lockedState);
+    const { r, g, b, ww, mask } = Common.flattenLightState(lockedState);
 
     if(this.eightByteProtocol == 0){
       await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()

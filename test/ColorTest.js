@@ -27,8 +27,8 @@ const SERVER = "http://localhost:51826";
   await sendCommand(payload(bri, 255))
   await sendCommand(payload(setPower, true))
   await sleep(1000)
-  await sendCommand(payload(hue, 222))
-  await sendCommand(payload(sat, 20))
+  await sendCommand(payload(hue, 225))
+  await sendCommand(payload(sat, 13))
 
   // await sendCommand(payload(hue, 222))
   // await sendCommand(payload(sat, 20))

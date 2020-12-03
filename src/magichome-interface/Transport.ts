@@ -83,7 +83,8 @@ export class Transport {
     } catch (e) {
       const { code, address, port } = e;
       if(code){
-        this.log.warn(`Unable to connect to ${address} ${port} (code: ${code})`);
+        // Handled upstream
+        // this.log.warn(`Unable to connect to ${address} ${port} (code: ${code})`);
       } else {
         this.log.error('transport.ts error keys', e);
       }

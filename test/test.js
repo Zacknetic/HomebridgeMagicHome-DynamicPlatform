@@ -8,7 +8,7 @@ const SERVER = "http://localhost:51826";
 ;(async () => {
 
   let device = await getAccessories()
-  if(!device.found){
+  if(!device){
     console.log(`Test device ${TEST_DEVICE_NAME} not found.`)
     return null
   }
@@ -100,9 +100,13 @@ function findDevice(deviceSerialNumber, accessories){
       const {iid:s_iid, type, characteristics} = service
       for (let char of characteristics){
         const { value, description, iid: c_iid } = char
-        if( description === "Serial Number" && value === deviceSerialNumber){
-          console.log(`Found ${deviceSerialNumber} aid:${aid} service:${s_iid} characteristic:${c_iid}`)
-          device = { found: true, aid, s_iid, c_iid}
+        if( description === "Serial Number"){
+          if(value === deviceSerialNumber){
+            console.log(`Found desired test device "${deviceSerialNumber}" aid:${aid} service:${s_iid} characteristic:${c_iid}`)
+            device = { found: true, aid, s_iid, c_iid}
+          } else {
+            console.log(`Device in network: "${value}" aid:${aid} service:${s_iid} characteristic:${c_iid}`)
+          }
         }
       }
     }

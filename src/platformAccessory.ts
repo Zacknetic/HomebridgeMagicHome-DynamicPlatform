@@ -3,7 +3,7 @@ import type {
   Service, PlatformConfig, PlatformAccessory, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback,
 } from 'homebridge';
-import { clamp, convertWhitesToColorTemperature } from './magichome-interface/utils';
+import { clamp } from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogger } from './instance';
@@ -38,7 +38,7 @@ const DEFAULT_LIGHT_STATE: ILightState = {
   HSL: { hue: 255, saturation: 100, luminance: 50 },
   RGB: { red: 0, green: 0, blue: 0 },
   whiteValues: { warmWhite: 0, coldWhite: 0 },
-  colorTemperature: null,
+  colorTemperature: 0,
   brightness: 100,
 };
 
@@ -48,7 +48,7 @@ const OFFLINE_STATE: ILightState = {
   HSL: { hue: 0, saturation: 0, luminance: 0 },
   RGB: { red: 0, green: 0, blue: 0 },
   whiteValues: { warmWhite: 0, coldWhite: 0 },
-  colorTemperature: null,
+  colorTemperature: 0,
   brightness: 0,
 };
 
@@ -237,6 +237,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.operatingMode = opMode.redBlueGreenMode;
     this.lightState.HSL.hue = value as number; 
+    this.lightState.colorTemperature = 0;
     this.nextCommand = 'setColor';
     this.processRequest({ msg: `hue=${value}`});
     callback(null);
@@ -244,7 +245,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.operatingMode = opMode.redBlueGreenMode;
-    this.lightState.HSL.saturation = value as number; 
+    this.lightState.HSL.saturation = value as number;
+    this.lightState.colorTemperature = 0;
     this.nextCommand = 'setColor';
     this.processRequest({ msg: `sat=${value}`});
     callback(null);
@@ -260,6 +262,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
     this.lightState.operatingMode = opMode.temperatureMode;
     this.lightState.colorTemperature = value as number;
+    this.lightState.HSL = { hue: 0, saturation: 0, luminance: 0 };
     this.nextCommand = 'setCCT';
     this.processRequest({msg: `cct=${value}`} );
     callback(null);
@@ -480,7 +483,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateHomekitState(state:ILightState):Promise<any> {
     const { getHomeKitProps } = HomebridgeMagichomeDynamicPlatformAccessory;
-    const { isOn, hue, saturation, brightness, colorTemperature } = getHomeKitProps(state);
+    const { isOn, brightness, hue, saturation, colorTemperature } = getHomeKitProps(state);
 
     isOn       !== null && this.service.updateCharacteristic(this.platform.Characteristic.On, isOn);
     hue        !== null && this.service.updateCharacteristic(this.platform.Characteristic.Hue, hue);

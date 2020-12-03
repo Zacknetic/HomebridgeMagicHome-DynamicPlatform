@@ -16,7 +16,7 @@ export class Switch extends HomebridgeMagichomeDynamicPlatformAccessory {
   async updateDeviceState(_timeout = 200, lockedState:ILightState) {
     this.addMagicHomeProps(lockedState);
     this.lightLastWrittenState = cloneDeep(lockedState);   
-    const { r, g, b, mask } = Common.getRGBfromState(lockedState);
+    const { r, g, b, mask } = Common.flattenLightState(lockedState);
     this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
   }  
     

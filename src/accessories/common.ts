@@ -14,7 +14,7 @@ interface IConvProps {
   }
 }
 export default class CommonClass{
-  static convertHSBtoRGBWW_v2(state:ILightState, props:IConvProps ):void{
+  static convertHSBtoRGBWW_CCT(state:ILightState, props:IConvProps ):void{
 
     if(state.operatingMode === opMode.temperatureMode){
       state.RGB = { red:0, green:0, blue: 0}; // must be zero, so we can stuff tx message to device?
@@ -139,17 +139,13 @@ export default class CommonClass{
 
     //TODO: implement HSB output in case white(s) are non-zero
     
-    let brightness;
+    let brightness = 0;
     if(luminance > 0 && isOn){
       brightness = luminance * 2;
     } else if (isOn){
       brightness = clamp((warmWhite/2.55), 0, 100);
-    } else {
-      brightness = 0;
     }
-    brightness = Math.round(brightness);
-
-    state.brightness = brightness;
+    state.brightness = Math.round(brightness);
     return;
   }
 
@@ -222,15 +218,17 @@ export default class CommonClass{
   /*
         Update H,S,B based on RBGWW
   */
-  static convertRGBWWtoHSB_v2(state:ILightState, props:IConvProps ):void{
+  static convertRGBWWtoHSB_CCT(state:ILightState, props:IConvProps ):void{
     if(state.operatingMode === opMode.temperatureMode){
-      // since we're in color temperature mode, all we need is to respond with mired
-      // state.HSL = {hue:0, saturation:0, luminance:0};
-      //state.HSL = {hue:null, saturation:null, luminance:null};
+
   
       state.colorTemperature = convertWhitesToColorTemperature(state.whiteValues);
       state.brightness = estimateBrightnessFromWhites(state.whiteValues);
       const r = ColorUtils.colorTemperatureToHueAndSaturation(state.colorTemperature);
+
+      // since we're in color temperature mode, all we need is to respond with mired
+      // state.HSL = {hue:0, saturation:0, luminance:0};
+      // state.HSL = {hue:null, saturation:null, luminance:null};
       state.HSL = {hue:r.hue, saturation:r.saturation, luminance:0}; // TODO: must fix this
       return;
     }
@@ -248,7 +246,7 @@ export default class CommonClass{
       return;
     }
 
-    state.colorTemperature = null;
+    state.colorTemperature = 0;
     state.HSL = convertRGBtoHSL(state.RGB);
     const {hue: _hue, saturation: _saturation, brightness:_brightness} = this.estimateBrightness(state, props);
     state.brightness = _brightness;
@@ -293,8 +291,8 @@ export default class CommonClass{
     return;
   }   
 
+  // input: h,s,b 
   static estimateBrightness(lightState:ILightState, props:IConvProps):any {
-    // eslint-disable-next-line no-console
     const { colorWhiteThreshold } = props?.config?.whiteEffects;
     let { hue, saturation } = lightState.HSL;
     const { luminance } = lightState.HSL;
@@ -376,24 +374,11 @@ export default class CommonClass{
     }
   }
 
-  static getRGBWWfromState(lightState:ILightState):any{
+  static flattenLightState(lightState:ILightState):any{
     const { red:r, green:g, blue:b } = lightState.RGB;
     const { coldWhite:cw, warmWhite:ww } = lightState.whiteValues;
     const mask = this.getMaskFromOpMode(lightState.operatingMode);
     return { r, g, b, cw, ww, mask};
-  }
-
-  static getRGBWfromState(lightState: ILightState): any {
-    const { red:r, green:g, blue:b } = lightState.RGB;
-    const { warmWhite:ww } = lightState.whiteValues;
-    const mask = this.getMaskFromOpMode(lightState.operatingMode);
-    return { r, g, b, ww, mask};  
-  }
-
-  static getRGBfromState(state: ILightState): any {
-    const { red:r, green:g, blue:b } = state.RGB;
-    const mask = this.getMaskFromOpMode(state.operatingMode);
-    return { r, g, b, mask};  
   }
 
 }

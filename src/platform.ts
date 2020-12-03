@@ -283,7 +283,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
 
         
-          this.log.info('\nWarning! Continuing to register cached accessory despite not being seen for %o restarts.',
+          this.log.info('Warning! Continuing to register cached accessory despite not being seen for %o restarts.',
             accessory.context.restartsSinceSeen);
 
           // create the accessory handler

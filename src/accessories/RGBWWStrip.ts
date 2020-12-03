@@ -17,7 +17,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   async updateDeviceState(_timeout = 200, lockedState:ILightState) {
     this.addMagicHomeProps(lockedState);
     this.lightLastWrittenState = cloneDeep(lockedState);   
-    const { r, g, b, ww, cw, mask } = Common.getRGBWWfromState(lockedState);
+    const { r, g, b, ww, cw, mask } = Common.flattenLightState(lockedState);
     this.send([0x31, r, g, b, ww, cw, mask, 0x0F], true, _timeout);
   }
   
