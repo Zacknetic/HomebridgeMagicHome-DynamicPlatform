@@ -130,18 +130,16 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           newDevices++;
           
         } else {
-
+          const controllerLogicType = existingAccessory.context.device?.lightParameters?.controllerLogicType;
           // Trigger for an object repair is missing 'controllerLogicType' property
-          if(!existingAccessory.context.device?.lightParameters?.controllerLogicType) {
+          if( !(controllerLogicType in accessoryType)){
             const { uniqueId = 'n/a' } = existingAccessory.context.device || {};
             this.log.warn(`Warning! Outdated object data detected. Attempting to repair "${uniqueId}"`);  
             const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
             if( initialState == undefined){
-              return undefined;
+              continue;
             }
 
-      
-          
             const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
 
             const oldName = existingAccessory.context.displayName || 
@@ -186,6 +184,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           } else {
             this.log.error('Device was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.');
+            continue;
           }
         }
    
@@ -220,12 +219,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             accessory.context.device.restartsSinceSeen);
 
           // create the accessory handler
-          const lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
-          this.lightAccessories.push(lightAccessory);
-          // udpate the accessory to platform
-          this.api.updatePlatformAccessories([accessory]);
-          registeredDevices++;
-          unseenDevices++;
+          try {
+            const lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
+            this.lightAccessories.push(lightAccessory);
+            // udpate the accessory to platform
+            this.api.updatePlatformAccessories([accessory]);
+            registeredDevices++;
+            unseenDevices++;
+          } catch (error) {
+            this.log.debug(error);
+            continue;
+          }
+
         }
     
       } catch (error) {
@@ -358,13 +363,19 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.printDeviceInfo('Registering new accessory...!', accessory);
     // link the accessory to your platform
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+    let lightAccessory;
+    try {
+      // create the accessory handler
+      const lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
+      // push into accessory cache
+      this.accessories.push(accessory);
+      this.lightAccessories.push(lightAccessory);
+      return true;
+    } catch (error) {
+      this.log.debug(error);
+      return false;
+    }
 
-    // create the accessory handler
-    const lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
-    // push into accessory cache
-    this.accessories.push(accessory);
-    this.lightAccessories.push(lightAccessory);
-    return true;
   }
 
   /**
@@ -401,12 +412,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.printDeviceInfo('Registering existing accessory...', existingAccessory);
             
     // create the accessory handler
-    const lightAccessory = new accessoryType[existingAccessory.context.device.lightParameters.controllerLogicType](this, existingAccessory, this.config);
-    this.lightAccessories.push(lightAccessory);
-
-    // udpate the accessory to your platform
-    this.api.updatePlatformAccessories([existingAccessory]);
-    return true;
+    try {
+      const lightAccessory = new accessoryType[existingAccessory.context.device.lightParameters.controllerLogicType](this, existingAccessory, this.config);
+      this.lightAccessories.push(lightAccessory);
+  
+      // udpate the accessory to your platform
+      this.api.updatePlatformAccessories([existingAccessory]);
+      return true;
+  
+    } catch (error) {
+      this.log.debug(error);
+      return false;
+    }
   }
 
   printDeviceInfo(message: string, accessory: MagicHomeAccessory){
