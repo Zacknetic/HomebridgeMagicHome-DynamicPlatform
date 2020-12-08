@@ -317,7 +317,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateDeviceState(_timeout = 200) {
 
-
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB

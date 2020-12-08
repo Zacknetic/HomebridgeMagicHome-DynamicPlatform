@@ -140,13 +140,13 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
               return undefined;
             }
 
-            const oldName = existingAccessory.context.displayName || 
-                            existingAccessory.context.device?.lightParameters?.convenientName || 
-                            'MagicHome Device';
       
           
             const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
 
+            const oldName = existingAccessory.context.displayName || 
+                            existingAccessory.context.device?.lightParameters?.convenientName || 
+                            deviceQueryData.lightParameters.convenientName;
             if(deviceQueryData == null){
               this.log.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
                 deviceDiscovered.uniqueId);
@@ -176,9 +176,17 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     for (const accessory of this.accessories){
       try {
-        if(accessory.context.device == undefined) {
+        if(!accessory.context.device?.lightParameters?.controllerLogicType) {
     
-          this.log.warn('Device was not seen during discovery and is outdated (pre v1.8.6). Skipping for now, try restarting Homebridge to perform another scan.');
+          this.log.warn('Device was not seen during discovery and is outdated (pre v1.8.6). Attempting to repair object with cached data.');
+          const migrateSuccess = this.migrateObject(accessory);
+
+          if(migrateSuccess){
+            this.log.info('Device successfully repaired!');
+
+          } else {
+            this.log.error('Device was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.');
+          }
         }
    
         if(accessory.context.device.displayName?.toString().toLowerCase().includes('delete')){
@@ -294,7 +302,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     if(lightTypesMap.has(controllerHardwareVersion)){
-      this.log.warn('Hardware Version: %o with Firmware Version: %o matches known device type records', 
+      this.log.info('Hardware Version: %o with Firmware Version: %o matches known device type records', 
         controllerHardwareVersion.toString(16),
         controllerFirmwareVersion.toString(16));
       lightParameters = lightTypesMap.get(controllerHardwareVersion);
@@ -421,4 +429,31 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.log.debug('Recived the following response', output);
 
   } //send
+
+
+  async migrateObject(existingAccessory){
+    const { uniqueId = 'n/a' } = existingAccessory.context.device || {};
+    const oldDevice = existingAccessory.context.device;
+    this.log.warn(`Warning! Outdated object data detected. Attempting to repair "${uniqueId}"`);  
+    const initialState = existingAccessory.context.lastKnownState;
+    if( initialState == undefined){
+      return undefined;
+    }
+
+    const oldName = existingAccessory.context.displayName || 
+                    existingAccessory.context.device?.lightParameters?.convenientName || 
+                    'MagicHome Device';
+
+  
+    const deviceQueryData:IDeviceQueriedProps = await this.determineController(oldDevice);
+
+    if(deviceQueryData == null){
+      this.log.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
+        existingAccessory.context.device.uniqueId);
+      return null;
+    }
+
+    const deviceData: IDeviceProps = Object.assign({uuid: oldDevice.uniqueId, cachedIPAddress: oldDevice.ipAddress, restartsSinceSeen: oldDevice.restartsSinceSeen, displayName: oldName, lastKnownState: initialState}, oldDevice, deviceQueryData);        
+    existingAccessory.context.device = deviceData; 
+  }
 }//ZackneticMagichomePlatform class

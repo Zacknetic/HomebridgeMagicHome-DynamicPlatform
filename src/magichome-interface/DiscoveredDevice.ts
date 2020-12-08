@@ -12,7 +12,6 @@ export class DiscoveredDevice {
   public readonly config: PlatformConfig;
 
   isAllowed(){
-    this.log.warn('discovered device running');
 
     let isAllowed = true;
     try {
