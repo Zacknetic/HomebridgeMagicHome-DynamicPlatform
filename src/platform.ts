@@ -130,9 +130,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           newDevices++;
           
         } else {
-          const controllerLogicType = existingAccessory.context.device?.lightParameters?.controllerLogicType;
+
           // Trigger for an object repair is missing 'controllerLogicType' property
-          if( !(controllerLogicType in accessoryType)){
+          if(!existingAccessory.context.device?.lightParameters?.controllerLogicType){
             const { uniqueId = 'n/a' } = existingAccessory.context.device || {};
             this.log.warn(`Warning! Outdated object data detected. Attempting to repair "${uniqueId}"`);  
             const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
@@ -187,8 +187,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             continue;
           }
         }
-   
-        if(accessory.context.device.displayName?.toString().toLowerCase().includes('delete')){
+        
+        if(accessory.context.device?.displayName && accessory.context.device.displayName.toString().toLowerCase().includes('delete')){
           this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
           this.log.warn('Successfully pruned accessory: ', accessory.context.device.displayName,
             'due to being marked for deletion\n');
@@ -219,17 +219,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             accessory.context.device.restartsSinceSeen);
 
           // create the accessory handler
+          let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
           try {
-            const lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
-            this.lightAccessories.push(lightAccessory);
-            // udpate the accessory to platform
-            this.api.updatePlatformAccessories([accessory]);
-            registeredDevices++;
-            unseenDevices++;
+            lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
           } catch (error) {
-            this.log.debug(error);
+            this.log.error('[1] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
             continue;
           }
+          this.lightAccessories.push(lightAccessory);
+          // udpate the accessory to platform
+          this.api.updatePlatformAccessories([accessory]);
+          registeredDevices++;
+          unseenDevices++;
 
         }
     
@@ -363,19 +364,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.printDeviceInfo('Registering new accessory...!', accessory);
     // link the accessory to your platform
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-    let lightAccessory;
+    
+    // create the accessory handler
+    let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
     try {
-      // create the accessory handler
-      const lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
-      // push into accessory cache
-      this.accessories.push(accessory);
-      this.lightAccessories.push(lightAccessory);
-      return true;
+      lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
     } catch (error) {
-      this.log.debug(error);
+      this.log.error('[2] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
       return false;
     }
-
+    this.accessories.push(accessory);
+    this.lightAccessories.push(lightAccessory);
+    return true;
   }
 
   /**
@@ -412,18 +412,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.printDeviceInfo('Registering existing accessory...', existingAccessory);
             
     // create the accessory handler
+    let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
     try {
-      const lightAccessory = new accessoryType[existingAccessory.context.device.lightParameters.controllerLogicType](this, existingAccessory, this.config);
-      this.lightAccessories.push(lightAccessory);
-  
-      // udpate the accessory to your platform
-      this.api.updatePlatformAccessories([existingAccessory]);
-      return true;
-  
+      lightAccessory = new accessoryType[existingAccessory.context.device.lightParameters.controllerLogicType](this, existingAccessory, this.config);
     } catch (error) {
-      this.log.debug(error);
+      this.log.error('[3] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', existingAccessory.context.device?.lightParameters?.controllerLogicType);
       return false;
     }
+
+    this.lightAccessories.push(lightAccessory);
+    // udpate the accessory to your platform
+    this.api.updatePlatformAccessories([existingAccessory]);
+    return true;
   }
 
   printDeviceInfo(message: string, accessory: MagicHomeAccessory){
