@@ -460,10 +460,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.deviceUpdateInProgress = true;
       setTimeout(  () =>  {
         if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
-
-          if(!this.lightState.isOn){      // if we are turning the power off...
-            this.send(COMMAND_POWER_ON);  // set an extra on command in case the device is in a bugged state
-          }                               // it sounds counterintuitive, but this wont effect a non-bugged device
           this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
         } else {
           
