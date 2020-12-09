@@ -47,7 +47,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly Characteristic = this.api.hap.Characteristic;
   // this is used to track restored cached accessories
   public readonly accessories: MagicHomeAccessory[] = [];
-  public readonly lightAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = [];
   public count = 1;
   //public readonly log: Logger;
   private periodicDiscovery: NodeJS.Timeout | null = null;
@@ -87,6 +86,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // set cached accessory as not recently seen 
     // if found later to be a match with a discovered device, will change to true
     accessory.context.device.restartsSinceSeen++;
+    accessory.context.pendingRegistration = true;
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
   }
@@ -122,6 +122,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   
     // loop over the discovered devices and register each one if it has not already been registered
     for ( const deviceDiscovered of devicesDiscovered) { 
+
       let existingAccessory: MagicHomeAccessory = null;
       try {
         // generate a unique id for the accessory this should be generated from
@@ -248,7 +249,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             this.log.error('device object: ', accessory.context.device);
             continue;
           }
-          this.lightAccessories.push(lightAccessory);
+
           // udpate the accessory to platform
           this.api.updatePlatformAccessories([accessory]);
           registeredDevices++;
@@ -374,7 +375,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  * @param deviceDiscovered 
  * @param generatedUUID 
  */
-  async createNewAccessory(deviceDiscovered, generatedUUID){
+  async createNewAccessory(deviceDiscovered, generatedUUID):Promise<boolean>{   
     const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
 
     if(deviceQueryData == null){
@@ -416,7 +417,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       return false;
     }
     this.accessories.push(accessory);
-    this.lightAccessories.push(lightAccessory);
+
     return true;
   }
 
@@ -426,51 +427,65 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  * @param deviceDiscovered 
  * @param existingAccessory 
  */
-  registerExistingAccessory(deviceDiscovered, existingAccessory):boolean{
+  registerExistingAccessory(deviceDiscovered, existingAccessory:MagicHomeAccessory):boolean{
 
-    // set its restart prune counter to 0 as it has been seen this session
-    existingAccessory.context.device.restartsSinceSeen = 0;
-
-    // test if the existing cached accessory ip address matches the discovered
-    // accessory ip address if not, replace it
-    if (existingAccessory.context.device.cachedIPAddress !== deviceDiscovered.ipAddress) {
-
-      this.log.warn('Ip address discrepancy found for accessory: %o\n Expected ip address: %o\n Discovered ip address: %o' ,
-        existingAccessory.context.device.displayName,  existingAccessory.context.device.cachedIPAddress, deviceDiscovered.ipAddress);
-
-      // overwrite the ip address of the existing accessory to the newly disovered ip address
-      existingAccessory.context.device.cachedIPAddress = deviceDiscovered.ipAddress;
-
-      this.log.warn('Ip address successfully reassigned to: %o\n ', existingAccessory.context.device.cachedIPAddress);
-    }
-          
     if(!this.isAllowed(existingAccessory.context.device.uniqueId)){
       this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
         existingAccessory.context.device.displayName, existingAccessory.context.device.uniqueId);
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
       return false;
     }
-          
+
+    // set its restart prune counter to 0 as it has been seen this session
+    existingAccessory.context.device.restartsSinceSeen = 0;
+
+    // test if the existing cached accessory ip address matches the discovered
+    // accessory ip address if not, replace it
+    const ipHasNotChanged = existingAccessory.context.device.cachedIPAddress === deviceDiscovered.ipAddress;
+    const { pendingRegistration } = existingAccessory.context;
+    const registrationComplete = !pendingRegistration;
+    if(registrationComplete  && ipHasNotChanged){
+      this.log.debug(`Device ${existingAccessory.context.device.uniqueId} already registered. Registration update not required`) ;
+      return false;
+    }
+
+    if(!ipHasNotChanged){
+      this.log.warn('Ip address discrepancy found for accessory: %o\n Expected ip address: %o\n Discovered ip address: %o' ,
+        existingAccessory.context.device.displayName,  existingAccessory.context.device.cachedIPAddress, deviceDiscovered.ipAddress);
+
+      // overwrite the ip address of the existing accessory to the newly disovered ip address
+      existingAccessory.context.device.cachedIPAddress = deviceDiscovered.ipAddress;
+
+      this.log.warn('Ip address successfully reassigned to: %o\n ', existingAccessory.context.device.cachedIPAddress);            
+    }
+
     this.printDeviceInfo('Registering existing accessory...', existingAccessory);
             
     // create the accessory handler
     let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
     try {
+      if( !existingAccessory.context?.device?.lightParameters?.controllerLogicType || accessoryType[existingAccessory.context?.device?.lightParameters?.controllerLogicType] === undefined){
+        this.log.error('[registerExistingAccessory] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', existingAccessory.context.device?.lightParameters?.controllerLogicType);
+        this.log.error('[registerExistingAccessory] device object: ', existingAccessory.context.device);
+        return false;
+      }
       lightAccessory = new accessoryType[existingAccessory.context.device.lightParameters.controllerLogicType](this, existingAccessory, this.config);
     } catch (error) {
-      this.log.error('[3] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', existingAccessory.context.device?.lightParameters?.controllerLogicType);
-      this.log.error('device object: ', existingAccessory.context.device);
+      this.log.error('[registerExistingAccessory] The controllerLogicType does not exist in accessoryType list. controllerLogicType=', existingAccessory.context.device?.lightParameters?.controllerLogicType);
+      this.log.error('[registerExistingAccessory] device object: ', existingAccessory.context.device);
+      this.log.error(error);
+
       return false;
     }
 
-    this.lightAccessories.push(lightAccessory);
     // udpate the accessory to your platform
     this.api.updatePlatformAccessories([existingAccessory]);
+    existingAccessory.context.pendingRegistration = false;
     return true;
   }
 
   printDeviceInfo(message: string, accessory: MagicHomeAccessory){
-    this.log.info( '%o -' + message +
+    this.log.info( '%o - ' + message +
     '\n Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
     this.count++,
     accessory.context.device.displayName,

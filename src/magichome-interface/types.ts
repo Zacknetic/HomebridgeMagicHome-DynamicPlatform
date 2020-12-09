@@ -60,6 +60,7 @@ export interface IWhites {
 export interface MagicHomeAccessory extends PlatformAccessory{
     context: {
       displayName: string;
-      device: IDeviceProps
+      device: IDeviceProps;
+      pendingRegistration?: boolean;
     }
   } 
