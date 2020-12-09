@@ -101,9 +101,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    */
   async discoverDevices(dgb: boolean | null) {
     const { isValidDeviceModel } = HomebridgeMagichomeDynamicPlatform;
-    const onlineAndNew = [];
-    const onlineAndKnown = [];
-    const errorList = new Set();
+    const pendingUpdate = new Set();
+    const recentlyRegisteredDevices  = new Set();
 
     let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
     let discover = new Discover(this.log, this.config);
@@ -133,17 +132,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         existingAccessory = this.accessories.find(accessory => accessory.UUID === generatedUUID);  
 
         if (!existingAccessory) { 
-          onlineAndNew.push(deviceDiscovered.uniqueId);
-
           if(!this.createNewAccessory(deviceDiscovered, generatedUUID)) {
             continue;
           }
+          recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
           registeredDevices++;
           newDevices++;
           
         } else {
           // This deviceDiscovered already exist in cache!
-          onlineAndKnown.push(deviceDiscovered.uniqueId);
 
           // Check if cached device complies to the device model,
           if(!isValidDeviceModel(existingAccessory.context.device, null)) {    
@@ -173,8 +170,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             if(isValidDeviceModel(existingAccessory.context.device, this.log)){
               this.log.debug(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" successfully repaired!`);
             } else {
-              this.log.error(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online. `);
-              //errorList.add(generatedUUID);
+              this.log.error(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.`);
               continue;
             }
 
@@ -182,6 +178,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           if(!this.registerExistingAccessory(deviceDiscovered, existingAccessory)){
             continue;
           }
+
+          // add to list of registered devices, so we can show a summary in the end
+          recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
           registeredDevices++;
         } 
 
@@ -208,7 +207,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           // only offline, cached devices, old data model, should trigger here.
           const { uniqueId } = accessory.context.device;
           this.log.debug(`Device "${uniqueId}" was not seen during discovery. Ensure it can be controlled in the MagicHome app. Rescan in 30 seconds...`);
-          errorList.add(uniqueId);
+          pendingUpdate.add(uniqueId);
           continue;
         }
         
@@ -272,21 +271,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     unseenDevices);
 
 
-    const known = this.accessories.map( a => a.context.device.uniqueId);
 
-    if(Array.from(errorList).length === 0){
-      this.log.debug('All devices have been updated to latest data model. Disabling periodic device discovery.');
-      this.log.debug('Online and New:',onlineAndNew);
-      this.log.debug('Online and known:',onlineAndKnown);
-      this.log.debug('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
-
-      clearInterval(this.periodicDiscovery);
-    } else {
-      this.log.debug('Online and New:',onlineAndNew);
-      this.log.debug('Online and known:',onlineAndKnown);
-      this.log.debug('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
-      this.log.debug('Error List', Array.from(errorList));  
+    // Discovery summary:
+    if(recentlyRegisteredDevices.size > 0){
+      const found = recentlyRegisteredDevices.size;
+      const pending = Array.from(pendingUpdate).length;
+      const pendingStr = pending > 0 ? ` Pending update: ${pending} devices` : '';
+      this.log.info(`Discovery summary:  Found ${found} devices.${pendingStr}`);
     }
+
     this.count = 1; // reset the device logging counter
   }//discoveredDevices
 
@@ -333,7 +326,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }
  
   async determineController(discoveredDevice):Promise<IDeviceQueriedProps | null> {
-    const initialState = await this.getInitialState (discoveredDevice.ipAddress, 10000);
+    const { ipAddress } = discoveredDevice || {};
+    if(typeof ipAddress !== 'string' ){
+      this.log.error('Cannot determine controller because invalid IP address. Device:', discoveredDevice);
+      return null;
+    }
+    const initialState = await this.getInitialState (ipAddress, 10000);
     if( initialState == undefined){
       this.log.debug('Cannot determine controller. Device unreacheable.', discoveredDevice);
       return null;
