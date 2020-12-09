@@ -8,8 +8,8 @@ export interface IDeviceDiscoveredProps {
 
 export interface IDeviceQueriedProps {
     lightParameters: ILightParameters;
-    controllerHardwareVersion: string;
-    controllerFirmwareVersion: string;
+    controllerHardwareVersion: string | number;
+    controllerFirmwareVersion: string | number;
 }
 
 export interface ILightParameters {
@@ -21,11 +21,11 @@ export interface ILightParameters {
 }
 
 export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
-    uuid: string;
+    UUID: string;
     cachedIPAddress: string;
     displayName: string;
     restartsSinceSeen: number;
-    lastKnownState;
+    lastKnownState?: ILightState;
 }
 
 export interface ILightState {

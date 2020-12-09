@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge MagicHome Dynamic Platform",
   "name": "homebridge-magichome-dynamic-platform",
-  "version": "1.9.1",
+  "version": "1.9.2-alpha1",
   "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -31,7 +31,9 @@
     "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run lint && npm run build"
+    "prepublishOnly": "npm run lint && npm run build",
+    "test:migration": "cp ./test/node_modules/fixtures/cachedAccessories_1.8.5 ./.homebridge-dev/accessories/cachedAccessories",
+    "test:single": "cp ./test/node_modules/fixtures/cachedSingle ./.homebridge-dev/accessories/cachedAccessories"
   },
   "keywords": [
     "homebridge-plugin",
