@@ -57,8 +57,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //=================================================
   // Start Constructor //
-
-  counter = 0
   constructor(
     protected readonly platform: HomebridgeMagichomeDynamicPlatform,
     protected readonly accessory: MagicHomeAccessory,
