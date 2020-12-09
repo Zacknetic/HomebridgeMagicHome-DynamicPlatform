@@ -33,7 +33,8 @@
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run lint && npm run build",
     "test:migration": "cp ./test/node_modules/fixtures/cachedAccessories_1.8.5 ./.homebridge-dev/accessories/cachedAccessories",
-    "test:single": "cp ./test/node_modules/fixtures/cachedSingle ./.homebridge-dev/accessories/cachedAccessories"
+    "test:single": "cp ./test/node_modules/fixtures/cachedSingle ./.homebridge-dev/accessories/cachedAccessories",
+    "test:clean": "rm ./.homebridge-dev/accessories/* && rm ./.homebridge-dev/persist/*"
   },
   "keywords": [
     "homebridge-plugin",
