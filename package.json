@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge MagicHome Dynamic Platform",
   "name": "homebridge-magichome-dynamic-platform",
-  "version": "1.9.2-alpha1",
+  "version": "1.9.2-alpha6",
   "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -55,6 +55,7 @@
   ],
   "dependencies": {
     "color-convert": "^2.0.1",
+    "lodash": "^4.17.20",
     "lodash.debounce": "^4.0.8",
     "promise-queue": "^2.2.5"
   },
