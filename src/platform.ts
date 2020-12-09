@@ -12,7 +12,7 @@ import { RGBWBulb } from './accessories/RGBWBulb';
 import { RGBWWBulb } from './accessories/RGBWWBulb';
 import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
-import {cloneDeep} from 'lodash';
+import { cloneDeep } from 'lodash';
 import { setLogger } from './instance';
 
 
@@ -60,6 +60,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     //this.log = getLogger();
     this.log.warn('Finished initializing homebridge-magichome-dynamic-platform %o', loadJson<any>(join(__dirname, '../package.json'), {}).version);
+    this.log.info('If this plugin brings you joy, consider visiting GitHub and giving it a ⭐.');
+
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
     // in order to ensure they weren't added to homebridge already. This event can also be used
@@ -82,7 +84,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    */
   configureAccessory(accessory: MagicHomeAccessory) {
 
-    this.log.debug('%o - Loading accessory from cache...', this.count++, accessory.context.displayName);
+    this.log.debug('%o - Loading accessory from cache...', this.count++, accessory.context.device.displayName);
     // set cached accessory as not recently seen 
     // if found later to be a match with a discovered device, will change to true
     accessory.context.device.restartsSinceSeen++;
@@ -108,21 +110,20 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     let devicesDiscovered: IDeviceDiscoveredProps[] = await discover.scan(2000);
   
     while(devicesDiscovered.length === 0 && scans <5){
-      this.log.warn('( Scan: %o ) Discovered zero devices... rescanning...', scans + 1);
+      this.log.debug('( Scan: %o ) Discovered zero devices... rescanning...', scans + 1);
       devicesDiscovered = await discover.scan(2000);
       scans++;
     }
 
     discover = null;
     if (devicesDiscovered.length === 0){
-      this.log.warn('\nDiscovered zero devices!\n');
+      this.log.debug('\nDiscovered zero devices!\n');
     } else {
-      this.log.info('\nDiscovered %o devices.\n', devicesDiscovered.length);
+      this.log.debug('\nDiscovered %o devices.\n', devicesDiscovered.length);
     }
   
     // loop over the discovered devices and register each one if it has not already been registered
     for ( const deviceDiscovered of devicesDiscovered) { 
-
       let existingAccessory: MagicHomeAccessory = null;
       try {
         // generate a unique id for the accessory this should be generated from
@@ -206,7 +207,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         if(!isValidDeviceModel(accessory.context.device, null)) {
           // only offline, cached devices, old data model, should trigger here.
           const { uniqueId } = accessory.context.device;
-          this.log.info(`[Offline/prunning] Device "${uniqueId}" was not seen during discovery. Ensure it can be controlled in the MagicHome app. Rescan in 30 seconds...`);
+          this.log.debug(`Device "${uniqueId}" was not seen during discovery. Ensure it can be controlled in the MagicHome app. Rescan in 30 seconds...`);
           errorList.add(uniqueId);
           continue;
         }
@@ -263,7 +264,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       }
     }
 
-    this.log.info('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o'
+    this.log.debug('\nRegistered %o Magichome device(s). \nNew devices: %o \nCached devices that were seen this restart: %o'
      + '\nCached devices that were not seen this restart: %o\n',
     registeredDevices, 
     newDevices, 
@@ -274,19 +275,19 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     const known = this.accessories.map( a => a.context.device.uniqueId);
 
     if(Array.from(errorList).length === 0){
-      this.log.info('All devices have been updated to latest data model. Disabling periodic device discovery.');
-      this.log.info('Online and New:',onlineAndNew);
-      this.log.info('Online and known:',onlineAndKnown);
-      this.log.info('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
+      this.log.debug('All devices have been updated to latest data model. Disabling periodic device discovery.');
+      this.log.debug('Online and New:',onlineAndNew);
+      this.log.debug('Online and known:',onlineAndKnown);
+      this.log.debug('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
 
       clearInterval(this.periodicDiscovery);
     } else {
-      this.log.info('Online and New:',onlineAndNew);
-      this.log.info('Online and known:',onlineAndKnown);
-      this.log.info('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
-      this.log.info('Error List', Array.from(errorList));  
+      this.log.debug('Online and New:',onlineAndNew);
+      this.log.debug('Online and known:',onlineAndKnown);
+      this.log.debug('Offline and known:', known.filter( k => !onlineAndKnown.includes(k) ));
+      this.log.debug('Error List', Array.from(errorList));  
     }
-
+    this.count = 1; // reset the device logging counter
   }//discoveredDevices
 
 
@@ -342,13 +343,13 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     const controllerHardwareVersion = initialState.controllerHardwareVersion;
     const controllerFirmwareVersion = initialState.controllerFirmwareVersion;
   
-    this.log.info('Attempting to assign controller to new device: UniqueId: %o \nIpAddress %o \nModel: %o\nHardware Version: %o \nDevice Type: %o\n',
+    this.log.debug('Attempting to assign controller to new device: UniqueId: %o \nIpAddress %o \nModel: %o\nHardware Version: %o \nDevice Type: %o\n',
       discoveredDevice.uniqueId, discoveredDevice.ipAddress,discoveredDevice.modelNumber, initialState.controllerHardwareVersion.toString(16), initialState.controllerFirmwareVersion.toString(16));
  
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
 
     if(lightTypesMap.has(controllerHardwareVersion)){
-      this.log.info('Device %o: Hardware Version: %o with Firmware Version: %o matches known device type records', 
+      this.log.debug('Device %o: Hardware Version: %o with Firmware Version: %o matches known device type records', 
         discoveredDevice.uniqueId,
         controllerHardwareVersion.toString(16),
         controllerFirmwareVersion.toString(16));
@@ -526,6 +527,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       if(missingProps.length > 0){
         if(logger){
           logger.error('[isValidDeviceModel] unable to validate device model. Missing properties: ', missingProps );
+          logger.debug('\nThree things are certain:\nDeath, taxes and lost data.\nGuess which has occurred.');
         }
         return false;
       }
