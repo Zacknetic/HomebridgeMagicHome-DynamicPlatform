@@ -50,6 +50,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly lightAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = [];
   public count = 1;
   //public readonly log: Logger;
+  private periodicDiscovery: NodeJS.Timeout | null = null;
 
   constructor(
     public readonly log: Logger,
@@ -71,8 +72,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.discoverDevices();
       // this.discoverAnimations();
 
-      // make this configurable?
-      setInterval( () => this.discoverDevices(), 10000);
+      // Periodic scan for devices
+      this.periodicDiscovery = setInterval( () => this.discoverDevices(), 10000);
     });
   }
 
@@ -147,7 +148,28 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             //`Device "${uniqueId}" is online, but has outdated data model. Attempting to update it. 
             this.log.warn(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" seen during discovery and is outdated (pre v1.8.6). Rebuilding device. `, deviceDiscovered);
 
-            // existingAccessory.context.device = migrateDeviceModel(existingAccessory.context);
+
+            // ****** RECONSTRUCT DEVICE - patch existingAccessory with updated data *****
+            const { uniqueId = 'n/a' } = existingAccessory.context.device || {};
+            this.log.warn(`[discovered+cached] Warning! Outdated object data detected. Attempting to repair "${uniqueId}"`);  
+            const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
+            if( initialState == undefined){
+              continue;
+            }
+            const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
+
+            const oldName = existingAccessory.context.displayName || 
+                            existingAccessory.context.device?.lightParameters?.convenientName || 
+                            deviceQueryData.lightParameters.convenientName;
+            if(deviceQueryData == null){
+              this.log.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
+                deviceDiscovered.uniqueId);
+              continue;
+            }
+            const rootProps = {UUID: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: oldName, lastKnownState: initialState};
+            const deviceData: IDeviceProps = Object.assign(rootProps, deviceDiscovered, deviceQueryData);        
+            existingAccessory.context.device = deviceData; 
+            // ****** RECONSTRUCT DEVICE *****
   
             if(isValidDeviceModel(existingAccessory.context.device, this.log)){
               this.log.info(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" successfully repaired!`);
@@ -261,9 +283,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     unseenDevices);
 
 
-    this.log.info('Online and New:',onlineAndNew);
-    this.log.info('Online and known:',onlineAndKnown);
-    this.log.info('Error List', Array.from(errorList));
+
+    if(Array.from(errorList).length === 0){
+      this.log.info('All devices have been updated to latest data model. Disabling periodic device discovery.');
+      clearInterval(this.periodicDiscovery);
+    } else {
+      this.log.info('Online and New:',onlineAndNew);
+      this.log.info('Online and known:',onlineAndKnown);
+      this.log.info('Error List', Array.from(errorList));  
+    }
 
   }//discoveredDevices
 
@@ -309,18 +337,18 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
   }
  
-  async determineController(discoveredDevice):Promise<IDeviceQueriedProps> {
+  async determineController(discoveredDevice):Promise<IDeviceQueriedProps | null> {
     const initialState = await this.getInitialState (discoveredDevice.ipAddress, 10000);
     if( initialState == undefined){
       this.log.debug('Cannot determine controller. Device unreacheable.', discoveredDevice);
-      return undefined;
+      return null;
     }
 
     let lightParameters: ILightParameters;
     const controllerHardwareVersion = initialState.controllerHardwareVersion;
     const controllerFirmwareVersion = initialState.controllerFirmwareVersion;
   
-    this.log.info('\nAttempting to assign controller to new device: UniqueId: %o \nIpAddress %o \nModel: %o\nHardware Version: %o \nDevice Type: %o\n',
+    this.log.info('Attempting to assign controller to new device: UniqueId: %o \nIpAddress %o \nModel: %o\nHardware Version: %o \nDevice Type: %o\n',
       discoveredDevice.uniqueId, discoveredDevice.ipAddress,discoveredDevice.modelNumber, initialState.controllerHardwareVersion.toString(16), initialState.controllerFirmwareVersion.toString(16));
  
     //set the lightVersion so that we can give the device a useful name and later know how which protocol to use
@@ -333,9 +361,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     } else {
       this.log.warn('Unknown device version number: %o... unable to create accessory.' , controllerHardwareVersion.toString(16));
       this.log.warn('Please create an issue at https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues and upload your homebridge.log');
+      return null;
     }
 
-    this.log.debug('\nController Logic Type assigned to %o', lightParameters.controllerLogicType);
+    this.log.debug('Controller Logic Type assigned to %o', lightParameters.controllerLogicType);
     
     return {
       lightParameters,
@@ -411,9 +440,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // test if the existing cached accessory ip address matches the discovered
     // accessory ip address if not, replace it
     if (existingAccessory.context.device.cachedIPAddress !== deviceDiscovered.ipAddress) {
-      if(existingAccessory.context.device.cachedIPAddress === undefined){
-        this.log.error('[registerExistingAccessory] Existing device object looks pretty bad: ' ,existingAccessory.context.device);
-      }
 
       this.log.warn('Ip address discrepancy found for accessory: %o\n Expected ip address: %o\n Discovered ip address: %o' ,
         existingAccessory.context.device.displayName,  existingAccessory.context.device.cachedIPAddress, deviceDiscovered.ipAddress);
