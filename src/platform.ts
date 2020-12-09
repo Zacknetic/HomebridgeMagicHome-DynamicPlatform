@@ -3,7 +3,6 @@ import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformCon
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { join } from 'path';
 import { loadJson } from './magichome-interface/utils';
-
 import { Switch } from './accessories/Switch';
 import { DimmerStrip } from './accessories/DimmerStrip';
 import { RGBStrip } from './accessories/RGBStrip';
@@ -15,10 +14,8 @@ import { RGBWWStrip } from './accessories/RGBWWStrip';
 import { cloneDeep } from 'lodash';
 import { setLogger } from './instance';
 
-
 import { Discover } from './magichome-interface/Discover';
 import { Transport } from './magichome-interface/Transport';
-//import { AnimationPlatformAccessory } from './animationPlatformAccessory';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 import { IDeviceProps, IDeviceDiscoveredProps, IDeviceQueriedProps, ILightParameters } from './magichome-interface/types';
 import { getPrettyName as getUniqueIdName, lightTypesMap} from './magichome-interface/LightMap';
@@ -238,7 +235,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
             continue;
           }
 
-          this.log.info(`Warning! Continuing to register cached accessory "${accessory.context.device.uniqueId}" despite not being seen for ${accessory.context.device.restartsSinceSeen} restarts.`);
+          this.log.debug(`Warning! Continuing to register cached accessory "${accessory.context.device.uniqueId}" despite not being seen for ${accessory.context.device.restartsSinceSeen} restarts.`);
 
           // create the accessory handler
           let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
@@ -277,7 +274,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       const found = recentlyRegisteredDevices.size;
       const pending = Array.from(pendingUpdate).length;
       const pendingStr = pending > 0 ? ` Pending update: ${pending} devices` : '';
-      this.log.info(`Discovery summary:  Found ${found} devices.${pendingStr}`);
+      this.log.debug(`Discovery summary:  Found ${found} devices.${pendingStr}`);
     }
 
     this.count = 1; // reset the device logging counter
@@ -485,15 +482,15 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   printDeviceInfo(message: string, accessory: MagicHomeAccessory){
     this.log.info( '%o - ' + message +
-    '\n Display Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
+    '\nDisplay Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
     this.count++,
     accessory.context.device.displayName,
     accessory.context.device.lightParameters?.controllerLogicType,
     accessory.context.device.modelNumber, 
     accessory.context.device.uniqueId, 
     accessory.context.device.ipAddress,
-    accessory.context.device.controllerHardwareVersion?.toString(),
-    accessory.context.device.controllerFirmwareVersion?.toString());
+    accessory.context.device.controllerHardwareVersion?.toString(16),
+    accessory.context.device.controllerFirmwareVersion?.toString(16));
   }
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {
