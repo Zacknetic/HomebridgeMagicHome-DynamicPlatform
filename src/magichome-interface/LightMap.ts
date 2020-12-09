@@ -54,8 +54,8 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x33,
     {
-      controllerLogicType: 'GRBWStrip',
-      convenientName: 'GRBW Strip',
+      controllerLogicType: 'GRBStrip',
+      convenientName: 'GRB Strip',
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,

@@ -39,7 +39,7 @@ export class Discover {
           clients.push({ ipAddress, uniqueId, modelNumber });
           this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', this.count++, uniqueId, ipAddress,modelNumber); 
         } else {
-          this.log.info('\n%o - A device has been discovered that already exists. Likely due to a "fun" network layout...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists.', this.count++, uniqueId, ipAddress,modelNumber);    
+          this.log.debug('\n%o - A device has been discovered that already exists. Likely due to a "fun" network layout...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists.', this.count++, uniqueId, ipAddress,modelNumber);    
         }
         
       });
@@ -54,7 +54,7 @@ export class Discover {
             continue;
           }
           addressAlreadyScanned.push(userInterface.broadcast);
-          this.log.info('Scanning broadcast-address: %o for Magichome devices...', userInterface.broadcast);
+          this.log.debug('Scanning broadcast-address: %o for Magichome devices...', userInterface.broadcast);
           socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, userInterface.broadcast);
         }
       });
