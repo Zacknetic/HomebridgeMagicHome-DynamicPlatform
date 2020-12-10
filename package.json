@@ -6,8 +6,8 @@
     "Zachary Avino ZackAvino@Zacknetic.org",
     "Igor Ramos"
   ],
-  "version": "1.9.2-alpha8",
-  "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
+  "version": "1.9.2-beta4",
+  "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -52,6 +52,7 @@
     "rgbw",
     "rgbww",
     "LEDnet",
+    "wowled",
     "flux_led",
     "smart lights"
   ],
