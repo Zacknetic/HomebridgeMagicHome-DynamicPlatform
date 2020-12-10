@@ -6,7 +6,7 @@
     "Zachary Avino ZackAvino@Zacknetic.org",
     "Igor Ramos"
   ],
-  "version": "1.9.2-beta3",
+  "version": "1.9.2-alpha8",
   "description": "Dynamically discovers and adds MagicHome Bulbs and controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -35,10 +35,7 @@
     "lint": "eslint src/**.ts",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run lint && npm run build",
-    "test:migration": "cp ./test/node_modules/fixtures/cachedAccessories_1.8.5 ./.homebridge-dev/accessories/cachedAccessories",
-    "test:single": "cp ./test/node_modules/fixtures/cachedSingle ./.homebridge-dev/accessories/cachedAccessories",
-    "test:clean": "rm ./.homebridge-dev/accessories/* && rm ./.homebridge-dev/persist/*"
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
     "homebridge-plugin",

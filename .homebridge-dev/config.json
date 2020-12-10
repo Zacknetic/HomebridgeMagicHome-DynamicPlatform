@@ -17,6 +17,7 @@
   "platforms": [
     {
       "platform": "homebridge-magichome-dynamic-platform",
+      "name": "magicHome",
       "pruning": {
         "pruneMissingCachedAccessories": false,
         "restartsBeforeMissingAccessoriesPruned": 3,
