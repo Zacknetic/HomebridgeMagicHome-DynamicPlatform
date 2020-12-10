@@ -1,10 +1,10 @@
-import { ILightParameters } from './types';
+import { ILightParameters, ControllerTypes } from './types';
 
 const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x04,
     {
-      controllerLogicType: 'RGBWStrip',
+      controllerLogicType: ControllerTypes.RGBWStrip,
       convenientName: 'RGBW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -14,7 +14,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x06,
     {
-      controllerLogicType: 'RGBWStrip',
+      controllerLogicType: ControllerTypes.RGBWStrip,
       convenientName: 'RGBW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -24,7 +24,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x07,
     {
-      controllerLogicType: 'RGBWWStrip',
+      controllerLogicType: ControllerTypes.RGBWWStrip,
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -34,7 +34,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x21,
     {
-      controllerLogicType: 'DimmerStrip',
+      controllerLogicType: ControllerTypes.DimmerStrip,
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -44,7 +44,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x25,
     {
-      controllerLogicType: 'RGBWWStrip',
+      controllerLogicType: ControllerTypes.RGBWWStrip,
       convenientName: 'RGBWW Simultaneous',
       simultaneousCCT: true,
       hasColor: true,
@@ -54,7 +54,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x33,
     {
-      controllerLogicType: 'GRBStrip',
+      controllerLogicType: ControllerTypes.GRBStrip,
       convenientName: 'GRB Strip',
       simultaneousCCT: true,
       hasColor: true,
@@ -64,7 +64,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x35,
     {
-      controllerLogicType: 'RGBWWBulb',
+      controllerLogicType: ControllerTypes.RGBWWBulb,
       convenientName: 'RGBWW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -74,7 +74,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x41,
     {
-      controllerLogicType: 'DimmerStrip',
+      controllerLogicType: ControllerTypes.DimmerStrip,
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -84,7 +84,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x44,
     {
-      controllerLogicType: 'RGBWBulb',
+      controllerLogicType: ControllerTypes.RGBWBulb,
       convenientName: 'RGBW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -94,7 +94,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x52,
     {
-      controllerLogicType: 'RGBWWBulb',
+      controllerLogicType: ControllerTypes.RGBWWBulb,
       convenientName: 'RGBWW Non-Simultaneous',
       simultaneousCCT: false,
       hasColor: true,
@@ -104,7 +104,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x65,
     {
-      controllerLogicType: 'DimmerStrip',
+      controllerLogicType: ControllerTypes.DimmerStrip,
       convenientName: 'Dimmer',
       simultaneousCCT: false,
       hasColor: false,
@@ -114,7 +114,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0x97,
     {
-      controllerLogicType: 'Switch',
+      controllerLogicType: ControllerTypes.Switch,
       convenientName: 'Power Socket',
       simultaneousCCT: false,
       hasColor: false,
@@ -124,7 +124,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0xa1,
     {
-      controllerLogicType: 'RGBStrip',
+      controllerLogicType: ControllerTypes.RGBStrip,
       convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,
@@ -134,7 +134,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
   [
     0xa2,
     {
-      controllerLogicType: 'RGBStrip',
+      controllerLogicType: ControllerTypes.RGBStrip,
       convenientName: 'RGB Strip',
       simultaneousCCT: false,
       hasColor: true,

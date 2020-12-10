@@ -19,7 +19,7 @@ import { Transport } from './magichome-interface/Transport';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 import { IDeviceProps, IDeviceDiscoveredProps, IDeviceQueriedProps, ILightParameters } from './magichome-interface/types';
 import { getPrettyName as getUniqueIdName, lightTypesMap} from './magichome-interface/LightMap';
-import { MagicHomeAccessory } from './magichome-interface/types';
+import { MagicHomeAccessory, ControllerTypes } from './magichome-interface/types';
 const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
@@ -518,6 +518,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       if(device.lastKnownState === undefined) {
         missingProps.push('lastKnownState');
       }
+
+      if( !Object.values(ControllerTypes).includes( lightParameters.controllerLogicType ) ){
+        if(logger){
+          logger.error(`[isValidDeviceModel] The ContollerLogicType "${lightParameters.controllerLogicType}" is unknown.` );
+        }
+        return false;
+      }
+     
   
       if(missingProps.length > 0){
         if(logger){

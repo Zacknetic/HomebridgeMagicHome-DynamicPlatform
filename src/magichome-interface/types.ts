@@ -13,11 +13,22 @@ export interface IDeviceQueriedProps {
 }
 
 export interface ILightParameters {
-    controllerLogicType: string;
+    controllerLogicType: ControllerTypes;
     convenientName: string;
     simultaneousCCT: boolean;
     hasColor:  boolean;
     hasBrightness: boolean;
+}
+
+export enum ControllerTypes {
+    RGBWStrip = 'RGBWStrip',
+    RGBWWStrip= 'RGBWWStrip',
+    DimmerStrip = 'DimmerStrip',
+    GRBStrip = 'GRBStrip',
+    RGBWWBulb = 'RGBWWBulb',
+    RGBWBulb = 'RGBWBulb',
+    Switch = 'Switch',
+    RGBStrip = 'RGBStrip'
 }
 
 export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
