@@ -18,7 +18,6 @@ export interface ILightParameters {
     simultaneousCCT: boolean;
     hasColor:  boolean;
     hasBrightness: boolean;
-    onCommandWithColor: boolean;
 }
 
 export enum ControllerTypes {
