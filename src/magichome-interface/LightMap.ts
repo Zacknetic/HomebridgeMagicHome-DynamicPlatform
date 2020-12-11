@@ -64,7 +64,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
-      onCommandWithColor: false,
+      onCommandWithColor: true,
     },
   ],
   [

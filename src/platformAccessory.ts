@@ -478,12 +478,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         } else {
           if(this.myDevice.lightParameters.onCommandWithColor){
             this.send( COMMAND_POWER_ON ); // set the power
-            this.log.warn('sending power with color');
           }
           this.updateDeviceState(); // set color
+          this.colorCommand = false;
+          this.deviceUpdateInProgress = false;
         }
-        this.colorCommand = false;
-        this.deviceUpdateInProgress = false;
       }, INTRA_MESSAGE_TIME);
     }
     return;
