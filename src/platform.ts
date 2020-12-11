@@ -371,12 +371,17 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  * @param deviceDiscovered 
  * @param generatedUUID 
  */
-  async createNewAccessory(deviceDiscovered, generatedUUID):Promise<boolean>{   
+  async createNewAccessory(deviceDiscovered:IDeviceDiscoveredProps, generatedUUID):Promise<boolean>{   
+    const unsupportedModels: string[] = [ 'AK001-ZJ210'];
+
     const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
 
     if(deviceQueryData == null){
-      this.log.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
-        deviceDiscovered.uniqueId);
+      if( unsupportedModels.includes(deviceDiscovered.modelNumber)){
+        this.log.error('Warning! Discovered device did not respond to query. Device is in the unsupported device list.\nFile an issue on github requesting support. Details:', deviceDiscovered);
+      } else {
+        this.log.error('Warning! Discovered device did not respond to query. This is usually due to an unresponsive device.\nPlease restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\nFile an issue on github with an uploaded log.', deviceDiscovered);
+      }
       return false;
     }
     //check if device is on blacklist or is not on whitelist
