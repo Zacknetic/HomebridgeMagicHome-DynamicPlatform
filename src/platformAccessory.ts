@@ -65,9 +65,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Magic Home')
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'MagicHome')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.myDevice.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, this.myDevice.modelNumber)
+      .setCharacteristic(this.platform.Characteristic.HardwareRevision, this.myDevice.controllerHardwareVersion)
       .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.myDevice.controllerFirmwareVersion) //?
       .getCharacteristic(this.platform.Characteristic.Identify)
       .removeAllListeners(CharacteristicEventTypes.SET)
