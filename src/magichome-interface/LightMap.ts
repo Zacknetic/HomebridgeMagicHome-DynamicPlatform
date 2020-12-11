@@ -9,6 +9,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: true,
     },
   ],
   [
@@ -19,6 +20,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -29,6 +31,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -39,6 +42,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: false,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -49,6 +53,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: true,
     },
   ],
   [
@@ -59,6 +64,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: true,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -69,6 +75,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -79,6 +86,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: false,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -89,6 +97,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -99,6 +108,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -109,6 +119,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: false,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -119,6 +130,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: false,
       hasBrightness: false,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -129,6 +141,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
   [
@@ -139,6 +152,7 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
       simultaneousCCT: false,
       hasColor: true,
       hasBrightness: true,
+      onCommandWithColor: false,
     },
   ],
 ]);

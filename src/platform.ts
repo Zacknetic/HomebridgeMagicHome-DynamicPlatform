@@ -68,8 +68,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.count = 1;
       // run the method to discover / register your devices as accessories
       this.discoverDevices(true);
-      // this.discoverAnimations();
-
       // Periodic scan for devices
       this.periodicDiscovery = setInterval( () => this.discoverDevices(false), 30000);
     });
@@ -372,7 +370,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
  * @param generatedUUID 
  */
   async createNewAccessory(deviceDiscovered:IDeviceDiscoveredProps, generatedUUID):Promise<boolean>{   
-    const unsupportedModels: string[] = [ 'AK001-ZJ210'];
+    const unsupportedModels: string[] = [ '000-0000']; //AK001-ZJ210 is suported... 
 
     const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
 
@@ -512,7 +510,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       const { lightParameters } = device || {};
 
       const rootProps = ['UUID', 'cachedIPAddress', 'restartsSinceSeen', 'displayName', 'ipAddress', 'uniqueId', 'modelNumber', 'lightParameters', 'controllerHardwareVersion', 'controllerFirmwareVersion'];
-      const lightProps = [ 'controllerLogicType', 'convenientName', 'simultaneousCCT', 'hasColor', 'hasBrightness'];
+      const lightProps = [ 'controllerLogicType', 'convenientName', 'simultaneousCCT', 'hasColor', 'hasBrightness', 'onCommandWithColor'];
   
       const missingRootProps = rootProps.filter( k => device[k] === undefined || device[k] == null);
       const missingLightProps = lightProps.filter( k => lightParameters[k] === undefined || lightParameters[k] == null);
