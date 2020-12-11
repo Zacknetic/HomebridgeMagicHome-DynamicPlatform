@@ -476,7 +476,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
           this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
         } else {
-          
+          this.send( COMMAND_POWER_ON ); // set the power
           this.updateDeviceState(); // set color
         }
         this.colorCommand = false;
