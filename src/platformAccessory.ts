@@ -480,9 +480,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
             this.send( COMMAND_POWER_ON ); // set the power
           }
           this.updateDeviceState(); // set color
-          this.colorCommand = false;
-          this.deviceUpdateInProgress = false;
         }
+        this.colorCommand = false;
+        this.deviceUpdateInProgress = false;
       }, INTRA_MESSAGE_TIME);
     }
     return;
