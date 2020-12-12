@@ -510,7 +510,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       const { lightParameters } = device || {};
 
       const rootProps = ['UUID', 'cachedIPAddress', 'restartsSinceSeen', 'displayName', 'ipAddress', 'uniqueId', 'modelNumber', 'lightParameters', 'controllerHardwareVersion', 'controllerFirmwareVersion'];
-      const lightProps = [ 'controllerLogicType', 'convenientName', 'simultaneousCCT', 'hasColor', 'hasBrightness', 'onCommandWithColor'];
+      const lightProps = [ 'controllerLogicType', 'convenientName', 'simultaneousCCT', 'hasColor', 'hasBrightness'];
   
       const missingRootProps = rootProps.filter( k => device[k] === undefined || device[k] == null);
       const missingLightProps = lightProps.filter( k => lightParameters[k] === undefined || lightParameters[k] == null);
