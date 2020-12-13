@@ -19,12 +19,12 @@ function wait(emitter: net.Socket, eventName: string, timeout: number) {
     }, timeout);
 
     // listen for the first event, then stop listening (once)
-    emitter.once(eventName, (...args: any) => {
+    emitter.once(eventName, (args: any ) => {
       clearTimeout(waitTimeout); // stop the timeout from executing
 
       if (!complete) {
         complete = true; // mark the job as done
-        resolve(...args);
+        resolve(args);
       }
     });
 

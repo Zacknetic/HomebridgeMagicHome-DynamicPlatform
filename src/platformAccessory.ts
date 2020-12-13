@@ -268,7 +268,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if( this.deviceWriteInProgress || this.deviceUpdateInProgress || this.deviceReadInProgress){
       return;
     }
-    this.deviceReadInProgress = true
+    this.deviceReadInProgress = true;
     
     try {
       let state;
@@ -280,7 +280,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if(state == null){
         const { ipAddress, uniqueId, displayName } = this.myDevice;
         this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
-        this.deviceReadInProgress = false
+        this.deviceReadInProgress = false;
         return;
       }
       this.myDevice.lastKnownState = state;
@@ -293,7 +293,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
     }
-    this.deviceReadInProgress = false
+    this.deviceReadInProgress = false;
   }
 
   /**
