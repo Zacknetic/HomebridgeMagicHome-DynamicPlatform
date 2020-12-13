@@ -38,6 +38,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected deviceWriteInProgress = false;
   protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
+  protected deviceReadInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
@@ -264,6 +265,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateLocalState() {
 
+    if( this.deviceWriteInProgress || this.deviceUpdateInProgress || this.deviceReadInProgress){
+      return;
+    }
+    this.deviceReadInProgress = true
+    
     try {
       let state;
       let scans = 0;
@@ -274,6 +280,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if(state == null){
         const { ipAddress, uniqueId, displayName } = this.myDevice;
         this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
+        this.deviceReadInProgress = false
         return;
       }
       this.myDevice.lastKnownState = state;
@@ -286,6 +293,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
     }
+    this.deviceReadInProgress = false
   }
 
   /**
@@ -349,7 +357,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
-    this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
+    await this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
   
 
 
