@@ -229,7 +229,12 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           if(!this.isAllowed(accessory.context.device.uniqueId)){
             this.log.warn('Warning! Accessory: %o will be pruned as its Unique ID: %o is blacklisted or is not whitelisted.\n', 
               accessory.context.device.displayName, accessory.context.device.uniqueId);
-            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+              try{
+                this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+              } catch(err){
+                this.log.debug('Accessory: %o count not be pruned. Likely it had never been registered.\n', 
+                accessory.context.device.displayName, accessory.context.device.uniqueId);
+              }
             continue;
           }
 
