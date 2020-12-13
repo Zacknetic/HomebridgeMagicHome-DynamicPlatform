@@ -45,7 +45,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   // this is used to track restored cached accessories
   public readonly accessories: MagicHomeAccessory[] = [];
   public count = 1;
-  //public readonly log: Logger;
   private periodicDiscovery: NodeJS.Timeout | null = null;
 
   constructor(
