@@ -485,10 +485,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
           await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
         } else {
-          if((this.myDevice.controllerFirmwareVersion <= 5 && this.myDevice.controllerFirmwareVersion > 1) || this.myDevice.controllerFirmwareVersion == 8){ 
+          if((this.myDevice.controllerFirmwareVersion <= 5 && this.myDevice.controllerFirmwareVersion > 1) 
+          || this.myDevice.controllerFirmwareVersion == 8 
+          || (this.myDevice.controllerFirmwareVersion == 1 && this.myDevice.modelNumber.includes('HF-LPB100-ZJ200'))){ 
             await this.send( COMMAND_POWER_ON ); // set the power
           }
-          await this.updateDeviceState(); // set color
+          setTimeout(   async () =>  {
+            await this.updateDeviceState(); // set color
+          }, 100);
         }
         this.colorCommand = false;
         this.deviceUpdateInProgress = false;
