@@ -17,12 +17,14 @@ export interface ILightParameters {
     convenientName: string;
     simultaneousCCT: boolean;
     hasColor:  boolean;
+    hasCCT:  boolean;
     hasBrightness: boolean;
 }
 
 export enum ControllerTypes {
     RGBWStrip = 'RGBWStrip',
-    RGBWWStrip= 'RGBWWStrip',
+    RGBWWStrip = 'RGBWWStrip',
+    CCTStrip = 'CCTStrip',
     DimmerStrip = 'DimmerStrip',
     GRBStrip = 'GRBStrip',
     RGBWWBulb = 'RGBWWBulb',

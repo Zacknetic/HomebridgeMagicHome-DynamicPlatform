@@ -11,6 +11,7 @@ import { RGBWBulb } from './accessories/RGBWBulb';
 import { RGBWWBulb } from './accessories/RGBWWBulb';
 import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
+import { CCTStrip } from './accessories/CCTStrip';
 import { cloneDeep } from 'lodash';
 import { setLogger } from './instance';
 
@@ -20,7 +21,7 @@ import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory
 import { IDeviceProps, IDeviceDiscoveredProps, IDeviceQueriedProps, ILightParameters } from './magichome-interface/types';
 import { getPrettyName as getUniqueIdName, lightTypesMap} from './magichome-interface/LightMap';
 import { MagicHomeAccessory, ControllerTypes } from './magichome-interface/types';
-const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
+//const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 
 const accessoryType = {
@@ -32,6 +33,7 @@ const accessoryType = {
   RGBWWBulb,
   RGBWStrip,
   RGBWWStrip,
+  CCTStrip,
 };
 
 /**

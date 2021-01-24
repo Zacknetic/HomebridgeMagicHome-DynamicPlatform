@@ -33,7 +33,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
-
+  protected setColortemp = false;
   protected colorCommand = false;
   protected deviceWriteInProgress = false;
   protected deviceWriteRetry: any = null;
@@ -46,6 +46,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     whiteValues: {warmWhite: 0, coldWhite: 0},
     isOn: true,
     brightness: 100,
+    CCT: 0,
   };
 
   protected lightState = {
@@ -54,6 +55,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     whiteValues: {warmWhite: 0, coldWhite: 0},
     isOn: true,
     brightness: 100,
+    CCT: 0,
   }
 
   //=================================================
@@ -105,6 +107,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
+        
       if( this.myDevice.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
@@ -121,7 +124,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
-
+      }
+      
+      if(this.myDevice.lightParameters.hasCCT){
+        // register handlers for the Saturation Characteristic
+        this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
+          .removeAllListeners(CharacteristicEventTypes.SET)
+          .removeAllListeners(CharacteristicEventTypes.GET)
+          .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this))        // SET - bind to the 'setSaturation` method below
+          .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));       // GET - bind to the 'getSaturation` method below
+        // register handlers for the On/Off Characteristic
       }
     } else {
 
@@ -170,6 +182,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = false;
     this.lightState.HSL.hue = value as number; 
     this.colorCommand = true;
     this.processRequest();
@@ -177,6 +190,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = false;
     this.lightState.HSL.saturation = value as number; 
     this.colorCommand = true;
     this.processRequest();
@@ -185,6 +199,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.brightness = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
+    callback(null);
+  }
+
+  setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = true;
+    this.lightState.CCT = value as number; 
     this.colorCommand = true;
     this.processRequest();
     callback(null);
@@ -216,9 +238,22 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     //update state with actual values asynchronously
     this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.myDevice.displayName);
-    this.updateLocalState();
-
+    if(!this.setColortemp){
+      this.updateLocalState();
+    }
     callback(null, hue);
+  }
+
+  getColorTemperature(callback: CharacteristicGetCallback) {
+
+    const CCT = this.lightState.CCT;
+
+    //update state with actual values asynchronously
+    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', CCT, this.myDevice.displayName);
+    if(this.setColortemp){
+      this.updateLocalState();
+    }
+    callback(null, CCT);
   }
 
   getBrightness(callback: CharacteristicGetCallback) {
@@ -400,8 +435,28 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       multiplier = (1 - (hsl.hue - 90) / 90);
       whiteTemperature.warmWhite = Math.round((255 * multiplier));
     }
+    this.lightState.whiteValues = whiteTemperature;
     return whiteTemperature;
   } //hueToWhiteTemperature
+
+  cctToWhiteTemperature() {
+    const CCT = this.lightState.CCT - 140;
+    let multiplier = 0;
+    const whiteTemperature = { warmWhite: 0, coldWhite: 0 };
+
+    const threshold = 110;
+    if (CCT >= threshold) {        
+      whiteTemperature.warmWhite = 127;
+      multiplier = (1-((CCT-threshold) / (360 - threshold)));
+      whiteTemperature.coldWhite = Math.round((127 * multiplier));
+    } else { 
+      whiteTemperature.coldWhite = 127;
+      multiplier = (CCT / threshold);
+      whiteTemperature.warmWhite = Math.round((127 * multiplier));
+    }
+    this.lightState.whiteValues = whiteTemperature;
+    return whiteTemperature;
+  } 
 
   
 

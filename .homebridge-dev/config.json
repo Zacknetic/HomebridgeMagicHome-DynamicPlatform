@@ -1,7 +1,7 @@
 {
   "bridge": {
     "name": "HomebridgeDev",
-    "username": "CC:22:3D:FF:FF:FF",
+    "username": "CC:BB:DD:DD:FF:FF",
     "manufacturer": "homebridge.io",
     "model": "homebridge",
     "port": 51826,
