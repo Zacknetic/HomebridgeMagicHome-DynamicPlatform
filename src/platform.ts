@@ -14,6 +14,7 @@ import { RGBWWStrip } from './accessories/RGBWWStrip';
 import { CCTStrip } from './accessories/CCTStrip';
 import { cloneDeep } from 'lodash';
 import { setLogger } from './instance';
+
 import { Discover } from './magichome-interface/Discover';
 import { Transport } from './magichome-interface/Transport';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
@@ -94,7 +95,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    * Method Two: Cached devices that were seen after scanning the network and are added while checking for ip discrepancies 
    * Method Three: Cached devices that were not seen after scanning the network but are still added with a warning to the user
    */
-
   async discoverDevices(dgb: boolean | null) {
     const { isValidDeviceModel } = HomebridgeMagichomeDynamicPlatform;
     const pendingUpdate = new Set();
@@ -128,8 +128,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         existingAccessory = this.accessories.find(accessory => accessory.UUID === generatedUUID);  
 
         if (!existingAccessory) { 
-          onlineAndNew.push(generatedUUID);
-
           if(!this.createNewAccessory(deviceDiscovered, generatedUUID)) {
             continue;
           }
@@ -169,7 +167,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
               this.log.debug(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" successfully repaired!`);
             } else {
               this.log.error(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.`);
-
               continue;
             }
 
@@ -208,7 +205,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
           this.log.debug(`Device "${uniqueId}" was not seen during discovery. Ensure it can be controlled in the MagicHome app. Rescan in 30 seconds...`);
           pendingUpdate.add(uniqueId);
           continue;
-
         }
         
         if(accessory.context.device?.displayName && accessory.context.device.displayName.toString().toLowerCase().includes('delete')){
@@ -276,6 +272,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     unseenDevices);
 
 
+
     // Discovery summary:
     if(recentlyRegisteredDevices.size > 0){
       const found = recentlyRegisteredDevices.size;
@@ -285,7 +282,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     }
 
     this.count = 1; // reset the device logging counter
-
   }//discoveredDevices
 
 
@@ -450,7 +446,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     // test if the existing cached accessory ip address matches the discovered
     // accessory ip address if not, replace it
-
     const ipHasNotChanged = existingAccessory.context.device.cachedIPAddress === deviceDiscovered.ipAddress;
     const { pendingRegistration } = existingAccessory.context;
     const registrationComplete = !pendingRegistration;
@@ -458,7 +453,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.log.debug(`Device ${existingAccessory.context.device.uniqueId} already registered. Registration update not required`) ;
       return false;
     }
-
 
     if(!ipHasNotChanged){
       this.log.warn('Ip address discrepancy found for accessory: %o\n Expected ip address: %o\n Discovered ip address: %o' ,
@@ -486,7 +480,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.log.error('[registerExistingAccessory] device object: ', existingAccessory.context.device);
       this.log.error(error);
 
-
       return false;
     }
 
@@ -507,7 +500,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accessory.context.device.ipAddress,
     accessory.context.device.controllerHardwareVersion?.toString(16),
     accessory.context.device.controllerFirmwareVersion?.toString(16));
-
   }
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {
@@ -548,7 +540,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         if(logger){
           logger.error('[isValidDeviceModel] unable to validate device model. Missing properties: ', missingProps );
           logger.debug('\nThree things are certain:\nDeath, taxes and lost data.\nGuess which has occurred.');
-
         }
         return false;
       }
