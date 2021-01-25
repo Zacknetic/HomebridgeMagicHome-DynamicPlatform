@@ -1,11 +1,11 @@
 {
   "bridge": {
     "name": "HomebridgeDev",
-    "username": "CC:22:3D:E3:CE:30",
+    "username": "CC:BB:DD:DD:FF:FF",
     "manufacturer": "homebridge.io",
     "model": "homebridge",
     "port": 51826,
-    "pin": "031-45-154"
+    "pin": "666-66-666"
   },
   "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
   "ports": {
@@ -17,6 +17,7 @@
   "platforms": [
     {
       "platform": "homebridge-magichome-dynamic-platform",
+      "name": "magicHome",
       "pruning": {
         "pruneMissingCachedAccessories": false,
         "restartsBeforeMissingAccessoriesPruned": 3,

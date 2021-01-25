@@ -33,11 +33,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //protected interval;
   public activeAnimation = animations.none;
-
+  protected setColortemp = false;
   protected colorCommand = false;
   protected deviceWriteInProgress = false;
   protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
+  protected deviceReadInProgress = false;
   log = getLogger();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
@@ -45,6 +46,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     whiteValues: {warmWhite: 0, coldWhite: 0},
     isOn: true,
     brightness: 100,
+    CCT: 0,
   };
 
   protected lightState = {
@@ -53,11 +55,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     whiteValues: {warmWhite: 0, coldWhite: 0},
     isOn: true,
     brightness: 100,
+    CCT: 0,
   }
 
   //=================================================
   // Start Constructor //
-
   constructor(
     protected readonly platform: HomebridgeMagichomeDynamicPlatform,
     protected readonly accessory: MagicHomeAccessory,
@@ -66,11 +68,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Magic Home')
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'MagicHome')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.myDevice.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, this.myDevice.modelNumber)
+      .setCharacteristic(this.platform.Characteristic.HardwareRevision, this.myDevice.controllerHardwareVersion)
       .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.myDevice.controllerFirmwareVersion) //?
       .getCharacteristic(this.platform.Characteristic.Identify)
+      .removeAllListeners(CharacteristicEventTypes.SET)
+      .removeAllListeners(CharacteristicEventTypes.GET)
       .on(CharacteristicEventTypes.SET, this.identifyLight.bind(this));       // SET - bind to the 'Identify` method below
 
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -88,6 +93,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.myDevice.lightParameters.hasBrightness = true;
 
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
+        .removeAllListeners(CharacteristicEventTypes.SET)
+        .removeAllListeners(CharacteristicEventTypes.GET)
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
     
       // each service must implement at-minimum the "required characteristics" for the given service type
@@ -95,32 +102,52 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       // register handlers for the Brightness Characteristic
       this.service.getCharacteristic(this.platform.Characteristic.Brightness)
+        .removeAllListeners(CharacteristicEventTypes.SET)
+        .removeAllListeners(CharacteristicEventTypes.GET)
         .on(CharacteristicEventTypes.SET, this.setBrightness.bind(this))        // SET - bind to the 'setBrightness` method below
         .on(CharacteristicEventTypes.GET, this.getBrightness.bind(this));       // GET - bind to the 'getBrightness` method below
 
+        
       if( this.myDevice.lightParameters.hasColor){
         // register handlers for the Hue Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Hue)
+          .removeAllListeners(CharacteristicEventTypes.SET)
+          .removeAllListeners(CharacteristicEventTypes.GET)
           .on(CharacteristicEventTypes.SET, this.setHue.bind(this))               // SET - bind to the 'setHue` method below
           .on(CharacteristicEventTypes.GET, this.getHue.bind(this));              // GET - bind to the 'getHue` method below
 
         // register handlers for the Saturation Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Saturation)
+          .removeAllListeners(CharacteristicEventTypes.SET)
+          .removeAllListeners(CharacteristicEventTypes.GET)
           .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
         //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
-
+      }
+      
+      if(this.myDevice.lightParameters.hasCCT){
+        // register handlers for the Saturation Characteristic
+        this.service.getCharacteristic(this.platform.Characteristic.ColorTemperature)
+          .removeAllListeners(CharacteristicEventTypes.SET)
+          .removeAllListeners(CharacteristicEventTypes.GET)
+          .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this))        // SET - bind to the 'setSaturation` method below
+          .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));       // GET - bind to the 'getSaturation` method below
+        // register handlers for the On/Off Characteristic
       }
     } else {
 
       this.service = this.accessory.getService(this.platform.Service.Switch) ?? this.accessory.addService(this.platform.Service.Switch);
       this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
+        .removeAllListeners(CharacteristicEventTypes.SET)
+        .removeAllListeners(CharacteristicEventTypes.GET)
         .on(CharacteristicEventTypes.SET, this.setConfiguredName.bind(this));
 
     }
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.On)
+      .removeAllListeners(CharacteristicEventTypes.SET)
+      .removeAllListeners(CharacteristicEventTypes.GET)
       .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
       .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
     //this.service2.updateCharacteristic(this.platform.Characteristic.On, false);
@@ -128,7 +155,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name,  this.myDevice.displayName);
-  
+    
+    // this.logListeners();
 
   }
 
@@ -154,6 +182,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = false;
     this.lightState.HSL.hue = value as number; 
     this.colorCommand = true;
     this.processRequest();
@@ -161,6 +190,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = false;
     this.lightState.HSL.saturation = value as number; 
     this.colorCommand = true;
     this.processRequest();
@@ -169,6 +199,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     this.lightState.brightness = value as number; 
+    this.colorCommand = true;
+    this.processRequest();
+    callback(null);
+  }
+
+  setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.setColortemp = true;
+    this.lightState.CCT = value as number; 
     this.colorCommand = true;
     this.processRequest();
     callback(null);
@@ -200,9 +238,22 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     //update state with actual values asynchronously
     this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.myDevice.displayName);
-    this.updateLocalState();
-
+    if(!this.setColortemp){
+      this.updateLocalState();
+    }
     callback(null, hue);
+  }
+
+  getColorTemperature(callback: CharacteristicGetCallback) {
+
+    const CCT = this.lightState.CCT;
+
+    //update state with actual values asynchronously
+    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', CCT, this.myDevice.displayName);
+    if(this.setColortemp){
+      this.updateLocalState();
+    }
+    callback(null, CCT);
   }
 
   getBrightness(callback: CharacteristicGetCallback) {
@@ -249,6 +300,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateLocalState() {
 
+    if( this.deviceWriteInProgress || this.deviceUpdateInProgress || this.deviceReadInProgress){
+      return;
+    }
+    this.deviceReadInProgress = true;
+    
     try {
       let state;
       let scans = 0;
@@ -259,6 +315,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if(state == null){
         const { ipAddress, uniqueId, displayName } = this.myDevice;
         this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
+        this.deviceReadInProgress = false;
         return;
       }
       this.myDevice.lastKnownState = state;
@@ -271,6 +328,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     } catch (error) {
       this.platform.log.error('getState() error: ', error);
     }
+    this.deviceReadInProgress = false;
   }
 
   /**
@@ -334,7 +392,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
     const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
 
-    this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
+    await this.send([0x31, r, g, b, 0x00, mask, 0x0F], true, _timeout); //8th byte checksum calculated later in send()
   
 
 
@@ -377,8 +435,28 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       multiplier = (1 - (hsl.hue - 90) / 90);
       whiteTemperature.warmWhite = Math.round((255 * multiplier));
     }
+    this.lightState.whiteValues = whiteTemperature;
     return whiteTemperature;
   } //hueToWhiteTemperature
+
+  cctToWhiteTemperature() {
+    const CCT = this.lightState.CCT - 140;
+    let multiplier = 0;
+    const whiteTemperature = { warmWhite: 0, coldWhite: 0 };
+
+    const threshold = 110;
+    if (CCT >= threshold) {        
+      whiteTemperature.warmWhite = 127;
+      multiplier = (1-((CCT-threshold) / (360 - threshold)));
+      whiteTemperature.coldWhite = Math.round((127 * multiplier));
+    } else { 
+      whiteTemperature.coldWhite = 127;
+      multiplier = (CCT / threshold);
+      whiteTemperature.warmWhite = Math.round((127 * multiplier));
+    }
+    this.lightState.whiteValues = whiteTemperature;
+    return whiteTemperature;
+  } 
 
   
 
@@ -458,12 +536,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   processRequest(){
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
-      setTimeout(  () =>  {
+      setTimeout(   async () =>  {
         if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
-          this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
+          await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
         } else {
-          
-          this.updateDeviceState(); // set color
+          if((this.myDevice.controllerFirmwareVersion <= 5 && this.myDevice.controllerFirmwareVersion > 1) 
+          || this.myDevice.controllerFirmwareVersion == 8 
+          || (this.myDevice.controllerFirmwareVersion == 1 && this.myDevice.modelNumber.includes('HF-LPB100-ZJ200'))){ 
+            await this.send( COMMAND_POWER_ON ); // set the power
+          }
+          setTimeout(   async () =>  {
+            await this.updateDeviceState(); // set color
+          }, 100);
         }
         this.colorCommand = false;
         this.deviceUpdateInProgress = false;
@@ -471,5 +555,25 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
     return;
   }
-} // ZackneticMagichomePlatformAccessory class
 
+  /**
+   *  This is a debug function to show the number of listeners for each .on event.
+   */
+  logListeners() {
+    this.log.warn('On set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('set'));
+    this.log.warn('Identify set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('set'));
+    this.log.warn('Name set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('set'));
+    this.log.warn('Brightness set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('set'));
+    this.log.warn('Hue set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('set'));
+    this.log.warn('Sat set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('set'));
+    this.log.warn('Manufacturer set: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('set') );
+
+    this.log.warn('On get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('get'));
+    this.log.warn('Identify get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('get'));
+    this.log.warn('Name get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('get'));
+    this.log.warn('Brightness get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('get'));
+    this.log.warn('Hue get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('get'));
+    this.log.warn('Sat get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('get'));
+    this.log.warn('Manufacturer get: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('get') );
+  }
+} // ZackneticMagichomePlatformAccessory class

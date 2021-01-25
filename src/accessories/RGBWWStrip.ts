@@ -73,7 +73,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
-    this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
+    await this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
     
   }//setColor
     

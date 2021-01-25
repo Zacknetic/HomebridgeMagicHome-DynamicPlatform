@@ -13,11 +13,24 @@ export interface IDeviceQueriedProps {
 }
 
 export interface ILightParameters {
-    controllerLogicType: string;
+    controllerLogicType: ControllerTypes;
     convenientName: string;
     simultaneousCCT: boolean;
     hasColor:  boolean;
+    hasCCT:  boolean;
     hasBrightness: boolean;
+}
+
+export enum ControllerTypes {
+    RGBWStrip = 'RGBWStrip',
+    RGBWWStrip = 'RGBWWStrip',
+    CCTStrip = 'CCTStrip',
+    DimmerStrip = 'DimmerStrip',
+    GRBStrip = 'GRBStrip',
+    RGBWWBulb = 'RGBWWBulb',
+    RGBWBulb = 'RGBWBulb',
+    Switch = 'Switch',
+    RGBStrip = 'RGBStrip'
 }
 
 export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
@@ -60,6 +73,7 @@ export interface IWhites {
 export interface MagicHomeAccessory extends PlatformAccessory{
     context: {
       displayName: string;
-      device: IDeviceProps
+      device: IDeviceProps;
+      pendingRegistration?: boolean;
     }
   } 
