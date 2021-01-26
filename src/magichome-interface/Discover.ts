@@ -1,7 +1,8 @@
 import dgram from 'dgram';
 import { Network } from './Network';
 
-import type { Logger, PlatformConfig } from 'homebridge';
+import { Logs } from '../logs';
+import type { PlatformConfig } from 'homebridge';
 import { IDeviceDiscoveredProps } from '../magichome-interface/types';
 
 const BROADCAST_PORT = 48899;
@@ -10,7 +11,7 @@ const BROADCAST_MAGIC_STRING = 'HF-A11ASSISTHREAD';
 export class Discover {
   public count = 1;
   constructor(  
-    public readonly log: Logger,
+    public readonly logs: Logs,
     private readonly config: PlatformConfig,
   ){}
 
@@ -37,9 +38,9 @@ export class Discover {
 
         if (clients.findIndex((item) => item.uniqueId === uniqueId) === -1) {
           clients.push({ ipAddress, uniqueId, modelNumber });
-          this.log.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', this.count++, uniqueId, ipAddress,modelNumber); 
+          this.logs.debug('\n%o - Discovered device...\nUniqueId: %o \nIpAddress %o \nModel: %o\n.', this.count++, uniqueId, ipAddress,modelNumber); 
         } else {
-          this.log.debug('\n%o - A device has been discovered that already exists. Likely due to a "fun" network layout...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists.', this.count++, uniqueId, ipAddress,modelNumber);    
+          this.logs.debug('\n%o - A device has been discovered that already exists. Likely due to a "fun" network layout...\nUniqueId: %o \nIpAddress %o \nModel: %o\n already exists.', this.count++, uniqueId, ipAddress,modelNumber);    
         }
         
       });
@@ -50,11 +51,11 @@ export class Discover {
         const addressAlreadyScanned: string[] = [];
         for (const userInterface of userInterfaces){
           if( addressAlreadyScanned.includes(userInterface.broadcast)){
-            this.log.debug('Skipping redundant scan of broadcast-address %o for Magichome devices.', userInterface.broadcast);
+            this.logs.debug('Skipping redundant scan of broadcast-address %o for Magichome devices.', userInterface.broadcast);
             continue;
           }
           addressAlreadyScanned.push(userInterface.broadcast);
-          this.log.debug('Scanning broadcast-address: %o for Magichome devices...', userInterface.broadcast);
+          this.logs.debug('Scanning broadcast-address: %o for Magichome devices...', userInterface.broadcast);
           socket.send(BROADCAST_MAGIC_STRING, BROADCAST_PORT, userInterface.broadcast);
         }
       });

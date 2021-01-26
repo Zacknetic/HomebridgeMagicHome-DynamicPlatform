@@ -2,7 +2,7 @@ import net from 'net';
 import Queue from 'promise-queue';
 import { checksum } from './utils';
 import type { PlatformConfig } from 'homebridge';
-import { getLogger } from '../instance';
+import { getLogs } from '../logs';
 
 const COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 
@@ -52,7 +52,7 @@ function wait(emitter: net.Socket, eventName: string, timeout: number) {
 }
 
 export class Transport {
-  log = getLogger();
+  logs = getLogs();
   host: any;
   socket: any;
   queue: any;
@@ -85,7 +85,7 @@ export class Transport {
         // No need to show error here, shown upstream
         // this.log.debug(`Unable to connect to ${address} ${port} (code: ${code})`);
       } else {
-        this.log.error('transport.ts error:', e);
+        this.logs.error('transport.ts error:', e);
       }
     } finally {
       this.socket.end();
@@ -157,7 +157,7 @@ export class Transport {
   
       };
     } catch (error) {
-      this.log.debug('Transport getState() error:', error);
+      this.logs.debug('Transport getState() error:', error);
     }
   }
 }
