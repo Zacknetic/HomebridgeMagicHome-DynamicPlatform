@@ -388,9 +388,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     if(deviceQueryData == null){
       if( unsupportedModels.includes(deviceDiscovered.modelNumber)){
-        this.logs.error('Warning! Discovered device did not respond to query. Device is in the unsupported device list.\nFile an issue on github requesting support. Details:', deviceDiscovered);
+        this.logs.warn('Warning! Discovered device did not respond to query. Device is in the unsupported device list.\nFile an issue on github requesting support. Details:', deviceDiscovered);
       } else {
-        this.logs.error('Warning! Discovered device did not respond to query. This is usually due to an unresponsive device.\nPlease restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\nFile an issue on github with an uploaded log.', deviceDiscovered);
+        this.logs.warn('Warning! Discovered device did not respond to query. This is usually due to an unresponsive device.\nPlease restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\nFile an issue on github with an uploaded log.', deviceDiscovered);
       }
       return false;
     }
