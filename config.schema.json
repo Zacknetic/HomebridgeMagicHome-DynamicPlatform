@@ -93,8 +93,46 @@
                     "type": "boolean",
                     "default": false,
                     "required": true
+                    },
+                    "logLevel": {
+                        "title": "Log Level:",
+                        "type": "integer",
+                        "default": 3,
+                        "oneOf": [
+                            {
+                                "title": "1 - Errors",
+                                "enum": [
+                                  1
+                                ]
+                            },
+                            {
+                                "title": "2 - Warnings",
+                                "enum": [
+                                  2
+                                ]
+                            },
+                            {
+                                "title": "3 - Info (Default)",
+                                "enum": [
+                                  3
+                                ]
+                            },
+                            {
+                                "title": "4 - Debug",
+                                "enum": [
+                                  4
+                                ]
+                            },
+                            {
+                                "title": "5 - Trace",
+                                "enum": [
+                                  5
+                                ]
+                            }
+                    ],
+                    "required": true
                     }
-                }
+                }  
             }
         }
     }

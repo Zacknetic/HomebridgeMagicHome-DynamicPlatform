@@ -6,7 +6,7 @@ import type {
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
-import { getLogger } from './instance';
+import { getLogs } from './logs';
 import { MagicHomeAccessory, IDeviceProps } from './magichome-interface/types';
 
 const COMMAND_POWER_ON = [0x71, 0x23, 0x0f];
@@ -39,7 +39,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
   protected deviceReadInProgress = false;
-  log = getLogger();
+  logs = getLogs();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
     RGB: { red: 0, green: 0, blue: 0 },
@@ -168,7 +168,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const name: string = value.toString();
-    this.platform.log.debug('Renaming device to %o', name);
+    this.logs.debug('Renaming device to %o', name);
     this.myDevice.displayName = name;
     this.platform.api.updatePlatformAccessories([this.accessory]);
 
@@ -176,7 +176,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   identifyLight() {
-    this.platform.log.info('Identifying accessory: %o!', this.myDevice.displayName);
+    this.logs.info('Identifying accessory: %o!', this.myDevice.displayName);
     this.flashEffect();
 
   }
@@ -237,7 +237,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const hue = this.lightState.HSL.hue;
 
     //update state with actual values asynchronously
-    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.myDevice.displayName);
+    this.logs.debug('Get Characteristic Hue -> %o for device: %o ', hue, this.myDevice.displayName);
     if(!this.setColortemp){
       this.updateLocalState();
     }
@@ -249,7 +249,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const CCT = this.lightState.CCT;
 
     //update state with actual values asynchronously
-    this.platform.log.debug('Get Characteristic Hue -> %o for device: %o ', CCT, this.myDevice.displayName);
+    this.logs.debug('Get Characteristic Hue -> %o for device: %o ', CCT, this.myDevice.displayName);
     if(this.setColortemp){
       this.updateLocalState();
     }
@@ -264,7 +264,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // dont update the actual values from brightness, it is impossible to determine by rgb values alone
     //this.getState();
 
-    this.platform.log.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.myDevice.displayName);
+    this.logs.debug('Get Characteristic Brightness -> %o for device: %o ', brightness, this.myDevice.displayName);
     this.updateLocalState();
 
     callback(null, brightness);
@@ -282,7 +282,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //update state with actual values asynchronously
     this.updateLocalState();
 
-    this.platform.log.debug('Get Characteristic On -> %o for device: %o ', isOn, this.myDevice.displayName);
+    this.logs.debug('Get Characteristic On -> %o for device: %o ', isOn, this.myDevice.displayName);
     callback(null, isOn);
   }
 
@@ -314,7 +314,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       } 
       if(state == null){
         const { ipAddress, uniqueId, displayName } = this.myDevice;
-        this.platform.log.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
+        this.logs.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
         this.deviceReadInProgress = false;
         return;
       }
@@ -326,7 +326,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.updateHomekitState();
 
     } catch (error) {
-      this.platform.log.error('getState() error: ', error);
+      this.logs.error('getState() error: ', error);
     }
     this.deviceReadInProgress = false;
   }
@@ -380,8 +380,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
     const brightness = this.lightState.brightness;
     /*
-    this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
+    this.logs.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
+    this.logs.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
     */
     const mask = 0xF0; // the 'mask' byte tells the controller which LEDs to turn on color(0xF0), white (0x0F), or both (0xFF)
     //we default the mask to turn on color. Other values can still be set, they just wont turn on
@@ -465,7 +465,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const buffer = Buffer.from(command);
 
     const output = await this.transport.send(buffer, useChecksum, _timeout);
-    //this.platform.log.debug('Recieved the following response', output);
+    //this.logs.debug('Recieved the following response', output);
 
   } //send
 
@@ -560,20 +560,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    *  This is a debug function to show the number of listeners for each .on event.
    */
   logListeners() {
-    this.log.warn('On set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('set'));
-    this.log.warn('Identify set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('set'));
-    this.log.warn('Name set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('set'));
-    this.log.warn('Brightness set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('set'));
-    this.log.warn('Hue set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('set'));
-    this.log.warn('Sat set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('set'));
-    this.log.warn('Manufacturer set: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('set') );
+    this.logs.warn('On set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('set'));
+    this.logs.warn('Identify set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('set'));
+    this.logs.warn('Name set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('set'));
+    this.logs.warn('Brightness set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('set'));
+    this.logs.warn('Hue set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('set'));
+    this.logs.warn('Sat set Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('set'));
+    this.logs.warn('Manufacturer set: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('set') );
 
-    this.log.warn('On get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('get'));
-    this.log.warn('Identify get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('get'));
-    this.log.warn('Name get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('get'));
-    this.log.warn('Brightness get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('get'));
-    this.log.warn('Hue get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('get'));
-    this.log.warn('Sat get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('get'));
-    this.log.warn('Manufacturer get: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('get') );
+    this.logs.warn('On get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.On).listenerCount('get'));
+    this.logs.warn('Identify get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Identify).listenerCount('get'));
+    this.logs.warn('Name get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName).listenerCount('get'));
+    this.logs.warn('Brightness get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Brightness).listenerCount('get'));
+    this.logs.warn('Hue get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Hue).listenerCount('get'));
+    this.logs.warn('Sat get Listener count: ', this.service.getCharacteristic(this.platform.Characteristic.Saturation).listenerCount('get'));
+    this.logs.warn('Manufacturer get: Listener count: ', this.service.setCharacteristic(this.platform.Characteristic.Manufacturer, null).listenerCount('get') );
   }
 } // ZackneticMagichomePlatformAccessory class
