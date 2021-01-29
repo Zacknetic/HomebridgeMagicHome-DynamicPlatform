@@ -34,7 +34,8 @@
         "blacklistedUniqueIDs": [""]
       },
       "advancedOptions": {
-        "namesWithMacAddress": true
+        "namesWithMacAddress": false,
+        "logLevel": 5
       }
     }
   ]
