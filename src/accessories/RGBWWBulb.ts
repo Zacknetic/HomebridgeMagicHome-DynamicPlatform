@@ -8,7 +8,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-    const whites = this.hueToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    const whites = this.cctToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
     const brightness = this.lightState.brightness;
     
     // this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
@@ -65,6 +65,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   async updateHomekitState() {
+    /*
     this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
@@ -81,6 +82,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       }
     }
     this.cacheCurrentLightState();
+    */
   }
     
 }

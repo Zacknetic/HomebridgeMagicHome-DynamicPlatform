@@ -30,7 +30,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
   protected colorOffThresholdSimultaniousDevices = this.config.whiteEffects.colorOffThresholdSimultaniousDevices;
   protected simultaniousDevicesColorWhite = this.config.whiteEffects.simultaniousDevicesColorWhite;
-
+  protected alController;
   //protected interval;
   public activeAnimation = animations.none;
   protected setColortemp = false;
@@ -72,7 +72,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.myDevice.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, this.myDevice.modelNumber)
       .setCharacteristic(this.platform.Characteristic.HardwareRevision, this.myDevice.controllerHardwareVersion)
-      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.myDevice.controllerFirmwareVersion) //?
+      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.myDevice.controllerFirmwareVersion)
       .getCharacteristic(this.platform.Characteristic.Identify)
       .removeAllListeners(CharacteristicEventTypes.SET)
       .removeAllListeners(CharacteristicEventTypes.GET)
@@ -119,9 +119,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         // register handlers for the Saturation Characteristic
         this.service.getCharacteristic(this.platform.Characteristic.Saturation)
           .removeAllListeners(CharacteristicEventTypes.SET)
-          .removeAllListeners(CharacteristicEventTypes.GET)
-          .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));        // SET - bind to the 'setSaturation` method below
-        //.on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
+        // .removeAllListeners(CharacteristicEventTypes.GET)
+          .on(CharacteristicEventTypes.SET, this.setSaturation.bind(this));      // SET - bind to the 'setSaturation` method below
+        // .on(CharacteristicEventTypes.GET, this.getSaturation.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
       
       }
@@ -134,6 +134,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           .on(CharacteristicEventTypes.SET, this.setColorTemperature.bind(this))        // SET - bind to the 'setSaturation` method below
           .on(CharacteristicEventTypes.GET, this.getColorTemperature.bind(this));       // GET - bind to the 'getSaturation` method below
         // register handlers for the On/Off Characteristic
+        
+        if (platform.api.versionGreaterOrEqual && platform.api.versionGreaterOrEqual('1.3.0-beta.46')) {
+          this.alController = new platform.api.hap.AdaptiveLightingController(this.service);
+          this.accessory.configureController(this.alController);
+        }
+        
       }
     } else {
 
@@ -211,13 +217,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.processRequest();
     callback(null);
   }
-
-  /*
-  async setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback){
-    this.lightState.operatingMode = opMode.temperatureMode;
-    this.processRequest({msg: `cct=${value}`} );
-    callback(null);
-  }*/
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     
@@ -337,13 +336,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateHomekitState() {
 
+    /*
     this.service.updateCharacteristic(this.platform.Characteristic.On,  this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
     if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
       this.updateLocalBrightness(this.lightState.HSL.luminance * 2);
     }
-    this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  this.lightState.brightness);
+    this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  this.lightState.brightness);*/
   }
 
   updateLocalHSL(_hsl){
@@ -537,6 +537,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if(!this.deviceUpdateInProgress){
       this.deviceUpdateInProgress = true;
       setTimeout(   async () =>  {
+        this.logs.warn('setting light state: %o', this.lightState);
         if (( !this.colorCommand) || !this.lightState.isOn){ //if no color command or a command to turn the light off
           await this.send(this.lightState.isOn ? COMMAND_POWER_ON : COMMAND_POWER_OFF); // set the power
         } else {
@@ -549,6 +550,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
             await this.updateDeviceState(); // set color
           }, 100);
         }
+        //  this.lightState.HSL.saturation = this.lightStateTemporary.HSL.saturation;
         this.colorCommand = false;
         this.deviceUpdateInProgress = false;
       }, INTRA_MESSAGE_TIME);

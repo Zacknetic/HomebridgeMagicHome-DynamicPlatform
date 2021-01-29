@@ -414,7 +414,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accessory.context.device = deviceData; 
 
  
-    this.printDeviceInfo('Registering new accessory...!', accessory);
+    this.logs.printDeviceInfo('Registering new accessory...!', accessory, this.count++);
     // link the accessory to your platform
     this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
     
@@ -470,7 +470,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.logs.warn('Ip address successfully reassigned to: %o\n ', existingAccessory.context.device.cachedIPAddress);            
     }
 
-    this.printDeviceInfo('Registering existing accessory...', existingAccessory);
+    this.logs.printDeviceInfo('Registering existing accessory...', existingAccessory, this.count++);
             
     // create the accessory handler
     let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
@@ -493,19 +493,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     this.api.updatePlatformAccessories([existingAccessory]);
     existingAccessory.context.pendingRegistration = false;
     return true;
-  }
-
-  printDeviceInfo(message: string, accessory: MagicHomeAccessory){
-    this.logs.info( '%o - ' + message +
-    '\nDisplay Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
-    this.count++,
-    accessory.context.device.displayName,
-    accessory.context.device.lightParameters?.controllerLogicType,
-    accessory.context.device.modelNumber, 
-    accessory.context.device.uniqueId, 
-    accessory.context.device.ipAddress,
-    accessory.context.device.controllerHardwareVersion?.toString(16),
-    accessory.context.device.controllerFirmwareVersion?.toString(16));
   }
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {

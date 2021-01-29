@@ -17,7 +17,7 @@ export class CCTStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     
     
     //await this.send([0x31, 0x00, 0x00, 0x00, ww, cw, 0xFF, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
-   // await this.send([0x35, 0xb1, ww, cw, 0x00, 0x00, 0x00, 0x03], true, _timeout); //9th byte checksum calculated later in send()
+    // await this.send([0x35, 0xb1, ww, cw, 0x00, 0x00, 0x00, 0x03], true, _timeout); //9th byte checksum calculated later in send()
 
     
   }//setColor

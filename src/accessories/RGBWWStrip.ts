@@ -8,7 +8,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //**** local variables ****\\
     const hsl = this.lightState.HSL;
     let [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-    const whites = this.hueToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    const whites = this.cctToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
     const brightness = this.lightState.brightness;
     
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
@@ -46,7 +46,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
       //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
       //White colors were already calculated above
-    } else if (hsl.saturation < this.colorOffThresholdSimultaniousDevices) {
+    } else if (hsl.saturation < this.colorOffThresholdSimultaniousDevices || (this.setColortemp && (hsl.saturation < this.colorOffThresholdSimultaniousDevices || hsl.saturation > this.colorWhiteThresholdSimultaniousDevices))) {
       // this.platform.log.debug('Turning off color');
       r = 0;
       g = 0;
@@ -68,6 +68,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
       //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
     } else {
+      this.setColortemp = false;
       ww = 0;
       cw = 0;
       // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
@@ -78,6 +79,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   }//setColor
     
   async updateHomekitState() {
+    /*
     this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
@@ -93,6 +95,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
       }
     }
+    */
   }
   
 }
