@@ -25,15 +25,29 @@
 
 ## Features 
 
-* Support for Bulbs
+* Support for Bulbs (RGBWW 5 Channel, RGBW 4 Channel)
 
-* Support for Lightstrips
+* Support for Lightstrips (RGBWW 5 & 4 Channel, RGB) 
+
+* Auto discovery (no tinkering with IP's, even after a power change)
+
+* Remove devices by adding the word "delete" to the accessory name in the home app, and restart Homebridge. 
 
 ## Contributing 
 
 Please see [CONTRIBUTING.md]()
 
 ## Troubleshooting
+
+If you run into any issues, please check the following before filing an issue:
+
+1) Please see [Common Issues]() 
+
+2) Restart Homebridge
+
+3) Make sure the plugin is updated
+
+4) Check the logs, you can obtain the logs by clicking the "view logs" button on the top right of the Config-Ui-X menu.
 
 
 
