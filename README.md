@@ -13,13 +13,14 @@
 ## Installation
 > Using homebridge-config-ui-x
 
-<img src="https://github.com/iRayanKhan/HomebridgeMagicHome-DynamicPlatform/blob/master/.github/gifs/Installation.gif?raw=true">
 
 1) Install the plugin using [homebridge-config-ui-x](https://github.com/oznu/homebridge-config-ui-x).
 
 2) Click save, and restart Homebridge.
 
 3) Add to Home app.
+
+<img src="https://github.com/iRayanKhan/HomebridgeMagicHome-DynamicPlatform/blob/master/.github/gifs/Installation.gif?raw=true">
 
 
 
