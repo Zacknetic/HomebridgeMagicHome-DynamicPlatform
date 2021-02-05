@@ -1,4 +1,4 @@
-import { CharacteristicEventTypes } from 'homebridge';
+import { Characteristic, CharacteristicEventTypes } from 'homebridge';
 import type {
   Service, PlatformConfig, PlatformAccessory, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback,
@@ -39,6 +39,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected deviceWriteRetry: any = null;
   protected deviceUpdateInProgress = false;
   protected deviceReadInProgress = false;
+
+  protected deviceIsOffline;
+  protected offlineValue;
+  protected deviceIsAlreadyRegistered = false;
+
   logs = getLogs();
   public lightStateTemporary= {
     HSL: { hue: 255, saturation: 100, luminance: 50 },
@@ -162,12 +167,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .on(CharacteristicEventTypes.SET, this.setOn.bind(this))              // SET - bind to the `setOn` method below
       .on(CharacteristicEventTypes.GET, this.getOn.bind(this));               // GET - bind to the `getOn` method below
 
-    this.updateLocalState();
+    if (!this.deviceIsOffline) {
+      this.updateLocalState();
+    }
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(this.platform.Characteristic.Name,  this.myDevice.displayName);
     
     // this.logListeners();
+
+    if (!this.config.advancedOptions.displayUnresponsive || this.config.advancedOptions.displayUnresponsive == false) {
+      this.offlineValue = false;
+    } else {
+      this.offlineValue = new Error('Unable to connect to device');
+    }
 
   }
 
@@ -193,44 +206,60 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.logs.debug('Setting accessory %o\'s Hue value: %o', this.myDevice.displayName, value);
-    this.setColortemp = false;
-    this.lightState.HSL.hue = value as number; 
-    this.colorCommand = true;
-    this.processRequest();
+    if (!this.deviceIsOffline) {
+      this.logs.debug('Setting accessory %o\'s Hue value: %o', this.myDevice.displayName, value);
+      this.setColortemp = false;
+      this.lightState.HSL.hue = value as number; 
+      this.colorCommand = true;
+      this.processRequest();
+    }
     callback(null);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.logs.debug('Setting accessory %o\'s Saturation value: %o', this.myDevice.displayName, value);
-    this.setColortemp = false;
-    this.lightState.HSL.saturation = value as number; 
-    this.colorCommand = true;
-    this.processRequest();
+    if (!this.deviceIsOffline) {
+      this.logs.debug('Setting accessory %o\'s Saturation value: %o', this.myDevice.displayName, value);
+      this.setColortemp = false;
+      this.lightState.HSL.saturation = value as number; 
+      this.colorCommand = true;
+      this.processRequest();
+    }
     callback(null);
   }
 
   setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.logs.debug('Setting accessory %o\'s Brightness value: %o', this.myDevice.displayName, value);
-    this.lightState.brightness = value as number; 
-    this.colorCommand = true;
-    this.processRequest();
+    if (!this.deviceIsOffline) {
+      this.logs.debug('Setting accessory %o\'s Brightness value: %o', this.myDevice.displayName, value);
+      this.lightState.brightness = value as number; 
+      this.colorCommand = true;
+      this.processRequest();
+    }
     callback(null);
   }
 
   setColorTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.logs.debug('Setting accessory %o\'s Color Temperature value: %o', this.myDevice.displayName, value);
-    this.setColortemp = true;
-    this.lightState.CCT = value as number; 
-    this.colorCommand = true;
-    this.processRequest();
+    if (!this.deviceIsOffline) {
+      this.logs.debug('Setting accessory %o\'s Color Temperature value: %o', this.myDevice.displayName, value);
+      this.setColortemp = true;
+      this.lightState.CCT = value as number; 
+      this.colorCommand = true;
+      this.processRequest();
+    }
     callback(null);
   }
 
   setOn(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    this.logs.debug('Setting accessory %o\'s On value: %o', this.myDevice.displayName, value);
-    this.lightState.isOn = value as boolean;
-    this.processRequest();
+    if (!this.deviceIsOffline) {
+      this.logs.debug('Setting accessory %o\'s On value: %o', this.myDevice.displayName, value);
+      this.lightState.isOn = value as boolean;
+      this.processRequest();
+    } else {
+      this.logs.debug('Marking accessory offline');
+      setTimeout(() => {
+        this.updateLocalIsOn(this.offlineValue);
+        this.updateHomekitState();
+      }, 1000);
+    }
     callback(null);
   }
 
@@ -244,7 +273,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const hue = this.lightState.HSL.hue; 
     if(!this.setColortemp){   //if we are not in Color Temperature mode, allow HB to update HK with Hue values
       this.logs.debug('Returning accessory %o\'s cached Hue value: %o', this.myDevice.displayName, hue);
-      this.updateLocalState(); //update state with actual values asynchronously
+      if (!this.deviceIsOffline) {
+        this.updateLocalState(); //update state with actual values asynchronously (only if online)
+      }
     }
     callback(null, hue);
   }
@@ -253,7 +284,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const CCT = this.lightState.CCT;
     if(this.setColortemp){  //if we are in Color Temperature mode, allow HB to update HK with CCT values
       this.logs.debug('Returning accessory %o\'s cached Color Temperature value: %o', this.myDevice.displayName, CCT);
-      this.updateLocalState(); //update state with actual values asynchronously
+      if (!this.deviceIsOffline) {
+        this.updateLocalState(); //update state with actual values asynchronously (only if online)
+      }
     }
     callback(null, CCT);  //immediately return cached state to prevent laggy HomeKit UI
   }
@@ -261,7 +294,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   getBrightness(callback: CharacteristicGetCallback) {
     const brightness = this.lightState.brightness;
     this.logs.debug('Returning accessory %o\'s cached Brightness value: %o', this.myDevice.displayName, brightness);
-    this.updateLocalState();    //update state with actual values asynchronously
+    if (!this.deviceIsOffline) {
+      this.updateLocalState();    //update state with actual values asynchronously (only if online)
+    }
     callback(null, brightness); //immediately return cached state to prevent laggy HomeKit UI
   }
 
@@ -273,8 +308,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   getOn(callback: CharacteristicGetCallback) {
 
     const isOn = this.lightState.isOn;
-    this.logs.debug('Returning accessory %o\'s cached Power value: %o', this.myDevice.displayName, isOn);
-    this.updateLocalState();  //update state with actual values asynchronously
+    if (this.deviceIsOffline) {
+      this.logs.debug('Marking accessory with No Response');
+    } else {
+      this.logs.debug('Returning accessory %o\'s cached Power value: %o', this.myDevice.displayName, isOn);
+    }
+    if (!this.deviceIsOffline) {
+      this.updateLocalState();  //update state with actual values asynchronously (only if online)
+    }
     callback(null, isOn); //immediately return cached state to prevent laggy HomeKit UI
   }
 
@@ -309,8 +350,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if(state == null){
         const { ipAddress, uniqueId, displayName } = this.myDevice;
         this.logs.debug(`No response from device '${displayName}' (${uniqueId}) ${ipAddress}`); 
+        
+        this.updateLocalIsOn(this.offlineValue);
+        this.updateHomekitState();
         this.deviceReadInProgress = false;
+        this.deviceIsOffline = true;
+        setTimeout(() => {
+          this.logs.debug('Checking to see if the device is back online...'); 
+          this.updateLocalState();
+        }, 8000);
         return;
+      } else {
+        this.deviceIsOffline = false;
       }
       this.myDevice.lastKnownState = state;
       this.updateLocalRGB(state.RGB);
@@ -318,6 +369,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.updateLocalWhiteValues(state.whiteValues);
       this.updateLocalIsOn(state.isOn);
       this.updateHomekitState();
+      
 
     } catch (error) {
       this.logs.error('getState() error: ', error);

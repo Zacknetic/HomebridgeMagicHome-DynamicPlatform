@@ -131,7 +131,14 @@
                             }
                     ],
                     "required": true
-                    }
+                    },
+                    "displayUnresponsive": {
+                        "title": "Show 'No Response' when offline.",
+                        "description": "When this option is enabled, the device will be marked with 'No Response' when offline. Disabling this option renders the device as being turned off.",
+                        "type": "boolean",
+                        "default": false,
+                        "required": true
+                        }
                 }  
             }
         }

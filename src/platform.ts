@@ -247,21 +247,29 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
           this.logs.debug(`Warning! Continuing to register cached accessory "${accessory.context.device.uniqueId}" despite not being seen for ${accessory.context.device.restartsSinceSeen} restarts.`);
 
+          this.logs.trace('Pending registration? ', accessory.context.pendingRegistration);
           // create the accessory handler
-          let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
-          try {
-            lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
-          } catch (error) {
-            this.logs.error('[1] The controllerLogicType does not exist in accessoryType list. Did you migrate this? controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
-            this.logs.error('device object: ', accessory.context.device);
-            continue;
+
+          if (accessory.context.pendingRegistration == true) {
+            let lightAccessory: HomebridgeMagichomeDynamicPlatformAccessory = null;
+          
+            try {
+            
+              lightAccessory = new accessoryType[accessory.context.device.lightParameters.controllerLogicType](this, accessory, this.config);
+              accessory.context.pendingRegistration = false;
+            
+            
+            } catch (error) {
+              this.logs.error('[1] The controllerLogicType does not exist in accessoryType list. Did you migrate this? controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
+              this.logs.error('device object: ', accessory.context.device);
+              continue;
+            }
+
+            // udpate the accessory to platform
+            this.api.updatePlatformAccessories([accessory]);
+            registeredDevices++;
+            unseenDevices++;
           }
-
-          // udpate the accessory to platform
-          this.api.updatePlatformAccessories([accessory]);
-          registeredDevices++;
-          unseenDevices++;
-
         }
     
       } catch (error) {
