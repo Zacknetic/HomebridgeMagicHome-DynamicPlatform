@@ -125,72 +125,77 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   
     // loop over the discovered devices and register each one if it has not already been registered
     for ( const deviceDiscovered of devicesDiscovered) { 
-      let existingAccessory: MagicHomeAccessory = null;
-      try {
+      if (this.isAllowed(deviceDiscovered.uniqueId)) {
+        let existingAccessory: MagicHomeAccessory = null;
+        try {
         // generate a unique id for the accessory this should be generated from
-        const generatedUUID = this.api.hap.uuid.generate(deviceDiscovered.uniqueId);
-        // check that the device has not already been registered by checking the
-        // cached devices we stored in the `configureAccessory` method above
-        existingAccessory = this.accessories.find(accessory => accessory.UUID === generatedUUID);  
+          const generatedUUID = this.api.hap.uuid.generate(deviceDiscovered.uniqueId);
+          // check that the device has not already been registered by checking the
+          // cached devices we stored in the `configureAccessory` method above
+          existingAccessory = this.accessories.find(accessory => accessory.UUID === generatedUUID);  
 
-        if (!existingAccessory) { 
-          if(!this.createNewAccessory(deviceDiscovered, generatedUUID)) {
-            continue;
-          }
-          recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
-          registeredDevices++;
-          newDevices++;
-          
-        } else {
-          // This deviceDiscovered already exist in cache!
-
-          // Check if cached device complies to the device model,
-          if(!isValidDeviceModel(existingAccessory.context.device, null)) {    
-            //`Device "${uniqueId}" is online, but has outdated data model. Attempting to update it. 
-            this.logs.debug(`The known device "${deviceDiscovered.uniqueId}" seen during discovery has outdated data model (pre v1.8.6). Rebuilding device. `, deviceDiscovered);
-
-
-            // ****** RECONSTRUCT DEVICE - patch existingAccessory with updated data *****
-            const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
-            const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
-
-            if(!initialState || !deviceQueryData){
-              this.logs.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
-                deviceDiscovered.uniqueId);
+          if (!existingAccessory) { 
+            if(!this.createNewAccessory(deviceDiscovered, generatedUUID)) {
               continue;
             }
+            recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
+            registeredDevices++;
+            newDevices++;
+          
+          } else {
+          // This deviceDiscovered already exist in cache!
 
-            const oldName = existingAccessory.context.displayName || 
+            // Check if cached device complies to the device model,
+            if(!isValidDeviceModel(existingAccessory.context.device, null)) {    
+            //`Device "${uniqueId}" is online, but has outdated data model. Attempting to update it. 
+              this.logs.debug(`The known device "${deviceDiscovered.uniqueId}" seen during discovery has outdated data model (pre v1.8.6). Rebuilding device. `, deviceDiscovered);
+
+
+              // ****** RECONSTRUCT DEVICE - patch existingAccessory with updated data *****
+              const initialState = await this.getInitialState (deviceDiscovered.ipAddress, 10000);
+              const deviceQueryData:IDeviceQueriedProps = await this.determineController(deviceDiscovered);
+
+              if(!initialState || !deviceQueryData){
+                this.logs.error('Warning! Device type could not be determined for device: %o, this is usually due to an unresponsive device.\n Please restart homebridge. If the problem persists, ensure the device works in the "Magichome Pro" app.\n file an issue on github with an uploaded log\n', 
+                  deviceDiscovered.uniqueId);
+                continue;
+              }
+
+              const oldName = existingAccessory.context.displayName || 
                             existingAccessory.context.device?.lightParameters?.convenientName || 
                             deviceQueryData.lightParameters.convenientName;
 
-            const rootProps = {UUID: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: oldName, lastKnownState: initialState};
-            const deviceData: IDeviceProps = Object.assign(rootProps, deviceDiscovered, deviceQueryData);        
-            existingAccessory.context.device = deviceData; 
-            // ****** RECONSTRUCT DEVICE *****
+              const rootProps = {UUID: generatedUUID, cachedIPAddress: deviceDiscovered.ipAddress, restartsSinceSeen: 0, displayName: oldName, lastKnownState: initialState};
+              const deviceData: IDeviceProps = Object.assign(rootProps, deviceDiscovered, deviceQueryData);        
+              existingAccessory.context.device = deviceData; 
+              // ****** RECONSTRUCT DEVICE *****
   
-            if(isValidDeviceModel(existingAccessory.context.device, this.logs)){
-              this.logs.debug(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" successfully repaired!`);
-            } else {
-              this.logs.error(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.`);
+              if(isValidDeviceModel(existingAccessory.context.device, this.logs)){
+                this.logs.debug(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" successfully repaired!`);
+              } else {
+                this.logs.error(`[discovered+cached] Device "${deviceDiscovered.uniqueId}" was not repaired successfully. Ensure it can be controlled in the MagicHome app then restart homebridge to try again while it is online.`);
+                continue;
+              }
+
+            }
+            if(!this.registerExistingAccessory(deviceDiscovered, existingAccessory)){
               continue;
             }
 
-          }
-          if(!this.registerExistingAccessory(deviceDiscovered, existingAccessory)){
-            continue;
-          }
+            // add to list of registered devices, so we can show a summary in the end
+            recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
+            registeredDevices++;
+          } 
 
-          // add to list of registered devices, so we can show a summary in the end
-          recentlyRegisteredDevices.add(deviceDiscovered.uniqueId);
-          registeredDevices++;
-        } 
-
-      } catch (error) {
-        this.logs.error('[discovered+cached] platform.ts discoverDevices() accessory creation has thrown the following error: %o', error);
-        this.logs.error('[discovered+cached] The existingAccessory object is: ', existingAccessory);
-        this.logs.error('[discovered+cached] The deviceDiscovered object is: ', deviceDiscovered);
+        } catch (error) {
+          this.logs.error('[discovered+cached] platform.ts discoverDevices() accessory creation has thrown the following error: %o', error);
+          this.logs.error('[discovered+cached] The existingAccessory object is: ', existingAccessory);
+          this.logs.error('[discovered+cached] The deviceDiscovered object is: ', deviceDiscovered);
+        }
+      } else {
+        this.logs.debug(deviceDiscovered.uniqueId + 'isn\'t allowed to be registered. Moving on...');
       }
+      
     }
     //=================================================
     // End Cached Devices //
