@@ -7,7 +7,7 @@
     "Igor Ramos",
     "Tom Butcher"
   ],
-  "version": "1.9.3-beta.5",
+  "version": "1.9.3-beta.6",
   "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
