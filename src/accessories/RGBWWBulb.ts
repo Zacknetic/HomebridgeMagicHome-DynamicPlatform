@@ -24,44 +24,21 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     let b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
     let ww = Math.round(((clamp(whites.warmWhite, 0, 255) / 100) * brightness));
     let cw = Math.round(((clamp(whites.coldWhite, 0, 255) / 100) * brightness));
-    
 
-    if (hsl.hue == 31 && (hsl.saturation == 33)) {
+    // If the user is controlling the colorTemp slider in homekit, set the CT leds to turn on.
+    if (this.setColortemp) {
       r = 0;
       g = 0;
       b = 0;
-      ww = Math.round((255 / 100) * brightness);
+      mask = 0x0F;
+    } else { // If the user is controlling the HSB slider in homekit, set the RGB leds to turn on.
       cw = 0;
-      mask = 0x0F;
-      //this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
-    } else if ((hsl.hue == 208 && (hsl.saturation == 17))) {
-      r = 0;
-      g = 0;
-      b = 0;
       ww = 0;
-      cw = Math.round((255 / 100) * brightness);
-      mask = 0x0F;
-      // this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
-
-      //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
-      //White colors were already calculated above
-    } else if ((hsl.saturation < this.colorWhiteThreshold)) {
-      r = 0;
-      g = 0;
-      b = 0;
-      mask = 0x0F;
-      // this.platform.log.debug('Setting warmWhite and coldWhite without colors: ww:%o cw:%o', ww, cw);
-    } else { //else set warmWhite and coldWhite to zero. Color mask already set at top
-
-      ww = 0;
-      cw = 0;
-      //this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
-
+      mask = 0xF0;
     }
-    await this.send([0x31, r, g, b, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
 
-    
-  }//setColor
+    await this.send([0x31, r, g, b, ww, cw, mask, 0x0F], true, _timeout); //9th byte checksum calculated later in send()
+  }
 
 
   async updateHomekitState() {
