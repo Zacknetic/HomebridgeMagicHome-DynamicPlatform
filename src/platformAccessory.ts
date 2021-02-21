@@ -76,8 +76,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'MagicHome')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.myDevice.uniqueId)
       .setCharacteristic(this.platform.Characteristic.Model, this.myDevice.modelNumber)
-      .setCharacteristic(this.platform.Characteristic.HardwareRevision, this.myDevice.controllerHardwareVersion)
-      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, this.myDevice.controllerFirmwareVersion)
+      .setCharacteristic(this.platform.Characteristic.HardwareRevision, String(this.myDevice.controllerHardwareVersion))
+      .setCharacteristic(this.platform.Characteristic.FirmwareRevision, String(this.myDevice.controllerFirmwareVersion))
       .getCharacteristic(this.platform.Characteristic.Identify)
       .removeAllListeners(CharacteristicEventTypes.SET)
       .removeAllListeners(CharacteristicEventTypes.GET)
@@ -145,6 +145,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         // register handlers for the On/Off Characteristic
         
         if (platform.api.versionGreaterOrEqual && platform.api.versionGreaterOrEqual('1.3.0-beta.46')) {
+          this.logs.trace('Adding the adaptive lighting controller to the accessory...');
           this.alController = new platform.api.hap.AdaptiveLightingController(this.service);
           this.accessory.configureController(this.alController);
         }
