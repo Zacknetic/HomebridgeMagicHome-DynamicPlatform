@@ -133,29 +133,42 @@ export class Transport {
     return data;
   }
 
-  async getState(_timeout = 500){
+  async getState(_timeout = 500, CCT = false){
     try {
       const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
       if (data == null) {
         return null;
       }
-      return {
-      
-        debugBuffer: data,
-        controllerHardwareVersion: data.readUInt8(1),
-        isOn: data.readUInt8(2) === 0x23,
-        RGB: {
-          red: data.readUInt8(6),
-          green: data.readUInt8(7),
-          blue: data.readUInt8(8),
-        },
-        whiteValues: {
-          warmWhite: data.readUInt8(9),
-          coldWhite: data.readUInt8(11),
-        },
-        controllerFirmwareVersion: data.readUInt8(10),
-  
-      };
+      if (!CCT){
+        return {
+        
+          debugBuffer: data,
+          controllerHardwareVersion: data.readUInt8(1),
+          isOn: data.readUInt8(2) === 0x23,
+          RGB: {
+            red: data.readUInt8(6),
+            green: data.readUInt8(7),
+            blue: data.readUInt8(8),
+          },
+          whiteValues: {
+            warmWhite: data.readUInt8(9),
+            coldWhite: data.readUInt8(11),
+          },
+          controllerFirmwareVersion: data.readUInt8(10),
+    
+        };
+      } else {
+        return {
+        
+          debugBuffer: data,
+          controllerHardwareVersion: data.readUInt8(1),
+          isOn: data.readUInt8(2) === 0x23,
+          cct: data.readUInt8(5),
+          brightness: data.readUInt8(6),
+          controllerFirmwareVersion: data.readUInt8(10),
+
+        };
+      }
     } catch (error) {
       this.logs.debug('Transport getState() error:', error);
     }

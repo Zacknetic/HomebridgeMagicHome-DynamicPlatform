@@ -193,7 +193,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
     const name: string = value.toString();
+
+    // if(name.includes('$$$')) {
     this.logs.debug('Renaming device to %o', name);
+    //}
     this.myDevice.displayName = name;
     this.platform.api.updatePlatformAccessories([this.accessory]);
 
@@ -400,6 +403,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   updateLocalRGB(_rgb){
     this.lightState.RGB = _rgb;
+  }
+
+  updateLocalCCT(_cct){
+    this.lightState.CCT = _cct;
   }
 
   updateLocalWhiteValues(_whiteValues){
