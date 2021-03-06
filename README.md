@@ -7,6 +7,7 @@
 <a href="https://www.npmjs.com/package/homebridge-magichome-dynamic-platform"><img title="npm version" src="https://badgen.net/npm/v/homebridge-magichome-dynamic-platform" ></a>
 <a href="https://github.com/homebridge/homebridge/wiki/Verified-Plugins"><img title="homebridge verification" src="https://badgen.net/badge/homebridge/verified/purple" ></a>
 <a href="https://www.npmjs.com/package/homebridge-magichome-dynamic-platform"><img title="npm downloads" src="https://badgen.net/npm/dt/homebridge-magichome-dynamic-platform" ></a>
+<a href="https://discord.gg/c8xpmZSNZC"><img title="discord" src="https://badgen.net/discord/online-members/c8xpmZSNZC" ></a>
 
 </span>
 
