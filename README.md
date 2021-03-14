@@ -11,6 +11,15 @@
 
 </span>
 
+<span align="center">
+  
+
+  
+  <img src="https://github.com/iRayanKhan/HomebridgeMagicHome-DynamicPlatform/blob/master/.github/gifs/Demo.gif?raw=true">
+  
+  </span>
+  
+
 ## Installation
 > Using homebridge-config-ui-x
 
