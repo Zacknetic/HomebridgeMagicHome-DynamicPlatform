@@ -44,15 +44,13 @@
 
 * Remove devices by adding the word "delete" to the accessory name in the home app, and restart Homebridge. 
 
-## Contributing 
 
-Please see [CONTRIBUTING.md]()
 
 ## Troubleshooting
 
 If you run into any issues, please check the following before filing an issue:
 
-1) Please see [Common Issues]() 
+1) Please check existing issues.
 
 2) Restart Homebridge
 
