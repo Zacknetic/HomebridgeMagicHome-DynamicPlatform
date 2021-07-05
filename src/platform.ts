@@ -496,16 +496,17 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   }
 
   printDeviceInfo(message: string, accessory: MagicHomeAccessory){
-    this.logs.info( '%o - ' + message +
-    '\nDisplay Name: %o \nController Logic Type: %o  \nModel: %o \nUnique ID: %o \nIP-Address: %o \nHardware Version: %o \nFirmware Version: %o \n',  
-    this.count++,
-    accessory.context.device.displayName,
-    accessory.context.device.lightParameters?.controllerLogicType,
-    accessory.context.device.modelNumber, 
-    accessory.context.device.uniqueId, 
-    accessory.context.device.ipAddress,
-    accessory.context.device.controllerHardwareVersion?.toString(16),
-    accessory.context.device.controllerFirmwareVersion?.toString(16));
+    const device = accessory.context.device;
+
+    this.logs.info( `
+    ${this.count++} - ${message}
+    Display Name: ${device.displayName}
+    Controller Logic Type: ${device.lightParameters?.controllerLogicType}
+    Model: ${device.modelNumber}
+    Unique ID: ${device.uniqueId} 
+    IP-Address: ${device.ipAddress} 
+    Hardware Version: ${device.controllerHardwareVersion?.toString(16)}
+    Firmware Version: ${device.controllerHardwareVersion?.toString(16)}\n`);
   }
 
   async send(transport, command: number[], useChecksum = true, _timeout = 200) {
