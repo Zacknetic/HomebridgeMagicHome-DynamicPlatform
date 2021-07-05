@@ -13,7 +13,7 @@
                         "type": "boolean",
                         "default" : false,
                         "required": true
-                
+
                     },
                     "restartsBeforeMissingAccessoriesPruned": {
                         "title": "Number Restarts Before Missing Accessories Are Pruned",
@@ -80,6 +80,36 @@
                             "default":[
                             ]
                         }
+                    },
+                    "overrideControllerType": {
+                        "title": "Override Controller Type",
+                        "type": "array",
+                        "items" : {
+                            "type": "object",
+                            "properties": {
+                              "uniqueId": {
+                                "title": "Unique ID",
+                                "type": "string",
+                                "required": true
+                              },
+                              "controllerType": {
+                                "title": "Controller Type",
+                                "type": "string",
+                                "oneOf":[
+                                  { "title": "RGBWStrip", "enum": ["RGBWStrip"] },
+                                  { "title": "RGBWWStrip", "enum": ["RGBWWStrip"] },
+                                  { "title": "CCTStrip", "enum": ["CCTStrip"] },
+                                  { "title": "DimmerStrip", "enum": ["DimmerStrip"] },
+                                  { "title": "GRBStrip", "enum": ["GRBStrip"] },
+                                  { "title": "RGBWWBulb", "enum": ["RGBWWBulb"] },
+                                  { "title": "RGBWBulb", "enum": ["RGBWBulb"] },
+                                  { "title": "Switch", "enum": ["Switch"] },
+                                  { "title": "RGBStrip", "enum": ["RGBStrip"] },
+                                ],
+                                "required": true
+                              }
+
+                        }
                     }
 
                 }
@@ -132,9 +162,8 @@
                     ],
                     "required": true
                     }
-                }  
+                }
             }
         }
     }
 }
-  
