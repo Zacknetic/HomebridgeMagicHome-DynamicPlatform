@@ -1,5 +1,3 @@
-import { APIEvent } from 'homebridge';
-import type { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig } from 'homebridge';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { join } from 'path';
 import { loadJson } from './magichome-interface/utils';
@@ -14,11 +12,21 @@ import { RGBWWStrip } from './accessories/RGBWWStrip';
 import { CCTStrip } from './accessories/CCTStrip';
 import { cloneDeep } from 'lodash';
 import { Logs } from './logs';
-import { Discover } from './magichome-interface/Discover';
-import { Transport } from './magichome-interface/Transport';
+import {
+  API,
+  APIEvent,
+  CharacteristicEventTypes,
+  CharacteristicSetCallback,
+  CharacteristicValue,
+  DynamicPlatformPlugin,
+  HAP,
+  Logging,
+  PlatformAccessory,
+  PlatformAccessoryEvent,
+  PlatformConfig,
+} from 'homebridge';
+
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
-import { IDeviceProps, IDeviceDiscoveredProps, IDeviceQueriedProps, ILightParameters } from './magichome-interface/types';
-import { getPrettyName as getUniqueIdName, lightTypesMap} from './magichome-interface/LightMap';
 import { MagicHomeAccessory, ControllerTypes } from './magichome-interface/types';
 //const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
@@ -93,6 +101,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accessory.context.pendingRegistration = true;
     // add the restored accessory to the accessories cache so we can track if it has already been registered
     this.accessories.push(accessory);
+    
   }
 
   /**

@@ -9,6 +9,10 @@
   "version": "1.9.3-beta.4",
   "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "license": "Apache-2.0",
+  "files": [
+    "LICENSE",
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform"
@@ -28,7 +32,7 @@
   ],
   "engines": {
     "node": ">=10.17.0",
-    "homebridge": ">0.4.53"
+    "homebridge": ">=1.0.0"
   },
   "main": "dist/index.js",
   "scripts": {
@@ -58,20 +62,20 @@
   ],
   "dependencies": {
     "color-convert": "^2.0.1",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "promise-queue": "^2.2.5"
   },
   "devDependencies": {
-    "@types/node": "^14.0.23",
+    "@types/node": "^14.17.19",
     "@types/promise-queue": "^2.2.0",
-    "@typescript-eslint/eslint-plugin": "^3.8.0",
-    "@typescript-eslint/parser": "^3.8.0",
-    "eslint": "^7.6.0",
-    "homebridge": "^1.1.7",
-    "nodemon": "^2.0.4",
+    "@typescript-eslint/eslint-plugin": "^3.10.1",
+    "@typescript-eslint/parser": "^3.10.1",
+    "eslint": "^7.32.0",
+    "homebridge": "^1.3.4",
+    "nodemon": "^2.0.13",
     "rimraf": "^3.0.2",
     "ts-node": "^8.10.2",
-    "typescript": "^3.9.7"
+    "typescript": "^3.9.10"
   }
 }
