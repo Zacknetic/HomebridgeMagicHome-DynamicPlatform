@@ -37,7 +37,7 @@ class AccessoryGenerator {
 		this.controllerGenerator = controllerGenerator;
 	}
 
-	async generateAccessories() {
+	public async generateAccessories() {
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
 			return this.discoverAccessories(controllers);
 		}).catch(error => {
@@ -69,9 +69,9 @@ class AccessoryGenerator {
 	 * 				which is quite wasteful...
 	 */
 
-	discoverAccessories(controllers: Map<string, BaseController>) {
+	rescanAccessories(controllers: Map<string, BaseController>) {
 
-		const accessoriesFromScanList: MagicHomeAccessory[] = [];
+		const newAccessoriesList: MagicHomeAccessory[] = [];
 
 		controllers.forEach((controller) => {
 			const {
@@ -84,16 +84,52 @@ class AccessoryGenerator {
 				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
 				this.accessoriesFromDiskMap.delete[homebridgeUUID];
 				this.processExistingAccessory(existingAccessory);
-		
+
 			} else {
 				const newAccessory = this.createNewAccessory({ controller, homebridgeUUID });
-				accessoriesFromScanList.push(newAccessory);				//add it to master accessory list
+				newAccessoriesList.push(newAccessory);				//add it to new accessory list
 				this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
 			}
 
 		});
 
-		this.registerNewAccessories(accessoriesFromScanList);
+		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
+	}
+
+	discoverAccessories(controllers: Map<string, BaseController>) {
+
+		const newAccessoriesList: MagicHomeAccessory[] = [];
+		const existingAccessoriesList: MagicHomeAccessory[] = [];
+
+		controllers.forEach((controller) => {
+			const {
+				protoDevice: { uniqueId, ipAddress, modelNumber },
+				deviceState, deviceAPI,
+			} = controller.getCachedDeviceInformation();
+			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
+
+			if (this.accessoriesFromDiskMap[homebridgeUUID]) {
+
+				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
+				const ipAddressOld = controller.getCachedDeviceInformation().protoDevice.ipAddress;
+				const processedAccessory = this.processExistingAccessory({existingAccessory, ipAddressNew});
+
+				this.accessoriesFromDiskMap.delete[homebridgeUUID];
+
+				existingAccessoriesList.push(processedAccessory);
+		
+				this.log.printDeviceInfo('Registering existing accessory...!', processedAccessory);
+
+			} else {
+				const newAccessory = this.createNewAccessory({ controller, homebridgeUUID });
+				newAccessoriesList.push(newAccessory);				//add it to new accessory list
+				this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
+			}
+
+		});
+
+		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
+		this.registerExistingAccessories(existingAccessoriesList);
 	}
 
 	createNewAccessory({ controller, homebridgeUUID }): MagicHomeAccessory {
@@ -104,13 +140,13 @@ class AccessoryGenerator {
 
 		if (!this.isAllowed(uniqueId)) {
 			this.log.warn(`Warning! New device with Unique ID: ${uniqueId} is blacklisted or is not whitelisted.\n`);
-			return null;
+			return;
 		}
 
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
-		newAccessory.context = { controller: controller, displayName: description, scansSinceSeen: 0 };
+		newAccessory.context = { displayName: description, scansSinceSeen: 0 };
 		try {
-			new homekitInterface[description](this, newAccessory, this.config);
+			new homekitInterface[description](this, newAccessory, this.config, controller);
 		} catch (error) {
 			this.log.error('[1] The controllerLogicType does not exist in accessoryType list. Did you migrate this? controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
 			this.log.error('device object: ', newAccessory.context.controller);
@@ -119,8 +155,25 @@ class AccessoryGenerator {
 		return newAccessory;
 	}
 
-	processExistingAccessory(existingAccessory: MagicHomeAccessory){
+	processExistingAccessory({existingAccessory, ipAddressNew}) {
+ const deviceInfo = existingAccessory.context.controller.getCachedDeviceInformation();
+ const {
+	protoDevice: { uniqueId, ipAddress, modelNumber },
+	deviceState, deviceAPI: { description },
+} = deviceInfo;
 		
+
+		if (!this.isAllowed(uniqueId)) {
+			this.log.warn(`Warning! New device with Unique ID: ${uniqueId} is blacklisted or is not whitelisted.\n`);
+			return;
+		}
+
+		if(ipAddressNew !== ipAddress) {
+			ipAddress = ipAddressNew;
+		}
+
+
+
 	}
 
 	registerNewAccessories(newAccessories: MagicHomeAccessory[]) {
