@@ -83,7 +83,7 @@ class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
     });
   }
 
-  async initializePlatforn(){
+  async initializePlatforn() {
 
     this.count = 1;
     await this.discoverDevices().then(devices => {
@@ -117,7 +117,7 @@ class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices(): Promise<Map<string, BaseController>> {
 
-    return new Promise <Map<string, BaseController>>(async (resolve, reject) => {
+    return new Promise<Map<string, BaseController>>(async (resolve, reject) => {
       const { isValidDeviceModel } = HomebridgeMagichomeDynamicPlatform;
       const pendingUpdate = new Set();
       const recentlyRegisteredDevices = new Set();
@@ -186,32 +186,8 @@ class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
     for (const accessory of this.accessories) {
       try {
 
-        if (!isValidDeviceModel(accessory.context.device, null)) {
-          // only offline, cached devices, old data model, should trigger here.
-          const { uniqueId } = accessory.context.device;
-          this.log.debug(`Device "${uniqueId}" was not seen during discovery. Ensure it can be controlled in the MagicHome app. Rescan in 30 seconds...`);
-          pendingUpdate.add(uniqueId);
-          continue;
-        }
-
-        if (accessory.context.device?.displayName && accessory.context.device.displayName.toString().toLowerCase().includes('delete')) {
-          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-          this.log.warn('Successfully pruned accessory: ', accessory.context.device.displayName,
-            'due to being marked for deletion\n');
-          continue;
-
-          //if the config parameters for pruning are set to true, prune any devices that haven't been seen
-          //for more restarts than the accepted ammount
-        } else if (this.config.pruning.pruneMissingCachedAccessories || this.config.pruning.pruneAllAccessoriesNextRestart) {
-          if (accessory.context.device.restartsSinceSeen >= this.config.pruning.restartsBeforeMissingAccessoriesPruned || this.config.pruning.pruneAllAccessoriesNextRestart) {
-            this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-            this.log.warn('Successfully pruned accessory:', accessory.context.device.displayName,
-              'which had not being seen for (', accessory.context.device.restartsSinceSeen, ') restart(s).\n');
-            continue;
-          }
-        }
         //simple warning to notify user that their accessory hasn't been seen in n restarts
-        if (accessory.context.device.restartsSinceSeen > 0) {
+        if (accessory.context.restartsSinceSeen > 0) {
           //logic for removing blacklisted devices
 
           if (!this.isAllowed(accessory.context.device.uniqueId)) {

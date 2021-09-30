@@ -20,12 +20,12 @@ const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
 
 class AccessoryGenerator {
-	private log;
 
 	public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
 
 	private hap: HAP;
 	private api: API;
+	private log;
 	private config: PlatformConfig;
 	private controllerGenerator: ControllerGenerator;
 
@@ -71,29 +71,7 @@ class AccessoryGenerator {
 
 	rescanAccessories(controllers: Map<string, BaseController>) {
 
-		const newAccessoriesList: MagicHomeAccessory[] = [];
-
-		controllers.forEach((controller) => {
-			const {
-				protoDevice: { uniqueId, ipAddress, modelNumber },
-				deviceState, deviceAPI,
-			} = controller.getCachedDeviceInformation();
-			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
-
-			if (this.accessoriesFromDiskMap[homebridgeUUID]) {
-				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
-				this.accessoriesFromDiskMap.delete[homebridgeUUID];
-				this.processExistingAccessory(existingAccessory);
-
-			} else {
-				const newAccessory = this.createNewAccessory({ controller, homebridgeUUID });
-				newAccessoriesList.push(newAccessory);				//add it to new accessory list
-				this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
-			}
-
-		});
-
-		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
+		//
 	}
 
 	discoverAccessories(controllers: Map<string, BaseController>) {
@@ -111,8 +89,7 @@ class AccessoryGenerator {
 			if (this.accessoriesFromDiskMap[homebridgeUUID]) {
 
 				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
-				const ipAddressOld = controller.getCachedDeviceInformation().protoDevice.ipAddress;
-				const processedAccessory = this.processExistingAccessory({ existingAccessory, ipAddressNew });
+				const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
 
 				this.accessoriesFromDiskMap.delete[homebridgeUUID];
 
@@ -121,7 +98,7 @@ class AccessoryGenerator {
 				this.log.printDeviceInfo('Registering existing accessory...!', processedAccessory);
 
 			} else {
-				const newAccessory = this.createNewAccessory({ controller, homebridgeUUID });
+				const newAccessory = this.createNewAccessory(controller, homebridgeUUID);
 				newAccessoriesList.push(newAccessory);				//add it to new accessory list
 				this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
 			}
@@ -132,19 +109,18 @@ class AccessoryGenerator {
 		this.registerExistingAccessories(existingAccessoriesList);
 	}
 
-	createNewAccessory({ controller, homebridgeUUID }): MagicHomeAccessory {
+	createNewAccessory(controller: BaseController, homebridgeUUID: string): MagicHomeAccessory {
 		const {
 			protoDevice: { uniqueId, ipAddress, modelNumber },
 			deviceState, deviceAPI: { description },
 		} = controller.getCachedDeviceInformation();
 
 		if (!this.isAllowed(uniqueId)) {
-			this.log.warn(`Warning! New device with Unique ID: ${uniqueId} is blacklisted or is not whitelisted.\n`);
 			return;
 		}
 
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
-		newAccessory.context = { displayName: description, scansSinceSeen: 0 };
+		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0, cachedController: controller };
 		try {
 			new homekitInterface[description](this, newAccessory, this.config, controller);
 		} catch (error) {
@@ -154,25 +130,19 @@ class AccessoryGenerator {
 		return newAccessory;
 	}
 
-	processExistingAccessory({ controller, existingAccessory }) {
-
-		const deviceInfo = existingAccessory.context.controller.getCachedDeviceInformation();
+	processExistingAccessory(controller: BaseController, existingAccessory: MagicHomeAccessory) {
 		const {
 			protoDevice: { uniqueId, ipAddress, modelNumber },
 			deviceState, deviceAPI: { description },
-		} = deviceInfo;
+		} = controller.getCachedDeviceInformation();
 
-
-		if (!this.isAllowed(uniqueId)) {
-			this.log.warn(`Warning! New device with Unique ID: ${uniqueId} is blacklisted or is not whitelisted.\n`);
+		if (!this.isAllowed(uniqueId) || !this.isFresh(existingAccessory)) {
 			return;
 		}
 
-		if (ipAddressNew !== ipAddress) {
-			deviceInfo.protoDevice.ipAddress = ipAddressNew;
-		}
+		existingAccessory.context.cachedController = controller;
 
-
+		return existingAccessory;
 
 	}
 
@@ -186,8 +156,32 @@ class AccessoryGenerator {
 		this.api.updatePlatformAccessories(existingAccessories);
 	}
 
+	isFresh(existingAccessory: MagicHomeAccessory): boolean {
+		const cachedDeviceInfo = existingAccessory.context.cachedController.getCachedDeviceInformation();
+		let isFresh = true;
+		const {
+			protoDevice: { uniqueId, ipAddress, modelNumber },
+			deviceState, deviceAPI: { description },
+		} = cachedDeviceInfo;
 
-	isAllowed(uniqueId): boolean {
+		if (existingAccessory.context.displayName.toString().toLowerCase().includes('delete')) {
+
+			this.unregisterAccessory(existingAccessory,
+				`Successfully pruned accessory: ${existingAccessory.context.displayName} 
+				due to being marked for deletion\n`);
+			isFresh = false;
+		} else if (this.config.pruning.has('pruneRestarts')) {
+			if (existingAccessory.context.restartsSinceSeen >= this.config.pruning.pruneRestarts) {
+				this.unregisterAccessory(existingAccessory, `Successfully pruned accessory: ${existingAccessory.context.displayName}
+					which had not being seen for ${existingAccessory.context.restartsSinceSeen} restart(s).\n`);
+				isFresh = false;
+			}
+		}
+
+		return isFresh;
+	}
+
+	isAllowed(uniqueId: string): boolean {
 
 		const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs;
 		const isWhitelist: boolean = this.config.deviceManagement.blacklistOrWhitelist.includes('whitelist');
@@ -196,6 +190,11 @@ class AccessoryGenerator {
 		const isAllowed = isWhitelist ? onList : !onList;
 
 		return isAllowed;
+	}
+
+	unregisterAccessory(existingAccessory: MagicHomeAccessory, reason: string) {
+		this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+		this.log.warn(reason);
 	}
 
 	//    const accessory = new this.api.platformAccessory(deviceQueryData.lightParameters.convenientName, generatedUUID) as MagicHomeAccessory;

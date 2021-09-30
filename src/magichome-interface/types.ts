@@ -34,7 +34,8 @@ export interface IColorHSL {
 export interface MagicHomeAccessory extends PlatformAccessory {
 	context: {
 		displayName: string;
-		scansSinceSeen: number,
+		restartsSinceSeen: number,
 		pendingRegistration?: boolean;
+		cachedController: BaseController;
 	}
 }
