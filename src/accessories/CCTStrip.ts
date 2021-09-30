@@ -33,7 +33,7 @@ export class CCTStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       // + (this.lightState.whiteValues.warmWhite/1.27)), 0, 100));
     }
     
-    this.cacheCurrentLightState();
+    //this.cacheCurrentLightState();
   }
     
 }

@@ -8,7 +8,7 @@ export class Switch extends HomebridgeMagichomeDynamicPlatformAccessory {
    */
   async updateHomekitState() {
  
-    this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
+    // this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
 
   }
     

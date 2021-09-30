@@ -36,6 +36,6 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 		displayName: string;
 		restartsSinceSeen: number,
 		pendingRegistration?: boolean;
-		cachedController: BaseController;
+		cachedInformation;
 	}
 }

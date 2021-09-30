@@ -56,25 +56,25 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
-    if(this.eightByteProtocol == 0){
-      await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
-    } else if(this.eightByteProtocol == 1){
-      await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F]);
-    } else if (this.eightByteProtocol == 2){
-      this.eightByteProtocol = (await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
-      await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
-    }
+    // if(this.eightByteProtocol == 0){
+    //   await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
+    // } else if(this.eightByteProtocol == 1){
+    //   await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F]);
+    // } else if (this.eightByteProtocol == 2){
+    //   this.eightByteProtocol = (await this.send([0x31, r, g, b, ww, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
+    //   await this.send([0x31, r, g, b, ww, mask, 0x0F]); //8th byte checksum calculated later in send()
+    // }
     
   }//setColor
     
   async updateHomekitState(){
-    this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
-    this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    } else if (this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp((this.lightState.whiteValues.warmWhite/2.55), 0, 100));
-    }
+    // this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
+    // this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
+    // this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
+    // if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
+    //   this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
+    // } else if (this.lightState.isOn){
+    //   this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp((this.lightState.whiteValues.warmWhite/2.55), 0, 100));
+    // }
   }
 }
