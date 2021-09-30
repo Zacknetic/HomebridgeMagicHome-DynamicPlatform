@@ -1,79 +1,41 @@
 import type { PlatformAccessory } from 'homebridge';
+import { BaseController } from 'magichome-platform';
 
-export interface IDeviceDiscoveredProps {
-    ipAddress: string;
-    uniqueId: string;
-    modelNumber: string;
-}
+import { Switch } from '../accessories/Switch';
+import { DimmerStrip } from '../accessories/DimmerStrip';
+import { RGBStrip } from '../accessories/RGBStrip';
+import { GRBStrip } from '../accessories/GRBStrip';
+import { RGBWBulb } from '../accessories/RGBWBulb';
+import { RGBWWBulb } from '../accessories/RGBWWBulb';
+import { RGBWStrip } from '../accessories/RGBWStrip';
+import { RGBWWStrip } from '../accessories/RGBWWStrip';
+import { CCTStrip } from '../accessories/CCTStrip';
 
-export interface IDeviceQueriedProps {
-    lightParameters: ILightParameters;
-    controllerHardwareVersion: string | number;
-    controllerFirmwareVersion: string | number;
-}
 
-export interface ILightParameters {
-    controllerLogicType: ControllerTypes;
-    convenientName: string;
-    simultaneousCCT: boolean;
-    hasColor:  boolean;
-    hasCCT:  boolean;
-    hasBrightness: boolean;
-}
-
-export enum ControllerTypes {
-    RGBWStrip = 'RGBWStrip',
-    RGBWWStrip = 'RGBWWStrip',
-    CCTStrip = 'CCTStrip',
-    DimmerStrip = 'DimmerStrip',
-    GRBStrip = 'GRBStrip',
-    RGBWWBulb = 'RGBWWBulb',
-    RGBWBulb = 'RGBWBulb',
-    Switch = 'Switch',
-    RGBStrip = 'RGBStrip'
-}
-
-export type IDeviceProps = IDeviceDiscoveredProps & IDeviceQueriedProps & {
-    UUID: string;
-    cachedIPAddress: string;
-    displayName: string;
-    restartsSinceSeen: number;
-    lastKnownState?: ILightState;
-}
-
-export interface ILightState {
-    isOn: boolean;
-    RGB: IColorRGB;
-    HSL?: IColorHSL;
-    whiteValues:  IWhites;
-    brightness?: number;
-    colorTemperature?: number;
-    debugBuffer?: Buffer;
-    controllerHardwareVersion?: string;
-    controllerFirmwareVersion?: string;
-}
-
-export interface IColorRGB {
-    red: number; 
-    green: number; 
-    blue:number;
-}
+export const homekitInterface = {
+	'Power Socket': Switch,
+	'Dimmer': DimmerStrip,
+	'GRB Strip': GRBStrip,
+	'RGB Strip': RGBStrip,
+	'RGBW Non-Simultaneous': RGBWBulb,
+	'RGBWW Non-Simultaneous': RGBWWBulb,
+	'RGBW Simultaneous': RGBWStrip,
+	'RGBWW Simultaneous': RGBWWStrip,
+	'CCT Strip': CCTStrip,
+};
 
 export interface IColorHSL {
-    hue: number; 
-    saturation: number; 
-    luminance: number;
+	hue: number;
+	saturation: number;
+	luminance: number;
 }
 
-export interface IWhites {
-    warmWhite: number; 
-    coldWhite: number; 
-}
 
-export interface MagicHomeAccessory extends PlatformAccessory{
-    context: {
-      displayName: string;
-      device: IDeviceProps;
-      pendingRegistration?: boolean;
-    }
-  } 
+export interface MagicHomeAccessory extends PlatformAccessory {
+	context: {
+		displayName: string;
+		scansSinceSeen: number,
+		controller: BaseController;
+		pendingRegistration?: boolean;
+	}
+}
