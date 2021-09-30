@@ -112,12 +112,12 @@ class AccessoryGenerator {
 
 				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
 				const ipAddressOld = controller.getCachedDeviceInformation().protoDevice.ipAddress;
-				const processedAccessory = this.processExistingAccessory({existingAccessory, ipAddressNew});
+				const processedAccessory = this.processExistingAccessory({ existingAccessory, ipAddressNew });
 
 				this.accessoriesFromDiskMap.delete[homebridgeUUID];
 
 				existingAccessoriesList.push(processedAccessory);
-		
+
 				this.log.printDeviceInfo('Registering existing accessory...!', processedAccessory);
 
 			} else {
@@ -148,28 +148,28 @@ class AccessoryGenerator {
 		try {
 			new homekitInterface[description](this, newAccessory, this.config, controller);
 		} catch (error) {
-			this.log.error('[1] The controllerLogicType does not exist in accessoryType list. Did you migrate this? controllerLogicType=', accessory.context.device?.lightParameters?.controllerLogicType);
-			this.log.error('device object: ', newAccessory.context.controller);
+			this.log.error('The controllerLogicType does not exist in accessoryType list.');
 		}
 
 		return newAccessory;
 	}
 
-	processExistingAccessory({existingAccessory, ipAddressNew}) {
- const deviceInfo = existingAccessory.context.controller.getCachedDeviceInformation();
- const {
-	protoDevice: { uniqueId, ipAddress, modelNumber },
-	deviceState, deviceAPI: { description },
-} = deviceInfo;
-		
+	processExistingAccessory({ controller, existingAccessory }) {
+
+		const deviceInfo = existingAccessory.context.controller.getCachedDeviceInformation();
+		const {
+			protoDevice: { uniqueId, ipAddress, modelNumber },
+			deviceState, deviceAPI: { description },
+		} = deviceInfo;
+
 
 		if (!this.isAllowed(uniqueId)) {
 			this.log.warn(`Warning! New device with Unique ID: ${uniqueId} is blacklisted or is not whitelisted.\n`);
 			return;
 		}
 
-		if(ipAddressNew !== ipAddress) {
-			ipAddress = ipAddressNew;
+		if (ipAddressNew !== ipAddress) {
+			deviceInfo.protoDevice.ipAddress = ipAddressNew;
 		}
 
 

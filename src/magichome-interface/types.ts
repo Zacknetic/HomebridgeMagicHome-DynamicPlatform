@@ -35,7 +35,6 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 	context: {
 		displayName: string;
 		scansSinceSeen: number,
-		controller: BaseController;
 		pendingRegistration?: boolean;
 	}
 }
