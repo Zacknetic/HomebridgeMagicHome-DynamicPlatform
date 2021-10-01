@@ -69,9 +69,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.queue.on('end', async () => {
 
       timeout = setTimeout(async () => {
-        this.logs.warn('FINAL STATE', this.latestDeviceCommand);
+        this.logs.warn(this.accessory.displayName,': FINAL STATE', this.latestDeviceCommand);
         const options: ICommandOptions = { verifyRetries: 10, bufferMS: 0, timeoutMS: 200 };
-        const deviceState = await this.controller.setAllValues(this.latestDeviceCommand, options);
+        let deviceState: IDeviceState;
+        if(this.latestDeviceCommand.isOn){
+          deviceState = await this.controller.setAllValues(this.latestDeviceCommand, options);
+        } else {
+          deviceState = await this.controller.setOn(false, options);
+        }
         this.accessory.context.cachedAccessoryState = this.accessoryState;
         //this.accessoryState = deviceStateToAccessoryState(deviceState);
       }, 500);
@@ -404,7 +409,11 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       const options: ICommandOptions = { verifyRetries: 0, bufferMS: 0, timeoutMS: 20 };
       this.accessoryState = Object.assign(accessoryCommand);
       this.logs.warn(deviceCommand);
-      return this.controller.setAllValues(deviceCommand, options);
+      if(deviceCommand.isOn){
+        return this.controller.setAllValues(deviceCommand, options);
+      } else {
+        return this.controller.setOn(false, options);
+      }
     });
 
   }
