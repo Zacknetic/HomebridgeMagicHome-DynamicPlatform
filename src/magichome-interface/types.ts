@@ -25,13 +25,6 @@ export const homekitInterface = {
 	'CCT Strip': CCTStrip,
 };
 
-export interface IColorHSL {
-	hue: number;
-	saturation: number;
-	luminance: number;
-}
-
-
 export interface MagicHomeAccessory extends PlatformAccessory {
 	context: {
 		displayName: string;
@@ -41,9 +34,35 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 	}
 }
 
-export interface IAccessoryState extends IDeviceCommand {
+export interface IAccessoryState {
 	isOn: boolean,
 	HSL: IColorHSL,
 	colorTemperature: number,
 	brightness: number,
 }
+
+export interface IAccessoryCommand {
+	isOn?: boolean,
+	HSL?: IColorHSL,
+	colorTemperature?: number,
+	brightness?: number,
+}
+
+export interface IColorHSL {
+	hue?: number;
+	saturation?: number;
+	luminance?: number;
+}
+
+/*----------------------[Constants]----------------------*/
+
+export const DefaultAccessoryCommand = {
+	isOn: true,
+	HSL: {
+		hue: 0,
+		saturation: 100,
+		luminance: 0,
+	},
+	colorTemperature: 0,
+	brightness: 100,
+};

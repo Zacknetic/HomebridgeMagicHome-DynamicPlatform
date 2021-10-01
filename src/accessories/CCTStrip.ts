@@ -5,8 +5,8 @@ export class CCTStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   
   async updateDeviceState(_timeout = 200) {
 
-    //**** local variables ****\\
-    const CCT = this.lightState.CCT;
+    // //**** local variables ****\\
+    // const CCT = this.lightState.CCT;
     
     //we default the mask to turn on color. Other values can still be set, they just wont turn on
     
@@ -27,11 +27,11 @@ export class CCTStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //   this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
   //  this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
     //this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    if (this.lightState.isOn){
+    // if (this.lightState.isOn){
       // this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp((
       // (this.lightState.whiteValues.coldWhite/1.27) 
       // + (this.lightState.whiteValues.warmWhite/1.27)), 0, 100));
-    }
+    // }
     
     //this.cacheCurrentLightState();
   }

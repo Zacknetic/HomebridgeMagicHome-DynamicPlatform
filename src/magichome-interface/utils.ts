@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
+import { IColorCCT, IColorRGB } from 'magichome-platform/dist/types';
+import { IColorHSL } from './types';
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -22,7 +24,7 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // Start Convert RGBtoHSL //
-export function convertRGBtoHSL({red, green, blue}) {
+export function convertRGBtoHSL({ red, green, blue }) {
   const r = red / 255;
   const g = green / 255;
   const b = blue / 255;
@@ -57,9 +59,9 @@ export function convertRGBtoHSL({red, green, blue}) {
   } else {
     s = delta / (2 - max - min);
   }
-  const HSL = {hue: h, saturation: s * 100, luminance: l * 100};
+  const HSL = { hue: h, saturation: s * 100, luminance: l * 100 };
   return HSL;
-} 
+}
 
 export function hue2rgb(p: number, q: number, t: number) {
   if (t < 0) {
@@ -70,7 +72,7 @@ export function hue2rgb(p: number, q: number, t: number) {
   }
   if (t < 1 / 6) {
     return p + (q - p) * 6 * t;
-  }  
+  }
   if (t < 1 / 2) {
     return q;
   }
@@ -84,10 +86,13 @@ export function hue2rgb(p: number, q: number, t: number) {
 //=================================================
 // End Convert RGBtoHSL //
 
-        
+
 //=================================================
 // Start Convert HSLtoRGB //
-export function convertHSLtoRGB ({hue, saturation, luminance}) {
+export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
+
+  let RGB: IColorRGB;
+  const { hue, saturation, luminance } = HSL;
   const h = hue / 360;
   const s = saturation / 100;
   const l = 50 / 100;
@@ -97,7 +102,7 @@ export function convertHSLtoRGB ({hue, saturation, luminance}) {
 
   if (s === 0) {
     val = l * 255;
-    return [val, val, val];
+    RGB = {red: val, green: val, blue: val};
   }
 
   if (l < 0.5) {
@@ -131,8 +136,8 @@ export function convertHSLtoRGB ({hue, saturation, luminance}) {
 
     rgb[i] = val * 255;
   }
-
-  return rgb;
+  RGB = {red: rgb[0], green: rgb[1], blue: rgb[2]};
+  return RGB;
 }
 //=================================================
 // End Convert HSLtoRGB //
