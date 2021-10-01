@@ -1,5 +1,5 @@
 import { BaseController, ControllerGenerator } from 'magichome-platform';
-import { MagicHomeAccessory } from './magichome-interface/types';
+import { IAccessoryState, MagicHomeAccessory } from './magichome-interface/types';
 import {
 	API,
 	HAP,
@@ -8,6 +8,7 @@ import {
 
 import { homekitInterface } from './magichome-interface/types';
 import { config } from 'process';
+import { convertRGBtoHSL } from './magichome-interface/utils';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
@@ -76,7 +77,7 @@ export class AccessoryGenerator {
 		const existingAccessoriesList: MagicHomeAccessory[] = [];
 
 		for (const [uniqueId, controller] of Object.entries(controllers)) {
-			this.log.warn(controller);
+			// this.log.warn(controller);
 
 			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
 
@@ -108,19 +109,24 @@ export class AccessoryGenerator {
 
 	createNewAccessory(controller: BaseController, homebridgeUUID: string): MagicHomeAccessory {
 
-		const cachedInformation = controller.getCachedDeviceInformation();
 		const {
-			protoDevice: { uniqueId, ipAddress, modelNumber },
-			deviceState, deviceAPI: { description },
-		} = cachedInformation;
-
+			protoDevice: { uniqueId },
+			deviceAPI: { description },
+			deviceState: {LED: { RGB, CCT, isOn}},
+		} = controller.getCachedDeviceInformation();
 
 		if (!this.isAllowed(uniqueId)) {
 			return;
 		}
 
+		// //convert RGB to HSL
+		// //convert CCT to colorTemperature
+		// const HSL = convertRGBtoHSL(RGB)
+		// const 
+		// const accessoryState: IAccessoryState = {isOn, }			JUST KIDDING, DO IT AFTER INITIALIZING DEVICE
+
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
-		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0, cachedInformation };
+		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0 };
 
 		try {
 			new homekitInterface[description](this.hap, this.api, newAccessory, this.config, controller);
@@ -142,7 +148,7 @@ export class AccessoryGenerator {
 			return;
 		}
 
-		existingAccessory.context.cachedInformation = cachedInformation;
+		//existingAccessory.context.cachedInformation = cachedInformation; SAME HERE
 		try {
 			new homekitInterface[description](this.hap, this.api, existingAccessory, this.config, controller);
 		} catch (error) {
