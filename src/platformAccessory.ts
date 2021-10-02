@@ -7,12 +7,12 @@ import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/u
 import { getLogs } from './logs';
 import { DefaultAccessoryCommand, IAccessoryCommand, IAccessoryState, MagicHomeAccessory } from './magichome-interface/types';
 import { BaseController, ICommandOptions } from 'magichome-platform';
-
+import { _ } from 'lodash';
 import Queue from 'queue-promise';
 import { DefaultCommand, IDeviceCommand, IDeviceState, DeviceWriteStatus } from 'magichome-platform/dist/types';
 
 const { ready, pending, busy } = DeviceWriteStatus;
-const BUFFER_MS = 20;
+const BUFFER_MS = 50;
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -57,7 +57,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.queue = new Queue({
       concurrent: 1,
-      interval: 50,
+      interval: 20,
     });
 
     let timeout;
@@ -69,10 +69,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.queue.on('end', async () => {
 
       timeout = setTimeout(async () => {
-        this.logs.warn(this.accessory.displayName,': FINAL STATE', this.latestDeviceCommand);
+        this.logs.warn(this.accessory.displayName, ': FINAL STATE', this.latestDeviceCommand);
         const options: ICommandOptions = { verifyRetries: 10, bufferMS: 0, timeoutMS: 200 };
         let deviceState: IDeviceState;
-        if(this.latestDeviceCommand.isOn){
+        if (this.latestDeviceCommand.isOn) {
           deviceState = await this.controller.setAllValues(this.latestDeviceCommand, options);
         } else {
           deviceState = await this.controller.setOn(false, options);
@@ -183,7 +183,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //this.updateLocalState();
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    //this.service.setCharacteristic(hap.Characteristic.Name,  this.myDevice.displayName);
 
     // this.logListeners();
 
@@ -196,9 +195,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // Start Setters //
 
   setConfiguredName(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+
     const name: string = value.toString();
     this.logs.debug('Renaming device to %o', name);
-    this.accessory.displayName = name;
+    this.accessory.context.displayName = name;
+    // this.service.setCharacteristic(this.hap.Characteristic.Name,  value);
+
     this.api.updatePlatformAccessories([this.accessory]);
 
     callback(null);
@@ -211,32 +213,33 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    //this.logs.debug('Setting accessory %o\'s Hue value: %o', this.myDevice.displayName, value);
+    this.logs.warn('Setting accessory %o\'s Hue value: %o', this.accessory.context.displayName, value);
 
     callback(null);
     this.setColortemp = false;
 
-    const accessoryCommand: IAccessoryCommand = {isOn: true, HSL: { hue: value as number } };
+    const accessoryCommand: IAccessoryCommand = { isOn: true, HSL: { hue: value as number } };
     this.processAccessoryCommand(accessoryCommand);
   }
 
   setSaturation(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    //this.logs.debug('Setting accessory %o\'s Saturation value: %o', this.myDevice.displayName, value);
+    this.logs.warn('Setting accessory %o\'s Saturation value: %o', this.accessory.displayName, value);
 
     callback(null);
     this.setColortemp = false;
 
 
-    const accessoryCommand: IAccessoryCommand = {isOn: true, HSL: { saturation: value as number } };
+    const accessoryCommand: IAccessoryCommand = { isOn: true, HSL: { saturation: value as number } };
     this.processAccessoryCommand(accessoryCommand);
   }
 
-  setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-    //this.logs.debug('Setting accessory %o\'s Brightness value: %o', this.myDevice.displayName, value);
+  async setBrightness(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+    this.logs.warn('Setting accessory %o\'s Brightness value: %o', this.accessory.context.displayName, value);
 
     callback(null);
 
-    const accessoryCommand: IAccessoryCommand = {isOn: true, brightness: value as number };
+    const accessoryCommand: IAccessoryCommand = { isOn: true, brightness: value as number };
+    this.logs.error(accessoryCommand);
     this.processAccessoryCommand(accessoryCommand);
   }
 
@@ -360,6 +363,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
     const deviceWriteStatus = this.deviceWriteStatus;
+    this.logs.info(this.deviceWriteStatus);
     switch (deviceWriteStatus) {
       case ready:
 
@@ -367,16 +371,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         await this.writeStateToDevice(accessoryCommand).then((msg) => {
           //error logging
         }).finally(() => {
-          this.newAccessoryCommand = DefaultCommand;
+          //this.newAccessoryCommand = DefaultCommand;
           this.deviceWriteStatus = ready;
         });
         break;
 
       case pending:
-
-        //this.newAccessoryCommand = Object.assign({}, this.newAccessoryCommand, accessoryCommand);
-        this.newAccessoryCommand.HSL = Object.assign({}, this.newAccessoryCommand.HSL, accessoryCommand.HSL);
-        this.logs.warn('PENDING', this.newAccessoryCommand);
+        _.merge(this.newAccessoryCommand, accessoryCommand);
+        // Object.assign(this.newAccessoryCommand, accessoryCommand);
+        // Object.assign(this.newAccessoryCommand.HSL, accessoryCommand.HSL);
+        //this.logs.warn('PENDING', this.newAccessoryCommand);
         break;
     }
   }
@@ -386,11 +390,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     return new Promise<unknown>((resolve, reject) => {
 
       return setTimeout(() => {
+        this.logs.warn(this.accessory.context.displayName, '\nthis.accessoryState: ', this.accessoryState, '\n this.newAccessoryCommand: ', this.newAccessoryCommand);
+        const sanitizedAcessoryCommand = _.merge({}, this.accessoryState, this.newAccessoryCommand);
+        // const sanitizedAcessoryCommand = Object.assign({}, this.accessoryState, this.newAccessoryCommand);
+        // sanitizedAcessoryCommand.HSL = Object.assign({}, this.accessoryState.HSL, this.newAccessoryCommand.HSL);
+        this.logs.warn('\nSanatizedCommand: ', sanitizedAcessoryCommand);
 
-        const sanitizedAcessoryCommand = Object.assign({}, this.accessoryState, this.newAccessoryCommand);
-        sanitizedAcessoryCommand.HSL = Object.assign({}, this.accessoryState.HSL, this.newAccessoryCommand.HSL);
-
-        this.logs.warn(sanitizedAcessoryCommand);
+        //this.logs.warn(sanitizedAcessoryCommand);
         this.deviceWriteStatus = ready;
         //console.log('everything is probably fine', this.deviceAPI.description, this.protoDevice.uniqueId, this.deviceState.controllerHardwareVersion.toString(16), this.deviceAPI.needsPowerCommand, this.deviceState.controllerFirmwareVersion)
 
@@ -402,20 +408,31 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   async prepareCommand(accessoryCommand: IAccessoryCommand) {
-    const deviceCommand = accessoryCommandToDeviceCommand(accessoryCommand);
+    const deviceCommand = this.accessoryCommandToDeviceCommand(accessoryCommand);
     this.latestDeviceCommand = deviceCommand;
 
     this.queue.enqueue(() => {
-      const options: ICommandOptions = { verifyRetries: 0, bufferMS: 0, timeoutMS: 20 };
+      const options: ICommandOptions = { verifyRetries: 0, bufferMS: 0, timeoutMS: 100 };
       this.accessoryState = Object.assign(accessoryCommand);
-      this.logs.warn(deviceCommand);
-      if(deviceCommand.isOn){
+      //this.logs.warn(deviceCommand);
+      if (deviceCommand.isOn) {
         return this.controller.setAllValues(deviceCommand, options);
       } else {
         return this.controller.setOn(false, options);
       }
     });
 
+  }
+
+  protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
+    const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
+    const RGB = convertHSLtoRGB(HSL);
+    RGB.red = Math.round((RGB.red / 100) * brightness);
+    RGB.green = Math.round((RGB.green / 100) * brightness);
+    RGB.blue = Math.round((RGB.blue / 100) * brightness);
+
+    const deviceCommand: IDeviceCommand = { isOn, RGB };
+    return deviceCommand;
   }
 
   // /**
@@ -449,13 +466,4 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 //   //
 // }
 
-function accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
-  const {isOn, HSL, colorTemperature, brightness } = accessoryCommand;
-  const RGB = convertHSLtoRGB(HSL);
-  RGB.red = Math.round((RGB.red / 100) * brightness);
-  RGB.green = Math.round((RGB.green / 100) * brightness);
-  RGB.blue = Math.round((RGB.blue / 100) * brightness);
 
-  const deviceCommand: IDeviceCommand = {isOn, RGB};
-  return deviceCommand;
-}

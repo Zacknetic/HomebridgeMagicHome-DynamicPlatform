@@ -102,7 +102,7 @@ export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
 
   if (s === 0) {
     val = l * 255;
-    RGB = {red: val, green: val, blue: val};
+    RGB = { red: val, green: val, blue: val };
   }
 
   if (l < 0.5) {
@@ -136,7 +136,7 @@ export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
 
     rgb[i] = val * 255;
   }
-  RGB = {red: rgb[0], green: rgb[1], blue: rgb[2]};
+  RGB = { red: rgb[0], green: rgb[1], blue: rgb[2] };
   return RGB;
 }
 //=================================================
@@ -156,6 +156,39 @@ export function loadJson<T>(file: string, replacement: T): T {
   }
   return parseJson<T>(readFileSync(file).toString(), replacement);
 }
+
+/**
+ ** @calculateWhiteColor
+ *  determine warmWhite/coldWhite values from hue
+ *  the closer to 0/360 the weaker coldWhite brightness becomes
+ *  the closer to 180 the weaker warmWhite brightness becomes
+ *  the closer to 90/270 the stronger both warmWhite and coldWhite become simultaniously
+ */
+export function convertHueToColorCCT(hue: number): IColorCCT {
+  let multiplier = 0;
+  const colorCCT = { warmWhite: 0, coldWhite: 0 };
+
+
+  if (hue <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
+    colorCCT.warmWhite = 255;
+    multiplier = ((hue / 90));
+    colorCCT.coldWhite = Math.round((255 * multiplier));
+  } else if (hue > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
+    colorCCT.warmWhite = 255;
+    multiplier = (1 - (hue - 270) / 90);
+    colorCCT.coldWhite = Math.round((255 * multiplier));
+  } else if (hue > 180 && hue <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
+    colorCCT.coldWhite = 255;
+    multiplier = ((hue - 180) / 90);
+    colorCCT.warmWhite = Math.round((255 * multiplier));
+  } else if (hue > 90 && hue <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
+    colorCCT.coldWhite = 255;
+    multiplier = (1 - (hue - 90) / 90);
+    colorCCT.warmWhite = Math.round((255 * multiplier));
+  }
+  
+  return colorCCT;
+} //hueToWhiteTemperature
 
 //Unused
 

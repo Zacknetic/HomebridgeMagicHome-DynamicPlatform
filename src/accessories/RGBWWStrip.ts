@@ -1,82 +1,80 @@
-import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/utils';
+import { IColorRGB, IDeviceCommand } from 'magichome-platform/dist/types';
+import { IAccessoryCommand } from '../magichome-interface/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
-    
-  async updateDeviceState() {
 
-    // //**** local variables ****\\
-    // const hsl = this.lightState.HSL;
-    // let [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-    // const whites = this.hueToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
-    // const brightness = this.lightState.brightness;
-    
-    // //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    // //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-    
-    // let mask = 0xFF;
+  protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
 
-    // //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
-    // //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
-    // let r = Math.round(((clamp(red, 0, 255) / 100) * brightness));
-    // let g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
-    // let b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
-    // let ww = Math.round(((clamp(whites.warmWhite, 0, 255) / 100) * brightness));
-    // let cw = Math.round(((clamp(whites.coldWhite, 0, 255) / 100) * brightness));
+    const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
+    const {hue, saturation} = HSL;
+    let RGB:IColorRGB = convertHSLtoRGB(HSL);
+    const CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
 
+    let {red, green, blue} = RGB, {warmWhite, coldWhite} = CCT;
 
-    // if (hsl.hue == 31 && hsl.saturation == 33) {
+    //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
+    //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
 
-    //   r = 0;
-    //   g = 0;
-    //   b = 0;
-    //   ww = Math.round((255 / 100) * brightness);
-    //   cw = 0;
-    //   mask = 0x0F;
-    //   //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+    let colorMask = 0xFF;
 
-    // } else if (hsl.hue == 208 && hsl.saturation == 17) {
-    //   r = 0;
-    //   g = 0;
-    //   b = 0;
-    //   ww = 0;
-    //   cw = Math.round((255 / 100) * brightness);
-    //   mask = 0x0F;
-    //   // this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
+    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
+    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
+    red = Math.round((red / 100) * brightness);
+    green = Math.round((green / 100) * brightness);
+    blue = Math.round((blue / 100) * brightness);
+    warmWhite = Math.round((warmWhite / 100) * brightness);
+    coldWhite = Math.round((coldWhite / 100) * brightness);
 
-    //   //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
-    //   //White colors were already calculated above
-    // } else if (hsl.saturation < this.colorOffThresholdSimultaniousDevices) {
-    //   // this.platform.log.debug('Turning off color');
-    //   r = 0;
-    //   g = 0;
-    //   b = 0;
-    //   //  this.platform.log.debug('Setting only white: ww:%o cw:%o', ww, cw);
+    if (hue == 31 && saturation == 33) {
 
-    //   //else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
-    //   //set RGB to 100% saturation and 100% brightness
-    //   //this allows brightness to only affect the white colors, creating beautiful white+color balance
-    //   //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
-    //   //the white brightness effectively acts as the saturation value
-    // } else if (hsl.saturation < this.colorWhiteThresholdSimultaniousDevices && this.simultaniousDevicesColorWhite) {
-            
-    //   [red, green, blue] = convertHSLtoRGB({ hue: hsl.hue, saturation: 100, luminance: hsl.luminance}); //re-generate rgb with full saturation
-    //   r = red;
-    //   g = green;
-    //   b = blue;
-    //   // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
+      red = 0;
+      green = 0;
+      blue = 0;
+      coldWhite = 0;
+      colorMask = 0x0F;
+      //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
 
-    //   //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
-    // } else {
-    //   ww = 0;
-    //   cw = 0;
-    //   // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
-    // }
+    } else if (hue == 208 && saturation == 17) {
+      red = 0;
+      green = 0;
+      blue = 0;
+      warmWhite = 0;
+      colorMask = 0x0F;
+      // this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
 
-    // await this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
-    
+      //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
+      //White colors were already calculated above
+    } else if (saturation < 20) {
+      // this.platform.log.debug('Turning off color');
+      red = 0;
+      green = 0;
+      blue = 0;
+      //  this.platform.log.debug('Setting only white: ww:%o cw:%o', ww, cw);
+
+      //else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
+      //set RGB to 100% saturation and 100% brightness
+      //this allows brightness to only affect the white colors, creating beautiful white+color balance
+      //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
+      //the white brightness effectively acts as the saturation value
+    } else if (saturation < 50) {
+
+     RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+     
+      // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
+
+      //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
+    } else {
+      warmWhite = 0;
+      coldWhite = 0;
+      // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
+    }
+
+    const deviceCommand: IDeviceCommand = { isOn, RGB:{red, green, blue}, CCT: {warmWhite, coldWhite}, colorMask};
+    return deviceCommand;
   }//setColor
-    
+
   async updateHomekitState() {
     // this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
     // this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
@@ -94,5 +92,5 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     //   }
     // }
   }
-  
+
 }

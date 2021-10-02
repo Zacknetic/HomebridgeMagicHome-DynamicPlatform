@@ -148,6 +148,8 @@ export class AccessoryGenerator {
 			return;
 		}
 
+		this.log.info(existingAccessory.context.displayName);
+
 		//existingAccessory.context.cachedInformation = cachedInformation; SAME HERE
 		try {
 			new homekitInterface[description](this.hap, this.api, existingAccessory, this.config, controller);
