@@ -56,6 +56,11 @@ export interface IColorHSL {
 
 /*----------------------[Constants]----------------------*/
 
+export const ColorCommandModes = {
+	CCT: 'CCT',
+	HSL: 'HSL',
+};
+
 export const DefaultAccessoryCommand = {
 	isOn: true,
 	HSL: {
@@ -63,6 +68,6 @@ export const DefaultAccessoryCommand = {
 		saturation: 100,
 		luminance: 0,
 	},
-	colorTemperature: 0,
+	colorTemperature: 140,
 	brightness: 100,
 };

@@ -62,9 +62,10 @@
   ],
   "dependencies": {
     "color-convert": "^2.0.1",
+    "homebridge-lib": "^5.1.14",
     "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
-    "magichome-platform": "0.0.9",
+    "magichome-platform": "0.0.11",
     "promise-queue": "^2.2.5",
     "queue-promise": "^2.2.1"
   },

@@ -1,6 +1,6 @@
-import { IColorRGB, IDeviceCommand } from 'magichome-platform/dist/types';
-import { IAccessoryCommand } from '../magichome-interface/types';
-import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../magichome-interface/utils';
+import { IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, clamp } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 
@@ -61,4 +61,34 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, CCT: { warmWhite }, colorMask };
     return deviceCommand;
   }
+
+  deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
+
+    const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    // eslint-disable-next-line prefer-const
+    let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
+    let brightness = 0;
+
+    if (luminance > 0 && isOn) {
+      brightness = luminance;
+    } else if (isOn) {
+      brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+      if (warmWhite > coldWhite) {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
+      } else {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+      }
+    }
+
+    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    return accessoryState;
+  }
+
+  updateHomekitState() {
+    this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessoryState.isOn);
+    this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.accessoryState.HSL.hue);
+    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSL.saturation);
+    this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.accessoryState.brightness);
+  }
+
 }

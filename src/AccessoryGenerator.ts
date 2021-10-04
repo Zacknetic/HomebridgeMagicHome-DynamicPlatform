@@ -7,8 +7,6 @@ import {
 } from 'homebridge';
 
 import { homekitInterface } from './magichome-interface/types';
-import { config } from 'process';
-import { convertRGBtoHSL } from './magichome-interface/utils';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
@@ -35,10 +33,12 @@ export class AccessoryGenerator {
 	public async generateAccessories() {
 		this.log.warn('started to generate accessories');
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
-			return this.discoverAccessories(controllers);
+			const accessories = this.discoverAccessories(controllers);
+			return accessories;
 		}).catch(error => {
 			this.log.error(error);
 		});
+
 
 	}
 
@@ -81,12 +81,12 @@ export class AccessoryGenerator {
 
 			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
 
-			if (this.accessoriesFromDiskMap[homebridgeUUID]) {
+			if (this.accessoriesFromDiskMap.has(homebridgeUUID)) {
 
-				const existingAccessory = this.accessoriesFromDiskMap[homebridgeUUID];
+				const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
 				const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
 
-				this.accessoriesFromDiskMap.delete[homebridgeUUID];
+				this.log.warn(this.accessoriesFromDiskMap.delete(homebridgeUUID));
 
 				existingAccessoriesList.push(processedAccessory);
 				this.log.warn('registering existing accessory');
@@ -101,7 +101,17 @@ export class AccessoryGenerator {
 
 			}
 
+
+
 		}
+
+		// this.accessoriesFromDiskMap.forEach((accessory, homebridgeUUID) => {
+		// 	const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
+		// 	const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
+
+		// 	existingAccessoriesList.push(processedAccessory);
+		// 	this.log.warn('registering accessory that has been unseen');
+		// });
 
 		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
 		this.registerExistingAccessories(existingAccessoriesList);
@@ -112,7 +122,7 @@ export class AccessoryGenerator {
 		const {
 			protoDevice: { uniqueId },
 			deviceAPI: { description },
-			deviceState: {LED: { RGB, CCT, isOn}},
+			deviceState: { LED: { RGB, CCT, isOn } },
 		} = controller.getCachedDeviceInformation();
 
 		if (!this.isAllowed(uniqueId)) {

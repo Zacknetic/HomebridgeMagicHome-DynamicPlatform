@@ -1,6 +1,6 @@
-import { IColorRGB, IDeviceCommand } from 'magichome-platform/dist/types';
-import { IAccessoryCommand } from '../magichome-interface/types';
-import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../magichome-interface/utils';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, clamp } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
@@ -8,11 +8,15 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
-    const {hue, saturation} = HSL;
-    let RGB:IColorRGB = convertHSLtoRGB(HSL);
-    const CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
-
-    let {red, green, blue} = RGB, {warmWhite, coldWhite} = CCT;
+    const { hue, saturation } = HSL;
+    let RGB: IColorRGB = convertHSLtoRGB(HSL);
+    let CCT: IColorCCT;
+    if (this.ColorCommandMode == 'CCT') {
+      CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    } else {
+      CCT = cctToWhiteTemperature(accessoryCommand.colorTemperature);
+    }
+    let { red, green, blue } = RGB, { warmWhite, coldWhite } = CCT;
 
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
@@ -24,6 +28,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     red = Math.round((red / 100) * brightness);
     green = Math.round((green / 100) * brightness);
     blue = Math.round((blue / 100) * brightness);
+
     warmWhite = Math.round((warmWhite / 100) * brightness);
     coldWhite = Math.round((coldWhite / 100) * brightness);
 
@@ -60,8 +65,8 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       //the white brightness effectively acts as the saturation value
     } else if (saturation < 50) {
 
-     RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
-     
+      RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+
       // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
 
       //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
@@ -71,26 +76,37 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
-    const deviceCommand: IDeviceCommand = { isOn, RGB:{red, green, blue}, CCT: {warmWhite, coldWhite}, colorMask};
+    const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, CCT: { warmWhite, coldWhite }, colorMask };
     return deviceCommand;
   }//setColor
 
-  async updateHomekitState() {
-    // this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
-    // this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    // this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    // if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-    //   this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    // } else if (this.lightState.isOn){
-    //   this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp(((this.lightState.whiteValues.coldWhite/2.55) + (this.lightState.whiteValues.warmWhite/2.55)), 0, 100));
-    //   if(this.lightState.whiteValues.warmWhite>this.lightState.whiteValues.coldWhite){
-    //     this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255)));
-    //     this.service.updateCharacteristic(this.platform.Characteristic.Hue, 0);
-    //   } else {
-    //     this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255)));
-    //     this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
-    //   }
-    // }
+  deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
+
+    const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    // eslint-disable-next-line prefer-const
+    let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
+    let brightness = 0;
+
+    if (luminance > 0 && isOn) {
+      brightness = luminance;
+    } else if (isOn) {
+      brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+      if (warmWhite > coldWhite) {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
+      } else {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+      }
+    }
+
+    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    return accessoryState;
+  }
+
+  updateHomekitState() {
+    this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessoryState.isOn);
+    this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.accessoryState.HSL.hue);
+    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSL.saturation);
+    this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.accessoryState.brightness);
   }
 
 }

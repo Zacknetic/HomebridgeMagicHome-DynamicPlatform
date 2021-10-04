@@ -1,25 +1,29 @@
-import { IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
 import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../magichome-interface/utils';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature } from '../magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
-  
+
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
-    const {hue, saturation} = HSL;
-    const RGB:IColorRGB = convertHSLtoRGB(HSL);
-    const CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
-
-    let {red, green, blue} = RGB, {warmWhite, coldWhite} = CCT;
+    const { hue, saturation } = HSL;
+    const RGB: IColorRGB = convertHSLtoRGB(HSL);
+    let CCT: IColorCCT;
+    if (this.ColorCommandMode == 'CCT') {
+      CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    } else {
+      CCT = cctToWhiteTemperature(accessoryCommand.colorTemperature);
+    }
+    let { red, green, blue } = RGB, { warmWhite, coldWhite } = CCT;
 
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
 
     let colorMask = 0xF0;
 
-    
+
 
     //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
     //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
@@ -39,6 +43,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       colorMask = 0x0F;
       //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
     } else if (hue == 208 && saturation == 17) {
+
       red = 0;
       green = 0;
       blue = 0;
@@ -62,37 +67,38 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
-    const deviceCommand: IDeviceCommand = { isOn, RGB:{red, green, blue}, CCT: {warmWhite, coldWhite}, colorMask};
+    const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, CCT: { warmWhite, coldWhite }, colorMask };
     return deviceCommand;
-    
+
   }//setColor
 
+  deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
 
-  // deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
-  //   // const accessoryState: IAccessoryState = {};
+    const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    // eslint-disable-next-line prefer-const
+    let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
+    let brightness = 0;
 
-  //   // const {LED:{RGB, CCT, isOn }} = deviceState;
-   
-  //   // return accessoryState;
-  // }
+    if (luminance > 0 && isOn) {
+      brightness = luminance;
+    } else if (isOn) {
+      brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+      if (warmWhite > coldWhite) {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
+      } else {
+        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+      }
+    }
 
-  updateDeviceState(){
-     
-    // this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessory.isOn);
-    // this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.lightState.HSL.hue);
-    // this.service.updateCharacteristic(this.hap.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    // if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
-    //   this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    // } else if (this.lightState.isOn){
-    //   this.service.updateCharacteristic(this.hap.Characteristic.Brightness,clamp(((this.lightState.whiteValues.coldWhite/2.55) + (this.lightState.whiteValues.warmWhite/2.55)), 0, 100));
-    //   if(this.accessoryState.colorTemperature.warmWhite>this.lightState.whiteValues.coldWhite){
-    //     this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255)));
-    //     this.service.updateCharacteristic(this.hap.Characteristic.Hue, 0);
-    //   } else {
-    //     this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255)));
-    //     this.service.updateCharacteristic(this.hap.Characteristic.Hue, 180);
-    //   }
-    // }
+    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    return accessoryState;
   }
-    
+
+  updateHomekitState() {
+    this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessoryState.isOn);
+    this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.accessoryState.HSL.hue);
+    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSL.saturation);
+    this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.accessoryState.brightness);
+  }
+
 }

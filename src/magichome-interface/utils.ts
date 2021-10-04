@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
-import { IColorCCT, IColorRGB } from 'magichome-platform/dist/types';
-import { IColorHSL } from './types';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IAccessoryCommand, IAccessoryState, IColorHSL } from './types';
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -10,8 +10,15 @@ export function clamp(value: number, min: number, max: number) {
 //=================================================
 // Start checksum //
 
-//a checksum is needed at the end of the byte array otherwise the message is rejected by the light
-//add all bytes and chop off the beginning by & with 0xFF
+
+
+/**
+ * @checksum
+ * a checksum is needed at the end of the byte array otherwise the message is rejected by the device
+ * add all bytes and chop off the beginning by & with 0xFF
+ * @param buffer 
+ * @returns checksum number
+ */
 export function checksum(buffer: Uint8Array) {
   let chk = 0;
 
@@ -24,7 +31,8 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // Start Convert RGBtoHSL //
-export function convertRGBtoHSL({ red, green, blue }) {
+export function convertRGBtoHSL(RGB: IColorRGB) {
+  const { red, green, blue } = RGB;
   const r = red / 255;
   const g = green / 255;
   const b = blue / 255;
@@ -50,7 +58,7 @@ export function convertRGBtoHSL({ red, green, blue }) {
     h += 360;
   }
 
-  const l = (min + max) / 2;
+  const l = max;
 
   if (max === min) {
     s = 0;
@@ -59,28 +67,8 @@ export function convertRGBtoHSL({ red, green, blue }) {
   } else {
     s = delta / (2 - max - min);
   }
-  const HSL = { hue: h, saturation: s * 100, luminance: l * 100 };
+  const HSL: IColorHSL = { hue: h, saturation: s * 100, luminance: l * 100 };
   return HSL;
-}
-
-export function hue2rgb(p: number, q: number, t: number) {
-  if (t < 0) {
-    t += 1;
-  }
-  if (t > 1) {
-    t -= 1;
-  }
-  if (t < 1 / 6) {
-    return p + (q - p) * 6 * t;
-  }
-  if (t < 1 / 2) {
-    return q;
-  }
-  if (t < 2 / 3) {
-    return p + (q - p) * (2 / 3 - t) * 6;
-  }
-  return p;
-
 }
 
 //=================================================
@@ -186,11 +174,29 @@ export function convertHueToColorCCT(hue: number): IColorCCT {
     multiplier = (1 - (hue - 90) / 90);
     colorCCT.warmWhite = Math.round((255 * multiplier));
   }
-  
+
   return colorCCT;
 } //hueToWhiteTemperature
 
-//Unused
+export function cctToWhiteTemperature(CCT: number, multiplier = 0): {warmWhite: number, coldWhite: number} {
+  CCT -= 140;
+  let warmWhite, coldWhite;
+
+  const threshold = 110;
+  if (CCT >= threshold) {        
+    warmWhite = 127;
+    multiplier = (1-((CCT-threshold) / (360 - threshold)));
+    coldWhite = Math.round((127 * multiplier));
+  } else { 
+    coldWhite = 127;
+    multiplier = (CCT / threshold);
+    warmWhite = Math.round((127 * multiplier));
+  }
+
+  // this.logs.trace('Calculated accessory %o\'s white values: %o from CCT: %o', this.accessory.context.displayName, {warmWhite, coldWhite}, CCT);
+
+  return {warmWhite, coldWhite};
+} 
 
 /*
 export function delayToSpeed(delay: never) {
@@ -204,3 +210,142 @@ export function speedToDelay(speed: never) {
   return 30 - (clamped / 100) * 30 + 1;
 }
 */
+export function convertMiredColorTemperatureToHueSat(temperature: number): [number, number] {
+  const xy = convertMiredColorTemperatureToXY(temperature);
+  return convertXyToHueSat(xy[0], xy[1]);
+}
+
+export function convertXyToHueSat(x: number, y: number): [number, number] {
+  // Based on: https://developers.meethue.com/develop/application-design-guidance/color-conversion-formulas-rgb-to-xy-and-back/
+  const z: number = 1.0 - x - y;
+  const Y = 1.0;
+  const X: number = (Y / y) * x;
+  const Z: number = (Y / y) * z;
+
+  // sRGB D65 conversion
+  let r: number = (X * 1.656492) - (Y * 0.354851) - (Z * 0.255038);
+  let g: number = (-X * 0.707196) + (Y * 1.655397) + (Z * 0.036152);
+  let b: number = (X * 0.051713) - (Y * 0.121364) + (Z * 1.011530);
+
+  // Remove negative values
+  const m = Math.min(r, g, b);
+  if (m < 0.0) {
+    r -= m;
+    g -= m;
+    b -= m;
+  }
+
+  // Normalize
+  if (r > b && r > g && r > 1.0) {
+    // red is too big
+    g = g / r;
+    b = b / r;
+    r = 1.0;
+  } else if (g > b && g > r && g > 1.0) {
+    // green is too big
+    r = r / g;
+    b = b / g;
+    g = 1.0;
+  } else if (b > r && b > g && b > 1.0) {
+    // blue is too big
+    r = r / b;
+    g = g / b;
+    b = 1.0;
+  }
+
+  // Gamma correction
+  r = reverseGammaCorrection(r);
+  g = reverseGammaCorrection(g);
+  b = reverseGammaCorrection(b);
+
+  // Maximize
+  const max = Math.max(r, g, b);
+  r = (r === max) ? 255 : (255 * (r / max));
+  g = (g === max) ? 255 : (255 * (g / max));
+  b = (b === max) ? 255 : (255 * (b / max));
+
+  const RGB:IColorRGB = { red: r, green: g, blue: b };
+  const HSL = convertRGBtoHSL(RGB);
+
+  const hsv = [HSL.hue, HSL.saturation];
+
+  return [hsv[0], hsv[1]];
+}
+
+function convertMiredColorTemperatureToXY(temperature: number): [number, number] {
+  // Based on MiredColorTemperatureToXY from:
+  // https://github.com/dresden-elektronik/deconz-rest-plugin/blob/78939ac4ee4b0646fbf542a0f6e83ee995f1a875/colorspace.cpp
+  const TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD = 4000;
+
+  const TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD = 2222;
+  const TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD = 4000;
+
+  const TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION = 17440695910400;
+  const TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION = 15358885888;
+  const TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION = 57520658;
+  const TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION = 11790;
+
+  const TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION = 198301902438400;
+  const TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION = 138086835814;
+  const TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION = 14590587;
+  const TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION = 15754;
+
+  const TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION = 18126;
+  const TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION = 22087;
+  const TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION = 35808;
+  const TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION = 3312;
+
+  const TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION = 15645;
+  const TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION = 22514;
+  const TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION = 34265;
+  const TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION = 2744;
+
+  const TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION = 50491;
+  const TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION = 96229;
+  const TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION = 61458;
+  const TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION = 6062;
+
+  let localX = 0;
+  let localY = 0;
+  const temp = 1000000 / temperature;
+
+  if (TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD > temp) {
+    localX = TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION / temp +
+      TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION -
+      TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION / temp / temp -
+      TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION / temp / temp / temp;
+  } else {
+    localX = TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION / temp / temp +
+      TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION / temp +
+      TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION -
+      TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION / temp / temp / temp;
+  }
+
+  if (TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD > temp) {
+    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION * localX / 65536 -
+      TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION * localX * localX * localX / 281474976710656 -
+      TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION * localX * localX / 4294967296 -
+      TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION;
+  } else if (TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD > temp) {
+    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION * localX / 65536 -
+      TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION * localX * localX * localX / 281474976710656 -
+      TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION * localX * localX / 4294967296 -
+      TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION;
+  } else {
+    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION * localX / 65536 +
+      TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION * localX * localX * localX / 281474976710656 -
+      TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION * localX * localX / 4294967296 -
+      TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION;
+  }
+
+  localY *= 4;
+
+  localX /= 0xFFFF;
+  localY /= 0xFFFF;
+
+  return [Math.round(localX * 10000) / 10000, Math.round(localY * 10000) / 10000];
+}
+
+function reverseGammaCorrection(v: number): number {
+  return (v <= 0.0031308) ? 12.92 * v : (1.0 + 0.055) * Math.pow(v, (1.0 / 2.4)) - 0.055;
+}

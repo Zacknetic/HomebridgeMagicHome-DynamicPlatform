@@ -20,20 +20,13 @@ import { BaseController } from 'magichome-platform/dist/DeviceControllers/BaseCo
 //const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
 //const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
 import { AccessoryGenerator } from './AccessoryGenerator';
+import { UUID } from 'hap-nodejs';
 
 /**
  */
 
 const controllerGenerator = new ControllerGenerator();
-
-const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
-const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
 let hap: HAP;
-
-// export = (api: API) => {
-
-// };
-
 
 /**
  * HomebridgePlatform
@@ -52,8 +45,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   public readonly config: PlatformConfig;
   public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
-  public readonly accessoriesActive: MagicHomeAccessory[] = [];
-
 
   constructor(
     hbLogger: Logging,
@@ -63,7 +54,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     hap = api.hap;
     this.config = config;
     // this.log = new Logs(hbLogger, this.config.advancedOptions.logLevel);
-this.log = new Logs(hbLogger, config.advancedOptions.logLevel);
+    this.log = new Logs(hbLogger, config.advancedOptions.logLevel);
     this.api = api;
 
     //this.logs = getLogger();
@@ -87,8 +78,6 @@ this.log = new Logs(hbLogger, config.advancedOptions.logLevel);
    * It should be used to setup event handlers for characteristics and update respective values.
    */
   configureAccessory(accessory: MagicHomeAccessory) {
-
-    this.log.debug('%o - Loading accessory from cache...', this.accessoriesActive.length, accessory.context.displayName);
     // set cached accessory as not recently seen 
     // if found later to be a match with a discovered device, will change to true
     // accessory.context.scansSinceSeen++;
@@ -96,7 +85,9 @@ this.log = new Logs(hbLogger, config.advancedOptions.logLevel);
     // // add the restored accessory to the accessories cache so we can track if it has already been registered
 
     const homebridgeUUID = accessory.UUID;
-    this.accessoriesFromDiskMap[homebridgeUUID] = accessory;
+    this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
+    this.log.debug('%o - Loading accessory from cache...', this.accessoriesFromDiskMap.keys.length, accessory.context.displayName);
+
   }
 
   /**
@@ -115,13 +106,14 @@ this.log = new Logs(hbLogger, config.advancedOptions.logLevel);
 
     const accesssoryGenerator = new AccessoryGenerator(hap, this.api, this.log, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     await accesssoryGenerator.generateAccessories();
-    // this.periodicDiscovery = setInterval(() => await this.discoverDevices(), 30000);
+
+
   }
 
 
-  sanitizeConfig() {
-    //recursive config sanitation
-  }
+  // sanitizeConfig() {
+  //   //recursive config sanitation
+  // }
 
 
 }//ZackneticMagichomePlatform class
