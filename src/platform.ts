@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { loadJson } from './magichome-interface/utils';
+import { loadJson } from './misc/utils';
 import { cloneDeep } from 'lodash';
 import { Logs } from './logs';
 import {
@@ -8,19 +8,13 @@ import {
   DynamicPlatformPlugin,
   HAP,
   Logging,
-  PlatformAccessory,
   PlatformConfig,
 } from 'homebridge';
 
-import { ICommandOptions, IDeviceAPI, IDeviceCommand, IProtoDevice, ControllerGenerator } from 'magichome-platform';
+import { ControllerGenerator } from 'magichome-platform';
 
-// import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
-import { MagicHomeAccessory } from './magichome-interface/types';
-import { BaseController } from 'magichome-platform/dist/DeviceControllers/BaseController';
-//const NEW_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0x81, 0x8a, 0x8b]);
-//const LEGACY_COMMAND_QUERY_STATE: Uint8Array = Uint8Array.from([0xEF, 0x01, 0x77]);
+import { MagicHomeAccessory } from './misc/types';
 import { AccessoryGenerator } from './AccessoryGenerator';
-import { UUID } from 'hap-nodejs';
 
 /**
  */
@@ -104,9 +98,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
 
 
-    const accesssoryGenerator = new AccessoryGenerator(hap, this.api, this.log, this.config, this.accessoriesFromDiskMap, controllerGenerator);
+    const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     await accesssoryGenerator.generateAccessories();
-
+    // this.periodicDiscovery = setInterval( () => accesssoryGenerator.rescanAccessories(), 10000);
 
   }
 

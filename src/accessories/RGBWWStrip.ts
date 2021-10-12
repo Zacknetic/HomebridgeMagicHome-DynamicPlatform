@@ -1,6 +1,6 @@
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
-import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
-import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, clamp } from '../magichome-interface/utils';
+import { IAccessoryCommand, IAccessoryState } from '../misc/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, clamp, whiteTemperatureToCCT } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
@@ -9,14 +9,14 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const { hue, saturation } = HSL;
-    let RGB: IColorRGB = convertHSLtoRGB(HSL);
-    let CCT: IColorCCT;
-    if (this.ColorCommandMode == 'CCT') {
-      CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
-    } else {
-      CCT = cctToWhiteTemperature(accessoryCommand.colorTemperature);
-    }
-    let { red, green, blue } = RGB, { warmWhite, coldWhite } = CCT;
+    const RGB: IColorRGB = convertHSLtoRGB(HSL);
+    // let _CCT: IColorCCT;
+    // if (this.ColorCommandMode == 'HSL') {
+      const _CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "convertHueToColorCCT()"
+    // } else {
+    //   _CCT = cctToWhiteTemperature(colorTemperature);
+    // }
+    let { red, green, blue } = RGB, { warmWhite, coldWhite } = _CCT;
 
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
@@ -51,7 +51,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
       //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
       //White colors were already calculated above
-    } else if (saturation < 20) {
+    } else if (saturation < 50) {
       // this.platform.log.debug('Turning off color');
       red = 0;
       green = 0;
@@ -63,9 +63,12 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       //this allows brightness to only affect the white colors, creating beautiful white+color balance
       //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
       //the white brightness effectively acts as the saturation value
-    } else if (saturation < 50) {
+    } else if (saturation < 70) {
 
-      RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+      const _RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+      red = _RGB.red;
+      green = _RGB.green;
+      blue = _RGB.blue;
 
       // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
 
@@ -86,10 +89,11 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;
-
+    let colorTemperature = 140;
     if (luminance > 0 && isOn) {
       brightness = luminance;
     } else if (isOn) {
+      colorTemperature = whiteTemperatureToCCT({warmWhite, coldWhite});
       brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
       if (warmWhite > coldWhite) {
         saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
@@ -98,7 +102,10 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       }
     }
 
-    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    
+
+    const accessoryState = { HSL: { hue, saturation, luminance }, colorTemperature, isOn, brightness };
+
     return accessoryState;
   }
 
@@ -110,3 +117,28 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
 }
+
+
+// deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
+
+//   const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+//   // eslint-disable-next-line prefer-const
+//   let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
+//   let brightness = 0;
+//   //let colorTemperature = 140;
+//   if (luminance > 0 && isOn) {
+//     brightness = luminance;
+//    }else {
+//     // if(isOn){
+//       brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+//     // }
+//   //   colorTemperature = whiteTemperatureToCCT({warmWhite, coldWhite});
+//   //   const hueSat = convertMiredColorTemperatureToHueSat(colorTemperature);
+//   //   hue = hueSat[0];
+//   //   saturation = 10;
+
+//    }
+
+//   const accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
+//   return accessoryState;
+// }

@@ -1,6 +1,6 @@
 import { IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
-import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../magichome-interface/utils';
+import { IAccessoryCommand, IAccessoryState } from '../misc/types';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
@@ -10,8 +10,9 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const {hue, saturation} = HSL;
     const RGB:IColorRGB = convertHSLtoRGB(HSL);
-
-    let {red, green, blue} = RGB, warmWhite;
+    
+    let {red, green, blue} = RGB;
+    let warmWhite;
 
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
@@ -25,7 +26,7 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     red = Math.round((red / 100) * brightness);
     green = Math.round((green / 100) * brightness);
     blue = Math.round((blue / 100) * brightness);
-    warmWhite = Math.round(2.5 * brightness);
+    warmWhite = Math.round(2.55 * brightness);
 
     if (hue == 31 && saturation == 33) {
 

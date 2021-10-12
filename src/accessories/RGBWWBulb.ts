@@ -1,6 +1,6 @@
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
-import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature } from '../magichome-interface/utils';
+import { IAccessoryCommand, IAccessoryState } from '../misc/types';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
@@ -10,13 +10,13 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const { hue, saturation } = HSL;
     const RGB: IColorRGB = convertHSLtoRGB(HSL);
-    let CCT: IColorCCT;
-    if (this.ColorCommandMode == 'CCT') {
-      CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
-    } else {
-      CCT = cctToWhiteTemperature(accessoryCommand.colorTemperature);
-    }
-    let { red, green, blue } = RGB, { warmWhite, coldWhite } = CCT;
+    // let _CCT: IColorCCT;
+    // if (this.ColorCommandMode == 'HSL') {
+      const _CCT:IColorCCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    // } else {
+    //   _CCT = cctToWhiteTemperature(colorTemperature);
+    // }
+    let { red, green, blue } = RGB, { warmWhite, coldWhite } = _CCT;
 
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);

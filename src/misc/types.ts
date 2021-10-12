@@ -37,8 +37,8 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 export interface IAccessoryState {
 	isOn: boolean,
 	HSL: IColorHSL,
-	colorTemperature: number,
-	brightness: number,
+	colorTemperature?: number,
+	brightness?: number,
 }
 
 export interface IAccessoryCommand {
@@ -46,6 +46,7 @@ export interface IAccessoryCommand {
 	HSL?: IColorHSL,
 	colorTemperature?: number,
 	brightness?: number,
+	isPowerCommand?: boolean,
 }
 
 export interface IColorHSL {

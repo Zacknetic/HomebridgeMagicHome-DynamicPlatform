@@ -1,4 +1,4 @@
-import { clamp } from '../magichome-interface/utils';
+import { clamp } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class CCTStrip extends HomebridgeMagichomeDynamicPlatformAccessory {

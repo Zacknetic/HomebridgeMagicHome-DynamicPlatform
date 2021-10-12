@@ -1,6 +1,6 @@
 import { IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
-import { IAccessoryCommand, IAccessoryState } from '../magichome-interface/types';
-import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, clamp } from '../magichome-interface/utils';
+import { IAccessoryCommand, IAccessoryState } from '../misc/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, clamp } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 
@@ -24,7 +24,7 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     red = Math.round((red / 100) * brightness);
     green = Math.round((green / 100) * brightness);
     blue = Math.round((blue / 100) * brightness);
-    warmWhite = Math.round(2.5 * brightness);
+    warmWhite = Math.round(2.55 * brightness);
 
     if (hue == 31 && saturation == 33) {
 

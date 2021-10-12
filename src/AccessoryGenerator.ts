@@ -1,12 +1,12 @@
 import { BaseController, ControllerGenerator } from 'magichome-platform';
-import { IAccessoryState, MagicHomeAccessory } from './magichome-interface/types';
+import { IAccessoryState, MagicHomeAccessory } from './misc/types';
 import {
 	API,
 	HAP,
 	PlatformConfig,
 } from 'homebridge';
 
-import { homekitInterface } from './magichome-interface/types';
+import { homekitInterface } from './misc/types';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
@@ -14,16 +14,16 @@ const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
 export class AccessoryGenerator {
 
 	public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
-
+	public readonly activeAccessoriesMap: Map<string, MagicHomeAccessory> = new Map();
 	private hap: HAP;
 	private api: API;
 	private log;
 	private config: PlatformConfig;
 	private controllerGenerator: ControllerGenerator;
 
-	constructor(hap, api, log, config, accessoriesFromDiskMap, controllerGenerator) {
-		this.hap = hap;
+	constructor(api, log, config, accessoriesFromDiskMap, controllerGenerator) {
 		this.api = api;
+		this.hap = api.hap;
 		this.log = log;
 		this.config = config;
 		this.accessoriesFromDiskMap = accessoriesFromDiskMap;
@@ -33,13 +33,13 @@ export class AccessoryGenerator {
 	public async generateAccessories() {
 		this.log.warn('started to generate accessories');
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
+			// await this.discoverAccessories(controllers);
+			// this.registerOfflineAccessories(this.accessoriesFromDiskMap);
 			const accessories = this.discoverAccessories(controllers);
 			return accessories;
 		}).catch(error => {
 			this.log.error(error);
 		});
-
-
 	}
 
 	/**
@@ -66,16 +66,55 @@ export class AccessoryGenerator {
 	 * 				which is quite wasteful...
 	 */
 
-	rescanAccessories(controllers: Map<string, BaseController>) {
+	public async rescanAccessories() {
+		this.log.warn('started to generate accessories');
+		return await this.controllerGenerator.discoverControllers().then(async controllers => {
+			await this.reDiscoverAccessories(controllers);
+		}).catch(error => {
+			this.log.error(error);
+		});
+	}
 
-		//
+	reDiscoverAccessories(controllers: Map<string, BaseController>) {
+
+		const newAccessoriesList: MagicHomeAccessory[] = [];
+		const existingAccessoriesList: MagicHomeAccessory[] = [];
+		let accessory;
+		for (const [uniqueId, controller] of Object.entries(controllers)) {
+			// this.log.warn(controller);
+
+			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
+
+			if (this.accessoriesFromDiskMap.has(homebridgeUUID)) {
+				const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
+				accessory = this.processExistingAccessory(controller, existingAccessory);
+
+				this.accessoriesFromDiskMap.delete(homebridgeUUID);
+
+				existingAccessoriesList.push(accessory);
+				this.log.warn('re-registering existing accessory');
+
+				//this.log('Registering existing accessory...!', accessory);
+
+			} else if (!this.activeAccessoriesMap.has(homebridgeUUID)) {
+				accessory = this.createNewAccessory(controller, homebridgeUUID);
+				newAccessoriesList.push(accessory);				//add it to new accessory list
+				//this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
+				this.log.warn('re-registering new accessory');
+			}
+
+			this.activeAccessoriesMap.set(homebridgeUUID, accessory);
+		}
+
+		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
+		this.registerExistingAccessories(existingAccessoriesList);
 	}
 
 	discoverAccessories(controllers: Map<string, BaseController>) {
 
 		const newAccessoriesList: MagicHomeAccessory[] = [];
 		const existingAccessoriesList: MagicHomeAccessory[] = [];
-
+		let accessory;
 		for (const [uniqueId, controller] of Object.entries(controllers)) {
 			// this.log.warn(controller);
 
@@ -84,37 +123,40 @@ export class AccessoryGenerator {
 			if (this.accessoriesFromDiskMap.has(homebridgeUUID)) {
 
 				const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
-				const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
+				accessory = this.processExistingAccessory(controller, existingAccessory);
 
-				this.log.warn(this.accessoriesFromDiskMap.delete(homebridgeUUID));
+				this.accessoriesFromDiskMap.delete(homebridgeUUID);
 
-				existingAccessoriesList.push(processedAccessory);
+				existingAccessoriesList.push(accessory);
 				this.log.warn('registering existing accessory');
 
-				//this.log.printDeviceInfo('Registering existing accessory...!', processedAccessory);
+				//this.log('Registering existing accessory...!', accessory);
 
 			} else {
-				const newAccessory = this.createNewAccessory(controller, homebridgeUUID);
-				newAccessoriesList.push(newAccessory);				//add it to new accessory list
+				accessory = this.createNewAccessory(controller, homebridgeUUID);
+				newAccessoriesList.push(accessory);				//add it to new accessory list
 				//this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
 				this.log.warn('registering new accessory');
-
 			}
 
-
-
+			this.activeAccessoriesMap.set(homebridgeUUID, accessory);
 		}
-
-		// this.accessoriesFromDiskMap.forEach((accessory, homebridgeUUID) => {
-		// 	const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
-		// 	const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
-
-		// 	existingAccessoriesList.push(processedAccessory);
-		// 	this.log.warn('registering accessory that has been unseen');
-		// });
 
 		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
 		this.registerExistingAccessories(existingAccessoriesList);
+	}
+
+	registerOfflineAccessories(accessories) {
+		accessories.forEach((accessory, homebridgeUUID) => {
+			accessory.context.restartsSinceSeen++;
+			// 	const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
+			// 	const completeDeviceProp: Icustomcomp
+			// 	const controller = this.controllerGenerator.createCustomControllers()
+			// 	const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
+
+			// 	existingAccessoriesList.push(processedAccessory);
+			// 	this.log.warn('registering accessory that has been unseen');
+		});
 	}
 
 	createNewAccessory(controller: BaseController, homebridgeUUID: string): MagicHomeAccessory {
@@ -137,9 +179,10 @@ export class AccessoryGenerator {
 
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
 		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0 };
+		//this.log.warn(description);
 
 		try {
-			new homekitInterface[description](this.hap, this.api, newAccessory, this.config, controller);
+			new homekitInterface[description](this.api, newAccessory, this.config, controller);
 		} catch (error) {
 			this.log.error('The controllerLogicType does not exist in accessoryType list.');
 			this.log.error(error);
@@ -148,6 +191,7 @@ export class AccessoryGenerator {
 	}
 
 	processExistingAccessory(controller: BaseController, existingAccessory: MagicHomeAccessory) {
+		existingAccessory.context.restartsSinceSeen = 0;
 		const cachedInformation = controller.getCachedDeviceInformation();
 		const {
 			protoDevice: { uniqueId, ipAddress, modelNumber },
@@ -162,7 +206,7 @@ export class AccessoryGenerator {
 
 		//existingAccessory.context.cachedInformation = cachedInformation; SAME HERE
 		try {
-			new homekitInterface[description](this.hap, this.api, existingAccessory, this.config, controller);
+			new homekitInterface[description](this.api, existingAccessory, this.config, controller);
 		} catch (error) {
 			this.log.error('The controllerLogicType does not exist in accessoryType list.');
 			this.log.error(error);

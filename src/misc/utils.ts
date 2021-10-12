@@ -178,16 +178,16 @@ export function convertHueToColorCCT(hue: number): IColorCCT {
   return colorCCT;
 } //hueToWhiteTemperature
 
-export function cctToWhiteTemperature(CCT: number, multiplier = 0): {warmWhite: number, coldWhite: number} {
+export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
   CCT -= 140;
   let warmWhite, coldWhite;
 
   const threshold = 110;
-  if (CCT >= threshold) {        
+  if (CCT >= threshold) {
     warmWhite = 127;
-    multiplier = (1-((CCT-threshold) / (360 - threshold)));
+    multiplier = (1 - ((CCT - threshold) / (360 - threshold)));
     coldWhite = Math.round((127 * multiplier));
-  } else { 
+  } else {
     coldWhite = 127;
     multiplier = (CCT / threshold);
     warmWhite = Math.round((127 * multiplier));
@@ -195,8 +195,15 @@ export function cctToWhiteTemperature(CCT: number, multiplier = 0): {warmWhite: 
 
   // this.logs.trace('Calculated accessory %o\'s white values: %o from CCT: %o', this.accessory.context.displayName, {warmWhite, coldWhite}, CCT);
 
-  return {warmWhite, coldWhite};
-} 
+  return { warmWhite, coldWhite };
+}
+
+export function whiteTemperatureToCCT(whiteTemperature: IColorCCT) {
+  const { coldWhite } = whiteTemperature;
+  const CCT = (coldWhite * 1.41) + 140;
+
+  return CCT;
+}
 
 /*
 export function delayToSpeed(delay: never) {
@@ -211,7 +218,7 @@ export function speedToDelay(speed: never) {
 }
 */
 export function convertMiredColorTemperatureToHueSat(temperature: number): [number, number] {
-  const xy = convertMiredColorTemperatureToXY(temperature);
+  const xy = convertMiredColorTemperatureToXY(500 - temperature);
   return convertXyToHueSat(xy[0], xy[1]);
 }
 
@@ -264,7 +271,7 @@ export function convertXyToHueSat(x: number, y: number): [number, number] {
   g = (g === max) ? 255 : (255 * (g / max));
   b = (b === max) ? 255 : (255 * (b / max));
 
-  const RGB:IColorRGB = { red: r, green: g, blue: b };
+  const RGB: IColorRGB = { red: r, green: g, blue: b };
   const HSL = convertRGBtoHSL(RGB);
 
   const hsv = [HSL.hue, HSL.saturation];
