@@ -15,7 +15,7 @@ import { ControllerGenerator } from 'magichome-platform';
 
 import { MagicHomeAccessory } from './misc/types';
 import { AccessoryGenerator } from './AccessoryGenerator';
-
+import  logger  from 'node-color-log';
 /**
  */
 
@@ -53,7 +53,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     //this.logs = getLogger();
     this.log.warn('Finished initializing homebridge-magichome-dynamic-platform %o', loadJson<any>(join(__dirname, '../package.json'), {}).version);
-    this.log.info('If this plugin brings you joy, consider visiting GitHub and giving it a ⭐.');
+    logger.reverse().log('If this plugin brings you joy, consider visiting GitHub and giving it a ⭐.');
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -80,7 +80,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const homebridgeUUID = accessory.UUID;
     this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
-    this.log.debug('%o - Loading accessory from cache...', this.accessoriesFromDiskMap.keys.length, accessory.context.displayName);
+    this.log.debug(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
 
   }
 
@@ -100,7 +100,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     await accesssoryGenerator.generateAccessories();
-    // this.periodicDiscovery = setInterval( () => accesssoryGenerator.rescanAccessories(), 10000);
+    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 10000);
 
   }
 

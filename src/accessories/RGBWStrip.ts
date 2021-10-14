@@ -1,6 +1,6 @@
 import { IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
 import { IAccessoryCommand, IAccessoryState } from '../misc/types';
-import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, clamp } from '../misc/utils';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, clamp, convertMiredColorTemperatureToHueSat, whiteTemperatureToCCT } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 
@@ -10,7 +10,7 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const { hue, saturation } = HSL;
-    let RGB: IColorRGB = convertHSLtoRGB(HSL);
+    const RGB: IColorRGB = convertHSLtoRGB(HSL);
 
     let { red, green, blue } = RGB, warmWhite;
 
@@ -48,7 +48,15 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       //the white brightness effectively acts as the saturation value
     } else if (saturation < 50) {
 
-      RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+      const _RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
+      red = _RGB.red;
+      green = _RGB.green;
+      blue = _RGB.blue;
+
+      red = Math.round((red / 100) * (saturation * 2));
+      green = Math.round((green / 100) * (saturation * 2));
+      blue = Math.round((blue / 100) * (saturation * 2));
+
 
       // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
 
@@ -68,19 +76,25 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;
-
+    let colorTemperature = 140;
     if (luminance > 0 && isOn) {
       brightness = luminance;
-    } else if (isOn) {
-      brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
-      if (warmWhite > coldWhite) {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
-      } else {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+      if (coldWhite > 0 || warmWhite > 0) {
+        saturation = 25;
+        brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
       }
+    } else {
+      if (isOn) {
+        brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+      }
+      colorTemperature = whiteTemperatureToCCT({ warmWhite, coldWhite });
+      const hueSat = convertMiredColorTemperatureToHueSat(colorTemperature);
+      hue = hueSat[0];
+      saturation = 10;
+
     }
 
-    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    const accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
     return accessoryState;
   }
 

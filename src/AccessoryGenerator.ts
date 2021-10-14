@@ -31,9 +31,8 @@ export class AccessoryGenerator {
 	}
 
 	public async generateAccessories() {
-		this.log.warn('started to generate accessories');
+		this.log.info('Scanning network for MagicHome accessories.');
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
-			// await this.discoverAccessories(controllers);
 			// this.registerOfflineAccessories(this.accessoriesFromDiskMap);
 			const accessories = this.discoverAccessories(controllers);
 			return accessories;
@@ -67,7 +66,7 @@ export class AccessoryGenerator {
 	 */
 
 	public async rescanAccessories() {
-		this.log.warn('started to generate accessories');
+		this.log.trace('Re-scanning network for MagicHome accessories.');
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
 			await this.reDiscoverAccessories(controllers);
 		}).catch(error => {
@@ -92,22 +91,20 @@ export class AccessoryGenerator {
 				this.accessoriesFromDiskMap.delete(homebridgeUUID);
 
 				existingAccessoriesList.push(accessory);
-				this.log.warn('re-registering existing accessory');
-
-				//this.log('Registering existing accessory...!', accessory);
+				this.log.info('Found previously unreachable existing accessory. Updating...');
 
 			} else if (!this.activeAccessoriesMap.has(homebridgeUUID)) {
 				accessory = this.createNewAccessory(controller, homebridgeUUID);
 				newAccessoriesList.push(accessory);				//add it to new accessory list
 				//this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
-				this.log.warn('re-registering new accessory');
+				this.log.info('Found previously unseen accessory during a re-scan. Registering...');
 			}
 
 			this.activeAccessoriesMap.set(homebridgeUUID, accessory);
 		}
 
 		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
-		this.registerExistingAccessories(existingAccessoriesList);
+		this.updateExistingAccessories(existingAccessoriesList);
 	}
 
 	discoverAccessories(controllers: Map<string, BaseController>) {
@@ -121,29 +118,24 @@ export class AccessoryGenerator {
 			const homebridgeUUID = this.hap.uuid.generate(uniqueId);
 
 			if (this.accessoriesFromDiskMap.has(homebridgeUUID)) {
+				this.log.info('Found existing accessory. Updating...');
 
 				const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
 				accessory = this.processExistingAccessory(controller, existingAccessory);
-
 				this.accessoriesFromDiskMap.delete(homebridgeUUID);
-
 				existingAccessoriesList.push(accessory);
-				this.log.warn('registering existing accessory');
-
-				//this.log('Registering existing accessory...!', accessory);
-
 			} else {
+				this.log.info('Found new accessory. Registering...');
+
 				accessory = this.createNewAccessory(controller, homebridgeUUID);
 				newAccessoriesList.push(accessory);				//add it to new accessory list
-				//this.log.printDeviceInfo('Registering new accessory...!', newAccessory);
-				this.log.warn('registering new accessory');
 			}
 
 			this.activeAccessoriesMap.set(homebridgeUUID, accessory);
 		}
 
 		this.registerNewAccessories(newAccessoriesList);	//register new accessories from scan
-		this.registerExistingAccessories(existingAccessoriesList);
+		this.updateExistingAccessories(existingAccessoriesList);
 	}
 
 	registerOfflineAccessories(accessories) {
@@ -202,8 +194,6 @@ export class AccessoryGenerator {
 			return;
 		}
 
-		this.log.info(existingAccessory.context.displayName);
-
 		//existingAccessory.context.cachedInformation = cachedInformation; SAME HERE
 		try {
 			new homekitInterface[description](this.api, existingAccessory, this.config, controller);
@@ -221,7 +211,7 @@ export class AccessoryGenerator {
 
 	}
 
-	registerExistingAccessories(existingAccessories: MagicHomeAccessory[]) {
+	updateExistingAccessories(existingAccessories: MagicHomeAccessory[]) {
 		this.api.updatePlatformAccessories(existingAccessories);
 	}
 
@@ -253,8 +243,8 @@ export class AccessoryGenerator {
 
 	isAllowed(uniqueId: string): boolean {
 
-		const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs;
-		const isWhitelist: boolean = this.config.deviceManagement.blacklistOrWhitelist.includes('whitelist');
+		const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs ?? [];
+		const isWhitelist: boolean = this.config.deviceManagement.blacklistOrWhitelist.includes('whitelist') ?? false;
 		const onList: boolean = (blacklistedUniqueIDs).includes(uniqueId);
 
 		const isAllowed = isWhitelist ? onList : !onList;

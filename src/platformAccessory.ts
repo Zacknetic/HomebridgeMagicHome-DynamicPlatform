@@ -1,6 +1,6 @@
 import type {
   API, Service, PlatformConfig, CharacteristicValue,
-  CharacteristicSetCallback, CharacteristicGetCallback, HAP,
+  CharacteristicSetCallback, CharacteristicGetCallback, HAP, Logger, Logging,
 } from 'homebridge';
 
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './misc/utils';
@@ -9,7 +9,7 @@ import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, add
 import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus, IProtoDevice } from 'magichome-platform';
 import { _ } from 'lodash';
 import Queue from 'queue-promise';
-import { getLogs } from './logs';
+import { Logs } from './logs';
 
 const { ready, pending, busy } = DeviceWriteStatus;
 const CCT = 'CCT';
@@ -40,7 +40,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected ColorCommandMode = HSL;
   protected readonly hap: HAP;
-  protected logs = getLogs();
+  protected logs;
 
 
   protected colorWhiteThreshold;
@@ -63,7 +63,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     protected readonly accessory: MagicHomeAccessory,
     public readonly config: PlatformConfig,
     protected readonly controller: BaseController,
+    protected readonly logging: Logging,
   ) {
+
 
     this.colorWhiteThreshold = this.config.whiteEffects.colorWhiteThreshold;
     this.colorWhiteThresholdSimultaniousDevices = this.config.whiteEffects.colorWhiteThresholdSimultaniousDevices;
@@ -75,6 +77,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.controller = controller;
     this.hap = api.hap;
     this.api = api;
+
+    this.logs = new Logs(logging, this.config.loggingLevel ?? 3);
     this.setupCommandQueue();
     this.initializeCharacteristics();
     this.fetchAndUpdateState(2);
@@ -171,7 +175,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     const brightness = this.accessoryState.brightness;
     callback(null, brightness); //immediately return cached state to prevent laggy HomeKit UI
-    this.fetchAndUpdateState(2);
+    // this.fetchAndUpdateState(2);
   }
 
   /**
