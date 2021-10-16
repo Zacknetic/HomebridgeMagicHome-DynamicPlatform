@@ -13,10 +13,6 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     
     let {red, green, blue} = RGB;
     let warmWhite;
-
-    //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-
     let colorMask = 0xF0;
 
     
@@ -34,18 +30,16 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       green = 0;
       blue = 0;
       colorMask = 0x0F;
-      //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
+
     } else if (saturation < 20) {
-      // this.platform.log.debug('Turning off color');
+
       red = 0;
       green = 0;
       blue = 0;
-
       colorMask = 0x0F;
-      // this.platform.log.debug('Setting warmWhite and coldWhite without colors: ww:%o cw:%o', ww, cw);
+
     } else {
       warmWhite = 0;
-      // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
     const deviceCommand: IDeviceCommand = { isOn, RGB:{red, green, blue}, CCT: {warmWhite}, colorMask};
@@ -65,9 +59,9 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     } else if (isOn) {
       brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
       if (warmWhite > coldWhite) {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
+        saturation = this.colorWhiteSimultaniousSaturationLevel - (this.colorWhiteSimultaniousSaturationLevel * (coldWhite / 255));
       } else {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+        saturation = this.colorWhiteSimultaniousSaturationLevel - (this.colorWhiteSimultaniousSaturationLevel * (warmWhite / 255));
       }
     }
 

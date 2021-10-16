@@ -27,7 +27,7 @@
         "simultaniousDevicesColorWhite": true,
         "colorWhiteThreshold": 10,
         "colorWhiteThresholdSimultaniousDevices": 50,
-        "colorOffThresholdSimultaniousDevices": 5
+        "colorOffThresholdSimultaniousDevices": 1
       },
       "deviceManagement": {
         "blacklistOrWhitelist": "blacklist",

@@ -29,6 +29,8 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 	context: {
 		displayName: string;
 		restartsSinceSeen: number,
+		protoDevice,
+		deviceAPI,
 		pendingRegistration?: boolean;
 		cachedAccessoryState?: IAccessoryState;
 	}
@@ -53,6 +55,14 @@ export interface IColorHSL {
 	hue?: number;
 	saturation?: number;
 	luminance?: number;
+}
+
+
+export interface IConfigOptions {
+	logLevel: number,
+	colorWhiteInterfaceMode: string,
+	colorOffSaturationLevel: number,
+	colorWhiteSimultaniousSaturationLevel?: number,
 }
 
 /*----------------------[Constants]----------------------*/

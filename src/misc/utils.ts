@@ -193,8 +193,6 @@ export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite:
     warmWhite = Math.round((127 * multiplier));
   }
 
-  // this.logs.trace('Calculated accessory %o\'s white values: %o from CCT: %o', this.accessory.context.displayName, {warmWhite, coldWhite}, CCT);
-
   return { warmWhite, coldWhite };
 }
 

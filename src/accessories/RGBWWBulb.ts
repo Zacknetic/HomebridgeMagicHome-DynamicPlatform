@@ -1,6 +1,6 @@
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
 import { IAccessoryCommand, IAccessoryState } from '../misc/types';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature } from '../misc/utils';
+import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, whiteTemperatureToCCT, convertMiredColorTemperatureToHueSat } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
@@ -17,9 +17,6 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     //   _CCT = cctToWhiteTemperature(colorTemperature);
     // }
     let { red, green, blue } = RGB, { warmWhite, coldWhite } = _CCT;
-
-    //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
 
     let colorMask = 0xF0;
 
@@ -41,7 +38,6 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       blue = 0;
       coldWhite = 0;
       colorMask = 0x0F;
-      //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
     } else if (hue == 208 && saturation == 17) {
 
       red = 0;
@@ -49,22 +45,19 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       blue = 0;
       warmWhite = 0;
       colorMask = 0x0F;
-      // this.platform.log.debug('Setting coldWhite only without colors or warmWhite: cw:%o', cw);
 
       //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
       //White colors were already calculated above
     } else if (saturation < 20) {
-      // this.platform.log.debug('Turning off color');
+      
       red = 0;
       green = 0;
       blue = 0;
 
       colorMask = 0x0F;
-      // this.platform.log.debug('Setting warmWhite and coldWhite without colors: ww:%o cw:%o', ww, cw);
     } else {
       warmWhite = 0;
       coldWhite = 0;
-      // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
     const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, CCT: { warmWhite, coldWhite }, colorMask };
@@ -73,23 +66,27 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   }//setColor
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
-
     const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;
-
+    let colorTemperature = 140;
     if (luminance > 0 && isOn) {
       brightness = luminance;
-    } else if (isOn) {
-      brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
-      if (warmWhite > coldWhite) {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (coldWhite / 255));
-      } else {
-        saturation = this.colorWhiteThreshold - (this.colorWhiteThreshold * (warmWhite / 255));
+      if (coldWhite > 0 || warmWhite > 0) {
+        saturation = 25;
+        brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
       }
-    }
+    } else {
+      if (isOn) {
+        brightness = clamp(((coldWhite / 2.55) + (warmWhite / 2.55)), 0, 100);
+      }
+      colorTemperature = whiteTemperatureToCCT({ warmWhite, coldWhite: 0 });
+      const hueSat = convertMiredColorTemperatureToHueSat(colorTemperature);
+      hue = hueSat[0];
+      saturation = 10;
 
+    }
     const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
     return accessoryState;
   }

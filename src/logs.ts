@@ -7,7 +7,7 @@ export class Logs {
   }
 
   trace(message, ...parameters: any[]) {
-    if (this.level == 5) {
+    if (this.level >= 5) {
       this.logger.info(message, ...parameters);
     }
   }

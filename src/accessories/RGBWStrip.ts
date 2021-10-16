@@ -14,9 +14,6 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     let { red, green, blue } = RGB, warmWhite;
 
-    //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-    //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-
     let colorMask = 0xFF;
 
     //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
@@ -32,21 +29,21 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       green = 0;
       blue = 0;
       colorMask = 0x0F;
-      //  this.platform.log.debug('Setting warmWhite only without colors or coldWhite: ww:%o', ww);
 
-    } else if (saturation < 20) {
-      // this.platform.log.debug('Turning off color');
+    } else if (saturation < this.colorOffSaturationLevel) {
       red = 0;
       green = 0;
       blue = 0;
-      //  this.platform.log.debug('Setting only white: ww:%o cw:%o', ww, cw);
 
-      //else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
-      //set RGB to 100% saturation and 100% brightness
-      //this allows brightness to only affect the white colors, creating beautiful white+color balance
-      //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
-      //the white brightness effectively acts as the saturation value
-    } else if (saturation < 50) {
+      /**
+       * else if saturation is less than config set "colorWhiteThreshold" AND above "colorOffThreshold"
+       * set RGB to 100% saturation and 100% brightness
+       * this allows brightness to only affect the white colors, creating beautiful white+color balance
+       * we've set the color saturation to 100% because the higher the white level the more washed out the colors become
+       * the white brightness effectively acts as the saturation value
+       */
+
+    } else if (saturation < this.colorWhiteSimultaniousSaturationLevel) {
 
       const _RGB = convertHSLtoRGB({ hue, saturation: 100 }); //re-generate rgb with full saturation
       red = _RGB.red;
@@ -57,13 +54,8 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       green = Math.round((green / 100) * (saturation * 2));
       blue = Math.round((blue / 100) * (saturation * 2));
 
-
-      // this.platform.log.debug('Setting fully saturated color mixed with white: r:%o g:%o b:%o ww:%o cw:%o', r, g, b, ww, cw);
-
-      //else saturation is greater than "colorWhiteThreshold" so we set ww and cw to 0 and only display the color LEDs
     } else {
       warmWhite = 0;
-      // this.platform.log.debug('Setting colors without white: r:%o g:%o b:%o', r, g, b);
     }
 
     const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, CCT: { warmWhite }, colorMask };

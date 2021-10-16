@@ -1,4 +1,4 @@
-import { BaseController, ControllerGenerator } from 'magichome-platform';
+import { BaseController, ControllerGenerator, ICustomProtoDevice, IDeviceAPI } from 'magichome-platform';
 import { IAccessoryState, MagicHomeAccessory } from './misc/types';
 import {
 	API,
@@ -6,6 +6,7 @@ import {
 	PlatformConfig,
 } from 'homebridge';
 
+import { _ } from 'lodash';
 import { homekitInterface } from './misc/types';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
@@ -33,9 +34,11 @@ export class AccessoryGenerator {
 	public async generateAccessories() {
 		this.log.info('Scanning network for MagicHome accessories.');
 		return await this.controllerGenerator.discoverControllers().then(async controllers => {
-			// this.registerOfflineAccessories(this.accessoriesFromDiskMap);
 			const accessories = this.discoverAccessories(controllers);
+			this.registerOfflineAccessories(this.accessoriesFromDiskMap);
+
 			return accessories;
+
 		}).catch(error => {
 			this.log.error(error);
 		});
@@ -139,12 +142,11 @@ export class AccessoryGenerator {
 	}
 
 	registerOfflineAccessories(accessories) {
-		accessories.forEach((accessory, homebridgeUUID) => {
-			accessory.context.restartsSinceSeen++;
-			// 	const existingAccessory = this.accessoriesFromDiskMap.get(homebridgeUUID);
-			// 	const completeDeviceProp: Icustomcomp
-			// 	const controller = this.controllerGenerator.createCustomControllers()
-			// 	const processedAccessory = this.processExistingAccessory(controller, existingAccessory);
+		accessories.forEach(async (offlineAccessory, homebridgeUUID) => {
+			offlineAccessory.context.restartsSinceSeen++;
+			const { protoDevice, deviceAPI } = offlineAccessory.context;
+			const controller = await this.controllerGenerator.createCustomControllers({ protoDevice, deviceAPI })[0];
+			new homekitInterface[deviceAPI.description](this.api, offlineAccessory, this.config, controller, this.log);
 
 			// 	existingAccessoriesList.push(processedAccessory);
 			// 	this.log.warn('registering accessory that has been unseen');
@@ -154,6 +156,8 @@ export class AccessoryGenerator {
 	createNewAccessory(controller: BaseController, homebridgeUUID: string): MagicHomeAccessory {
 
 		const {
+			protoDevice,
+			deviceAPI,
 			protoDevice: { uniqueId },
 			deviceAPI: { description },
 			deviceState: { LED: { RGB, CCT, isOn } },
@@ -170,11 +174,11 @@ export class AccessoryGenerator {
 		// const accessoryState: IAccessoryState = {isOn, }			JUST KIDDING, DO IT AFTER INITIALIZING DEVICE
 
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
-		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0 };
+		newAccessory.context = { protoDevice, deviceAPI, displayName: description as string, restartsSinceSeen: 0 };
 		//this.log.warn(description);
 
 		try {
-			new homekitInterface[description](this.api, newAccessory, this.config, controller);
+			new homekitInterface[description](this.api, newAccessory, this.config, controller, this.log);
 		} catch (error) {
 			this.log.error('The controllerLogicType does not exist in accessoryType list.');
 			this.log.error(error);
@@ -186,6 +190,8 @@ export class AccessoryGenerator {
 		existingAccessory.context.restartsSinceSeen = 0;
 		const cachedInformation = controller.getCachedDeviceInformation();
 		const {
+			protoDevice,
+			deviceAPI,
 			protoDevice: { uniqueId, ipAddress, modelNumber },
 			deviceState, deviceAPI: { description },
 		} = cachedInformation;
@@ -194,9 +200,9 @@ export class AccessoryGenerator {
 			return;
 		}
 
-		//existingAccessory.context.cachedInformation = cachedInformation; SAME HERE
+		_.merge(existingAccessory.context, { protoDevice, deviceAPI, restartsSinceSeen: 0 });
 		try {
-			new homekitInterface[description](this.api, existingAccessory, this.config, controller);
+			new homekitInterface[description](this.api, existingAccessory, this.config, controller, this.log);
 		} catch (error) {
 			this.log.error('The controllerLogicType does not exist in accessoryType list.');
 			this.log.error(error);
@@ -230,7 +236,7 @@ export class AccessoryGenerator {
 				`Successfully pruned accessory: ${existingAccessory.context.displayName} 
 				due to being marked for deletion\n`);
 			isFresh = false;
-		} else if (this.config.pruning.pruneRestarts) {
+		} else if (this.config.pruning?.pruneRestarts ?? false) {
 			if (existingAccessory.context.restartsSinceSeen >= this.config.pruning.pruneRestarts) {
 				this.unregisterAccessory(existingAccessory, `Successfully pruned accessory: ${existingAccessory.context.displayName}
 					which had not being seen for ${existingAccessory.context.restartsSinceSeen} restart(s).\n`);
@@ -243,13 +249,14 @@ export class AccessoryGenerator {
 
 	isAllowed(uniqueId: string): boolean {
 
-		const blacklistedUniqueIDs = this.config.deviceManagement.blacklistedUniqueIDs ?? [];
-		const isWhitelist: boolean = this.config.deviceManagement.blacklistOrWhitelist.includes('whitelist') ?? false;
+		const blacklistedUniqueIDs = this.config.deviceManagement?.blacklistedUniqueIDs ?? [];
+		const isWhitelist: boolean = this.config.deviceManagement?.blacklistOrWhitelist?.includes('whitelist') ?? false;
 		const onList: boolean = (blacklistedUniqueIDs).includes(uniqueId);
 
 		const isAllowed = isWhitelist ? onList : !onList;
 
 		return isAllowed;
+		return true;
 	}
 
 	unregisterAccessory(existingAccessory: MagicHomeAccessory, reason: string) {
