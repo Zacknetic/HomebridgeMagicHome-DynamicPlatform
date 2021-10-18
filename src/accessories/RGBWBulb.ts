@@ -68,13 +68,5 @@ export class RGBWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
     const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
     return accessoryState;
   }
-
-  updateHomekiState() {
-    this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessoryState.isOn);
-    this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.accessoryState.HSL.hue);
-    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSL.saturation);
-    this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.accessoryState.brightness);
-  }
-
     
 }

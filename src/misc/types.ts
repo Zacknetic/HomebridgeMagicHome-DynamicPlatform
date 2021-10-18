@@ -10,7 +10,7 @@ import { RGBWWBulb } from '../accessories/RGBWWBulb';
 import { RGBWStrip } from '../accessories/RGBWStrip';
 import { RGBWWStrip } from '../accessories/RGBWWStrip';
 import { CCTStrip } from '../accessories/CCTStrip';
-import { IDeviceState, IDeviceCommand, IColorCCT } from 'magichome-platform/dist/types';
+import { IDeviceState, IDeviceCommand, IColorCCT, IDeviceInformation } from 'magichome-platform/dist/types';
 
 
 export const homekitInterface = {
@@ -26,14 +26,14 @@ export const homekitInterface = {
 };
 
 export interface MagicHomeAccessory extends PlatformAccessory {
-	context: {
-		displayName: string;
-		restartsSinceSeen: number,
-		protoDevice,
-		deviceAPI,
-		pendingRegistration?: boolean;
-		cachedAccessoryState?: IAccessoryState;
-	}
+	context: IAccessoryContext
+}
+
+export interface IAccessoryContext {
+	displayName?: string;
+	restartsSinceSeen: number,
+	accessoryState?: IAccessoryState;
+	cachedDeviceInformation: IDeviceInformation;
 }
 
 export interface IAccessoryState {

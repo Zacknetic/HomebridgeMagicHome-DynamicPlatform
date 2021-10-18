@@ -58,7 +58,7 @@ export function convertRGBtoHSL(RGB: IColorRGB) {
     h += 360;
   }
 
-  const l = max;
+  const l = max / 2.55;
 
   if (max === min) {
     s = 0;

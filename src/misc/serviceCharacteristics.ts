@@ -17,33 +17,28 @@ export function addHueCharacteristic(_this) {
 		.onGet(_this.getHue.bind(_this));
 }
 
-// if (!_this.service.testCharacteristic(_this.hap.Characteristic.CHANGE_ME)) {
-// 	_this.service.addCharacteristic(_this.hap.Characteristic.CHANGE_ME)
-// 		.onSet(_this.CHANGE_ME.bind(_this))
-// 		.onGet(_this.CHANGE_ME.bind(_this));
-// }
 export function addSaturationCharacteristic(_this) {
 	_this.logs.trace('Adding Saturation characteristic to service.');
-		_this.service.getCharacteristic(_this.hap.Characteristic.Saturation)
-			.onSet(_this.setSaturation.bind(_this));
-		// .onGet(_this.CHANGE_ME.bind(_this));
-	
+	_this.service.getCharacteristic(_this.hap.Characteristic.Saturation)
+		.onSet(_this.setSaturation.bind(_this));
+	// .onGet(_this.CHANGE_ME.bind(_this));
+
 }
 
 export function addBrightnessCharacteristic(_this) {
 	_this.logs.trace('Adding Brightness characteristic to service.');
-		_this.service.getCharacteristic(_this.hap.Characteristic.Brightness)
-			.onSet(_this.setBrightness.bind(_this))
-			.onGet(_this.getBrightness.bind(_this));
+	_this.service.getCharacteristic(_this.hap.Characteristic.Brightness)
+		.onSet(_this.setBrightness.bind(_this))
+		.onGet(_this.getBrightness.bind(_this));
 }
 
 export function addColorTemperatureCharacteristic(_this) {
 	_this.logs.trace('Adding ColorTemperature characteristic to service.');
-		_this.service.getCharacteristic(_this.hap.Characteristic.ColorTemperature)
-			.onSet(_this.setColorTemperature.bind(_this))
-			.onGet(_this.getColorTemperature.bind(_this));
+	_this.service.getCharacteristic(_this.hap.Characteristic.ColorTemperature)
+		.onSet(_this.setColorTemperature.bind(_this))
+		.onGet(_this.getColorTemperature.bind(_this));
 
-			if (_this.api.versionGreaterOrEqual && _this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
+	if (_this.api.versionGreaterOrEqual && _this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
 		_this.logs.trace('Adding the adaptive lighting service to the accessory...');
 		_this.adaptiveLightingService = new _this.api.hap.AdaptiveLightingController(_this.service);
 		_this.accessory.configureController(_this.adaptiveLightingService);
@@ -54,16 +49,16 @@ export function addAccessoryInformationCharacteristic(_this) {
 
 	const {
 		protoDevice: { uniqueId, modelNumber },
-		deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
-	} = _this.controller?.getCachedDeviceInformation() ?? _this.accessory.context;
-
+		// deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
+	} = _this.accessory.context.cachedDeviceInformation;
+	_this.logs.warn(_this.accessory.context.cachedDeviceInformation);
 	// set accessory information
 	_this.accessory.getService(_this.hap.Service.AccessoryInformation)!
 		.setCharacteristic(_this.hap.Characteristic.Manufacturer, 'MagicHome')
 		.setCharacteristic(_this.hap.Characteristic.SerialNumber, uniqueId)
 		.setCharacteristic(_this.hap.Characteristic.Model, modelNumber)
-		.setCharacteristic(_this.hap.Characteristic.HardwareRevision, controllerHardwareVersion?.toString(16) ?? 'unknown')
-		.setCharacteristic(_this.hap.Characteristic.FirmwareRevision, controllerFirmwareVersion?.toString(16) ?? 'unknown ')
+		// .setCharacteristic(_this.hap.Characteristic.HardwareRevision, controllerHardwareVersion?.toString(16) ?? 'unknown')
+		// .setCharacteristic(_this.hap.Characteristic.FirmwareRevision, controllerFirmwareVersion?.toString(16) ?? 'unknown ')
 		.getCharacteristic(_this.hap.Characteristic.Identify)
 		.removeAllListeners(CharacteristicEventTypes.SET)
 		.removeAllListeners(CharacteristicEventTypes.GET)
@@ -77,6 +72,9 @@ export function addAccessoryInformationCharacteristic(_this) {
 export function addConfiguredNameCharacteristic(_this) {
 	if (!_this.service.testCharacteristic(_this.hap.Characteristic.ConfiguredName)) {
 		_this.service.addCharacteristic(_this.hap.Characteristic.ConfiguredName)
+			.onSet(_this.setConfiguredName.bind(_this));
+	} else {
+		_this.service.getCharacteristic(_this.hap.Characteristic.ConfiguredName)
 			.onSet(_this.setConfiguredName.bind(_this));
 	}
 }

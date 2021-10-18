@@ -89,12 +89,4 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
     return accessoryState;
   }
-
-  updateHomekitState() {
-    this.service.updateCharacteristic(this.hap.Characteristic.On, this.accessoryState.isOn);
-    this.service.updateCharacteristic(this.hap.Characteristic.Hue, this.accessoryState.HSL.hue);
-    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSL.saturation);
-    this.service.updateCharacteristic(this.hap.Characteristic.Brightness, this.accessoryState.brightness);
-  }
-
 }
