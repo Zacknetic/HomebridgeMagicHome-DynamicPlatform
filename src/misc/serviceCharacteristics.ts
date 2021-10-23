@@ -4,21 +4,21 @@ import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessor
 /*-------------------------- Characteristics -------------------------------------*/
 
 export function addOnCharacteristic(_this) {
-	_this.logs.trace('Adding On characteristic to service.');
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding On characteristic to service.`);
 	_this.service.getCharacteristic(_this.hap.Characteristic.On)
 		.onSet(_this.setOn.bind(_this))
 		.onGet(_this.getOn.bind(_this));
 }
 
 export function addHueCharacteristic(_this) {
-	_this.logs.trace('Adding Hue characteristic to service.');
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Hue characteristic to service.`);
 	_this.service.getCharacteristic(_this.hap.Characteristic.Hue)
 		.onSet(_this.setHue.bind(_this))
 		.onGet(_this.getHue.bind(_this));
 }
 
 export function addSaturationCharacteristic(_this) {
-	_this.logs.trace('Adding Saturation characteristic to service.');
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Saturation characteristic to service.`);
 	_this.service.getCharacteristic(_this.hap.Characteristic.Saturation)
 		.onSet(_this.setSaturation.bind(_this));
 	// .onGet(_this.CHANGE_ME.bind(_this));
@@ -26,20 +26,20 @@ export function addSaturationCharacteristic(_this) {
 }
 
 export function addBrightnessCharacteristic(_this) {
-	_this.logs.trace('Adding Brightness characteristic to service.');
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Brightness characteristic to service.`);
 	_this.service.getCharacteristic(_this.hap.Characteristic.Brightness)
 		.onSet(_this.setBrightness.bind(_this))
 		.onGet(_this.getBrightness.bind(_this));
 }
 
 export function addColorTemperatureCharacteristic(_this) {
-	_this.logs.trace('Adding ColorTemperature characteristic to service.');
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Color Temperature characteristic to service.`);
 	_this.service.getCharacteristic(_this.hap.Characteristic.ColorTemperature)
 		.onSet(_this.setColorTemperature.bind(_this))
 		.onGet(_this.getColorTemperature.bind(_this));
 
 	if (_this.api.versionGreaterOrEqual && _this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
-		_this.logs.trace('Adding the adaptive lighting service to the accessory...');
+		_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Adaptive Lighting service to accessory.`);
 		_this.adaptiveLightingService = new _this.api.hap.AdaptiveLightingController(_this.service);
 		_this.accessory.configureController(_this.adaptiveLightingService);
 	}
@@ -51,7 +51,6 @@ export function addAccessoryInformationCharacteristic(_this) {
 		protoDevice: { uniqueId, modelNumber },
 		// deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
 	} = _this.accessory.context.cachedDeviceInformation;
-	_this.logs.warn(_this.accessory.context.cachedDeviceInformation);
 	// set accessory information
 	_this.accessory.getService(_this.hap.Service.AccessoryInformation)!
 		.setCharacteristic(_this.hap.Characteristic.Manufacturer, 'MagicHome')
@@ -77,6 +76,8 @@ export function addConfiguredNameCharacteristic(_this) {
 		_this.service.getCharacteristic(_this.hap.Characteristic.ConfiguredName)
 			.onSet(_this.setConfiguredName.bind(_this));
 	}
+	_this.logs.trace(`[Trace] [${_this.accessory.context.displayName}] - Adding Configured Name characteristic to service.`);
+
 }
 
 

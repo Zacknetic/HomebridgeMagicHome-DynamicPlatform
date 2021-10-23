@@ -47,10 +47,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   ) {
     hap = api.hap;
     this.config = config;
-    // this.log = new Logs(hbLogger, this.config.advancedOptions.logLevel);
     this.log = new Logs(hbLogger, config.globalAccessoryOptions?.logLevel ?? 3);
     this.api = api;
-    this.hbLogger = hbLogger;
     //this.logs = getLogger();
     this.log.warn('Finished initializing homebridge-magichome-dynamic-platform %o', loadJson<any>(join(__dirname, '../package.json'), {}).version);
     logger.reverse().log('If this plugin brings you joy, consider visiting GitHub and giving it a ⭐.');
@@ -98,9 +96,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
 
 
-    const accesssoryGenerator = new AccessoryGenerator(this.api, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
+    const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     await accesssoryGenerator.generateAccessories();
-    //this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 10000);
+    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 10000);
 
   }
 

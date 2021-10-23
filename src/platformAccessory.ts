@@ -122,7 +122,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setConfiguredName(value: CharacteristicValue) {
 
     const name: string = value.toString();
-    this.logs.debug('Renaming device to %o', name);
+    this.logs.debug('[Debug] Renaming device to %o', name);
     this.accessory.context.displayName = name;
     this.api.updatePlatformAccessories([this.accessory]);
   }
@@ -180,7 +180,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
     const deviceWriteStatus = this.deviceWriteStatus;
-    this.logs.trace(this.deviceWriteStatus);
     switch (deviceWriteStatus) {
       case ready:
 
@@ -201,7 +200,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected async writeStateToDevice(accessoryCommand: IAccessoryCommand): Promise<unknown> {
     this.newAccessoryCommand = accessoryCommand;
     return new Promise<unknown>((resolve, reject) => {
-      this.logs.trace(this.ColorCommandMode);
       return setTimeout(() => {
         this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessory.context.accessoryState, '\n Received Command', this.newAccessoryCommand);
         const sanitizedAcessoryCommand: IAccessoryCommand = _.merge({}, this.accessory.context.accessoryState, this.newAccessoryCommand);
@@ -210,8 +208,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         if (this.newAccessoryCommand.hasOwnProperty('isOn') && !(this.newAccessoryCommand.hasOwnProperty('HSL') || this.newAccessoryCommand.hasOwnProperty('brightness'))) {
           sanitizedAcessoryCommand.isPowerCommand = true;
         }
-
-        // this.logs.trace('\nSanatizedCommand: ', sanitizedAcessoryCommand);
 
         this.deviceWriteStatus = ready;
 
@@ -222,10 +218,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected async prepareCommand(accessoryCommand: IAccessoryCommand, options: ICommandOptions = MEDIUM_COMMAND_OPTIONS) {
     const deviceCommand = this.accessoryCommandToDeviceCommand(accessoryCommand);
-    this.logs.trace('Outgoing Command:', deviceCommand);
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
     this.latestDeviceCommand = deviceCommand;
     this.latestAccessoryCommand = accessoryCommand;
-    let deviceState: IDeviceState;
 
     this.queue.enqueue(async () => {
 
@@ -235,15 +230,15 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
 
       if (!(this.slowQueueRetry && this.queue.size < 1)) {
-
+        let response;
         if (!accessoryCommand.isPowerCommand) {
-          this.latestDeviceState = await this.controller.setAllValues(deviceCommand, options);
+          response = await this.controller.setAllValues(deviceCommand, options);
         } else {
-          this.latestDeviceState = await this.controller.setOn(deviceCommand.isOn, options);
+          response = await this.controller.setOn(deviceCommand.isOn, options);
         }
+        this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`, response);
       }
 
-      this.logs.debug('Received Device State:', this.latestDeviceState);
     });
   }
 
@@ -263,7 +258,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if (!deviceState) {
       deviceState = await this.controller?.fetchState() ?? this.accessory.context.cachedDeviceInformation.deviceState;
     }
-    this.logs.debug(this.accessory.context.displayName, '- Device State:\n', deviceState);
+    this.logs.debug(`[Debug] [${this.accessory.context.displayName}] - Device State:\n`, deviceState);
     this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
     const { HSL: { hue, saturation, luminance }, colorTemperature, brightness, isOn } = this.deviceStateToAccessoryState(deviceState);
     let accessoryState: IAccessoryState;
@@ -284,7 +279,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
       _.merge(this.accessory.context.accessoryState, accessoryState);
 
-      this.logs.debug(this.accessory.context.displayName, '- Homebridge State:\n', this.accessory.context.accessoryState);
+      this.logs.debug(`[Debug] [${this.accessory.context.displayName}] - Homebridge State:\n`, this.accessory.context.accessoryState);
     } else {
       _.merge(this.accessory.context.accessoryState, { isOn: false });
     }
@@ -337,7 +332,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       if (!_.isEqual(_.omit(this.latestDeviceState?.LED ?? {}, ['colorMask']), _.omit(this.latestDeviceCommand, ['colorMask']))) {
         if (this.slowQueueRetry) {
           timeout = setTimeout(async () => {
-            this.logs.trace(this.accessory.displayName, ': FINAL WRITE', this.latestDeviceCommand);
+            this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Sending a slow write command to increase chance of success:\n`, this.latestDeviceCommand);
             this.slowQueueRetry = false;
             await this.prepareCommand(this.latestAccessoryCommand, SLOW_COMMAND_OPTIONS);
             this.fetchAndUpdateState(2);
@@ -369,7 +364,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     addAccessoryInformationCharacteristic(this);
 
-    this.logs.trace('Adding Lightbulb service to accessory.');
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Lightbulb service to accessory.`);
     this.service = this.accessory.getService(this.hap.Service.Lightbulb) ?? this.accessory.addService(this.hap.Service.Lightbulb);
 
     if (hasColor) {
@@ -386,7 +381,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     if (!hasBrightness) {
-      this.logs.trace('Adding Switch service to accessory.');  //device is switch, register it as such
+      this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Switch service to accessory.`);  //device is switch, register it as such
       this.service = this.accessory.getService(this.hap.Service.Switch) ?? this.accessory.addService(this.hap.Service.Switch);
     }
     addOnCharacteristic(this);
