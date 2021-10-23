@@ -263,9 +263,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if (!deviceState) {
       deviceState = await this.controller?.fetchState() ?? this.accessory.context.cachedDeviceInformation.deviceState;
     }
-    this.logs.trace('FETCHED STATE:', deviceState);
-    this.latestDeviceCommand = deviceState.LED;
-    //this.logs.warn(deviceState);
+    this.logs.debug(this.accessory.context.displayName, '- Device State:\n', deviceState);
+    this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
     const { HSL: { hue, saturation, luminance }, colorTemperature, brightness, isOn } = this.deviceStateToAccessoryState(deviceState);
     let accessoryState: IAccessoryState;
     if (deviceState) {
@@ -285,7 +284,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
       _.merge(this.accessory.context.accessoryState, accessoryState);
 
-      this.logs.debug(this.accessory.displayName, ': FINAL STATE', this.accessory.context.accessoryState);
+      this.logs.debug(this.accessory.context.displayName, '- Homebridge State:\n', this.accessory.context.accessoryState);
     } else {
       _.merge(this.accessory.context.accessoryState, { isOn: false });
     }
@@ -421,7 +420,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       case pending:
         this.readRequestLevel = Math.max(requestLevel, this.readRequestLevel);
         break;
-
     }
 
   }
