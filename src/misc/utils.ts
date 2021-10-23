@@ -154,28 +154,29 @@ export function loadJson<T>(file: string, replacement: T): T {
  */
 export function convertHueToColorCCT(hue: number): IColorCCT {
   let multiplier = 0;
-  const colorCCT = { warmWhite: 0, coldWhite: 0 };
+  let warmWhite = 0, coldWhite = 0;
 
 
   if (hue <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
-    colorCCT.warmWhite = 255;
     multiplier = ((hue / 90));
-    colorCCT.coldWhite = Math.round((255 * multiplier));
+    coldWhite = Math.round((127 * multiplier));
+    warmWhite = 255 - coldWhite;
   } else if (hue > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
-    colorCCT.warmWhite = 255;
     multiplier = (1 - (hue - 270) / 90);
-    colorCCT.coldWhite = Math.round((255 * multiplier));
+    coldWhite = Math.round((127 * multiplier));
+    warmWhite = 255 - coldWhite;
   } else if (hue > 180 && hue <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
-    colorCCT.coldWhite = 255;
     multiplier = ((hue - 180) / 90);
-    colorCCT.warmWhite = Math.round((255 * multiplier));
+    warmWhite = Math.round((127 * multiplier));
+    coldWhite = 255 - warmWhite;
+
   } else if (hue > 90 && hue <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
-    colorCCT.coldWhite = 255;
     multiplier = (1 - (hue - 90) / 90);
-    colorCCT.warmWhite = Math.round((255 * multiplier));
+    warmWhite = Math.round((127 * multiplier));
+    coldWhite = 255 - warmWhite;
   }
 
-  return colorCCT;
+  return {warmWhite, coldWhite};
 } //hueToWhiteTemperature
 
 export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
