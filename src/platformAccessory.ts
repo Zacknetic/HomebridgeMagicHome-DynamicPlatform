@@ -6,12 +6,13 @@ import type {
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './misc/utils';
 import { DefaultAccessoryCommand, IAccessoryCommand, IAccessoryState, IConfigOptions, MagicHomeAccessory } from './misc/types';
 import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
-import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus, IProtoDevice } from 'magichome-platform';
+import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus as DeviceStatus, IProtoDevice } from 'magichome-platform';
 import { _ } from 'lodash';
 import Queue from 'queue-promise';
 import { Logs } from './logs';
 
-const { ready, pending, busy } = DeviceWriteStatus;
+const { ready, pending, busy } = DeviceStatus;
+
 const CCT = 'CCT';
 const HSL = 'HSL';
 const BUFFER_MS = 100;
@@ -46,6 +47,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected simultaniousDevicesColorWhite;
 
   protected deviceWriteStatus = ready;
+  protected deviceReadStatus = ready;
+  protected readRequestLevel = 0;
+
   protected queue;
   protected slowQueueRetry = false;
   latestDeviceState: IDeviceState;
@@ -404,8 +408,22 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   async fetchAndUpdateState(requestLevel) {
-    await this.updateLocalState(requestLevel, null);
-    this.updateHomekitState();
+    switch (this.deviceReadStatus) {
+      case ready:
+        this.deviceReadStatus = pending;
+        this.readRequestLevel = requestLevel;
+        setTimeout(async () => {
+          await this.updateLocalState(this.readRequestLevel, null);
+          this.updateHomekitState();
+          this.deviceReadStatus = ready;
+        }, BUFFER_MS);
+        break;
+      case pending:
+        this.readRequestLevel = Math.max(requestLevel, this.readRequestLevel);
+        break;
+
+    }
+
   }
 
 } // ZackneticMagichomePlatformAccessory class
