@@ -1,39 +1,52 @@
-import { clamp, convertHSLtoRGB } from '../misc/utils';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IAccessoryCommand, IAccessoryState } from '../misc/types';
+import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, clamp, whiteTemperatureToCCT, convertMiredColorTemperatureToHueSat } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
+
+
 export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
-  // public eightByteProtocol = 2;
-  // async updateDeviceState() {
 
-  //   //**** local variables ****\\
-  //   const hsl = this.lightState.HSL;
-  //   const [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
-  //   const brightness = this.lightState.brightness;
-    
-  //   //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
-  //   // this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-    
-  //   const mask = 0xF0; // the 'mask' byte tells the controller which LEDs to turn on color(0xF0), white (0x0F), or both (0xFF)
-  //   //we default the mask to turn on color. Other values can still be set, they just wont turn on
-    
-  //   //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
-  //   //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
-  //   const r = Math.round(((clamp(red, 0, 255) / 100) * brightness));
-  //   const g = Math.round(((clamp(green, 0, 255) / 100) * brightness));
-  //   const b = Math.round(((clamp(blue, 0, 255) / 100) * brightness));
-  
-   
-  //   if(this.eightByteProtocol == 0){
-  //    // await this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
-  //   } else if(this.eightByteProtocol == 1){
-  //     //await this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F]);
-  //   } else if (this.eightByteProtocol == 2){
-  //     //this.eightByteProtocol = (await this.send([0x31, r, g, b, 0x00, 0x00, mask, 0x0F])) == undefined ? 0 : 1;
-  //    // await this.send([0x31, r, g, b, 0x00, mask, 0x0F]); //8th byte checksum calculated later in send()
-  //   }
 
-    
-  // }//setColor
-    
-    
+  protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
+
+    const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
+    const { hue, saturation } = HSL;
+    const { red, green, blue }: IColorRGB = convertHSLtoRGB(HSL);
+
+
+    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
+    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
+    const _green = Math.round((red / 100) * brightness);
+    const _red = Math.round((green / 100) * brightness);
+    const _blue = Math.round((blue / 100) * brightness);
+
+
+    const deviceCommand: IDeviceCommand = { isOn, RGB: {red: _red, green: _green, blue: _blue } };
+    return deviceCommand;
+  }//setColor
+
+  deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
+
+    const { LEDState: { RGB: { red, green, blue }, isOn } } = deviceState;
+    const RGB: IColorRGB = { red: green, green: red, blue };
+    // eslint-disable-next-line prefer-const
+    let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
+    let brightness = 0;
+
+    //Brightness
+    if (isOn) {
+      brightness = luminance;
+    }
+
+
+    const accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
+    return accessoryState;
+  }
+
+
 }
+
+
+
+

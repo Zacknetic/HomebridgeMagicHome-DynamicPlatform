@@ -1,40 +1,38 @@
 import { Logging } from 'homebridge';
-import  logger  from 'node-color-log';
 
 export class Logs {
-  constructor(private logging: Logging, private readonly level = 3) {
+  constructor(private hbLogger: Logging, private readonly level = 3) {
     logs = this;
     this.level = level;
   }
 
   trace(message, ...parameters: any[]) {
     if (this.level >= 5) {
-      this.logging.info(message, ...parameters);
+      this.hbLogger.info('[Trace]', message, ...parameters);
     }
   }
 
   debug(message, ...parameters: any[]) {
     if (this.level >= 4) {
-      this.logging.info(message, ...parameters);
+      this.hbLogger.info('[Debug]', message, ...parameters);
     }
   }
 
   info(message, ...parameters: any[]) {
     if (this.level >= 3) {
-      this.logging.info(message, ...parameters);
+      this.hbLogger.info('[Info]', message, ...parameters);
     }
   }
 
   warn(message, ...parameters: any[]) {
     if (this.level >= 2) {
-      logger.bgColor('yellow').color('black').log('[Warning] ').joint().color('yellow').log(message, ...parameters);
-      // this.logging.warn(message, ...parameters);
+      this.hbLogger.warn('[Warning]', message, ...parameters);
     }
   }
 
   error(message, ...parameters: any[]) {
     if (this.level >= 1) {
-      this.logging.error(message, ...parameters);
+      this.hbLogger.error('[Error]', message, ...parameters);
     }
   }
 }

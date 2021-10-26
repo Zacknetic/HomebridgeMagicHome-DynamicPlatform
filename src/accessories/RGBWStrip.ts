@@ -64,7 +64,7 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
 
-    const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    const { LEDState: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;

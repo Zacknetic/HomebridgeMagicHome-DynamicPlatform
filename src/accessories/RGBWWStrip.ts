@@ -8,6 +8,10 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
+    if(HSL.saturation < 10){
+      this.animateMe();
+      return;
+    }
     const { hue, saturation } = HSL;
     const RGB: IColorRGB = convertHSLtoRGB(HSL);
     // let _CCT: IColorCCT;
@@ -79,8 +83,8 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   }//setColor
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
-
-    const { LED: { RGB, RGB: { red, green, blue }, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+  
+    const { LEDState: { RGB, RGB: { red, green, blue }, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
 
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);

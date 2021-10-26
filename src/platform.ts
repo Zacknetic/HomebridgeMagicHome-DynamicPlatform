@@ -41,13 +41,14 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
   private readonly hbLogger: Logging;
   constructor(
-    hbLogger: Logging,
+    logging: Logging,
     config: PlatformConfig,
     api: API,
   ) {
+    this.hbLogger = logging;
     hap = api.hap;
     this.config = config;
-    this.log = new Logs(hbLogger, config.globalAccessoryOptions?.logLevel ?? 3);
+    this.log = new Logs(logging, config?.globalAccessoryOptions?.logLevel ?? 3);
     this.api = api;
     //this.logs = getLogger();
     this.log.warn('Finished initializing homebridge-magichome-dynamic-platform %o', loadJson<any>(join(__dirname, '../package.json'), {}).version);
@@ -98,7 +99,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     await accesssoryGenerator.generateAccessories();
-    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 10000);
+    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 30000);
 
   }
 
