@@ -3,10 +3,45 @@ import type {
   CharacteristicSetCallback, CharacteristicGetCallback, HAP, Logger, Logging,
 } from 'homebridge';
 
+const thunderstruck: IAnimationLoop = {
+
+  'name': 'ThunderStruck',
+  'pattern': [
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+      },
+      'transitionTimeMS': 0,
+      'durationAtTargetMS': 100,
+      'chancePercent': 10,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 255, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 255, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': 0,
+      'durationAtTargetMS': 100,
+      'chancePercent': 100,
+    },
+  ],
+  'accessories': [
+    'Office Light',
+  ],
+  'accessoryOffsetMS': 0,
+};
+
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './misc/utils';
 import { DefaultAccessoryCommand, IAccessoryCommand, IAccessoryState, IConfigOptions, MagicHomeAccessory } from './misc/types';
 import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
-import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus as DeviceStatus, IProtoDevice } from 'magichome-platform';
+import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus as DeviceStatus, IProtoDevice, IAnimationLoop } from 'magichome-platform';
 import { _ } from 'lodash';
 import Queue from 'queue-promise';
 import { Logs } from './logs';
@@ -19,9 +54,9 @@ const BUFFER_MS = 100;
 const FINAL_COMMAND_TIMEOUT = 100;
 const QUEUE_INTERVAL = 150;
 
-const SLOW_COMMAND_OPTIONS: ICommandOptions = { verifyRetries: 20, bufferMS: 10, timeoutMS: 2000 };
-const MEDIUM_COMMAND_OPTIONS: ICommandOptions = { verifyRetries: 10, bufferMS: 10, timeoutMS: 200 };
-const FAST_COMMAND_OPTIONS: ICommandOptions = { verifyRetries: 0, bufferMS: 0, timeoutMS: 20 };
+const SLOW_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 10, timeoutMS: 2000 };
+const MEDIUM_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 10, bufferMS: 10, timeoutMS: 200 };
+const FAST_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 0, bufferMS: 0, timeoutMS: 20 };
 
 /**
  * Platform Accessory
@@ -34,6 +69,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected readonly hap: HAP;
 
   protected adaptiveLightingService;
+  protected animationInterval;
+  protected interruptInterval;
+  protected intervals;
 
   protected newAccessoryCommand: IAccessoryCommand;
   protected latestDeviceCommand: IDeviceCommand;
@@ -62,9 +100,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     protected readonly accessory: MagicHomeAccessory,
     public readonly config: PlatformConfig,
     protected readonly controller: BaseController,
-    protected readonly logging: Logging,
+    protected readonly hbLogger: Logging,
   ) {
-
 
     this.setupMisc();
 
@@ -122,7 +159,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setConfiguredName(value: CharacteristicValue) {
 
     const name: string = value.toString();
-    this.logs.debug('[Debug] Renaming device to %o', name);
+    this.logs.warn('Renaming device to %o', name);
     this.accessory.context.displayName = name;
     this.api.updatePlatformAccessories([this.accessory]);
   }
@@ -179,6 +216,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
 
   protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
+    // for (const interval of this.intervals) {
+      this.controller.clearAnimations();
+      clearInterval(this.animationInterval);
+
+    //}
+
     const deviceWriteStatus = this.deviceWriteStatus;
     switch (deviceWriteStatus) {
       case ready:
@@ -258,7 +301,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if (!deviceState) {
       deviceState = await this.controller?.fetchState() ?? this.accessory.context.cachedDeviceInformation.deviceState;
     }
-    this.logs.debug(`[Debug] [${this.accessory.context.displayName}] - Device State:\n`, deviceState);
+    this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
     this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
     const { HSL: { hue, saturation, luminance }, colorTemperature, brightness, isOn } = this.deviceStateToAccessoryState(deviceState);
     let accessoryState: IAccessoryState;
@@ -279,7 +322,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       }
       _.merge(this.accessory.context.accessoryState, accessoryState);
 
-      this.logs.debug(`[Debug] [${this.accessory.context.displayName}] - Homebridge State:\n`, this.accessory.context.accessoryState);
+      this.logs.debug(`[${this.accessory.context.displayName}] - Homebridge State:\n`, this.accessory.context.accessoryState);
     } else {
       _.merge(this.accessory.context.accessoryState, { isOn: false });
     }
@@ -294,7 +337,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
 
-    const { LED: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    const { LEDState: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;
@@ -329,7 +372,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.queue.on('end', async () => {
 
-      if (!_.isEqual(_.omit(this.latestDeviceState?.LED ?? {}, ['colorMask']), _.omit(this.latestDeviceCommand, ['colorMask']))) {
+      if (!_.isEqual(_.omit(this.latestDeviceState?.LEDState ?? {}, ['colorMask']), _.omit(this.latestDeviceCommand, ['colorMask']))) {
         if (this.slowQueueRetry) {
           timeout = setTimeout(async () => {
             this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Sending a slow write command to increase chance of success:\n`, this.latestDeviceCommand);
@@ -397,7 +440,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     this.colorWhiteSimultaniousSaturationLevel = colorWhiteSimultaniousSaturationLevel;
     this.colorOffSaturationLevel = colorOffSaturationLevel;
-    this.logs = new Logs(this.logging, logLevel ?? 3);
+    this.logs = new Logs(this.hbLogger, logLevel ?? 3);
 
   }
 
@@ -417,6 +460,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         break;
     }
 
+  }
+
+    protected async animateMe() {
+    this.logs.warn('animating thunderstruck');
+    clearInterval(this.animationInterval);
+    //this.controller.animateIndividual(thunderstruck);
+
+    
+     this.controller.animateIndividual(thunderstruck).then(() => this.animateMe());
+    // this.animationInterval = setInterval(() => {
+    //   this.controller.animateIndividual(thunderstruck);
+    // }, 1000);
   }
 
 } // ZackneticMagichomePlatformAccessory class
