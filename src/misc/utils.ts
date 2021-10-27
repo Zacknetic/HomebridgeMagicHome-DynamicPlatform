@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs';
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
 import { IAccessoryCommand, IAccessoryState, IColorHSL } from './types';
 
+
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -32,42 +33,43 @@ export function checksum(buffer: Uint8Array) {
 //=================================================
 // Start Convert RGBtoHSL //
 export function convertRGBtoHSL(RGB: IColorRGB) {
+
   const { red, green, blue } = RGB;
+
+
   const r = red / 255;
   const g = green / 255;
   const b = blue / 255;
-  const min = Math.min(r, g, b);
+
+  let h, s, l;
+  h = s = l = 0;
+
   const max = Math.max(r, g, b);
-  const delta = max - min;
-  let h = 0;
-  let s = 0;
-
-  if (max === min) {
+  const min = Math.min(r, g, b);
+  const C = max - min;
+  if (C == 0) {
     h = 0;
-  } else if (r === max) {
-    h = (g - b) / delta;
-  } else if (g === max) {
-    h = 2 + (b - r) / delta;
-  } else if (b === max) {
-    h = 4 + (r - g) / delta;
+  } else if (max == r) {
+    h = ((g - b) / C) % 6;
+  } else if (max == g) {
+    h = (b - r) / C + 2;
+  } else {
+    h = (r - g) / C + 4;
   }
-
-  h = Math.min(h * 60, 360);
-
+  h *= 60;
   if (h < 0) {
     h += 360;
   }
-
-  const l = max / 2.55;
-
-  if (max === min) {
+  l = max;
+  if (l == 0) {
     s = 0;
-  } else if (l <= 0.5) {
-    s = delta / (max + min);
   } else {
-    s = delta / (2 - max - min);
+    s = C / l;
   }
-  const HSL: IColorHSL = { hue: h, saturation: s * 100, luminance: l * 100 };
+  s *= 100;
+  l *= 100;
+
+  const HSL: IColorHSL = { hue: Math.floor(h), saturation: Math.floor(s), luminance: Math.floor(l) };
   return HSL;
 }
 
@@ -79,52 +81,51 @@ export function convertRGBtoHSL(RGB: IColorRGB) {
 // Start Convert HSLtoRGB //
 export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
 
-  let RGB: IColorRGB;
   const { hue, saturation, luminance } = HSL;
-  const h = hue / 360;
-  const s = saturation / 100;
-  const l = 50 / 100;
-  let t2;
-  let t3;
-  let val;
 
-  if (s === 0) {
-    val = l * 255;
-    RGB = { red: val, green: val, blue: val };
-  }
+  const h = hue;
+  const s = saturation / 100.0;
+  const l = luminance / 100.0;
 
-  if (l < 0.5) {
-    t2 = l * (1 + s);
+  const C = l * s;
+  const hh = h / 60.0;
+  const X = C * (1.0 - Math.abs((hh % 2) - 1.0));
+
+  let r, g, b;
+  r = g = b = 0;
+
+  if (hh >= 0 && hh < 1) {
+    r = C;
+    g = X;
+  } else if (hh >= 1 && hh < 2) {
+    r = X;
+    g = C;
+  } else if (hh >= 2 && hh < 3) {
+    g = C;
+    b = X;
+  } else if (hh >= 3 && hh < 4) {
+    g = X;
+    b = C;
+  } else if (hh >= 4 && hh < 5) {
+    r = X;
+    b = C;
   } else {
-    t2 = l + s - l * s;
+    r = C;
+    b = X;
   }
 
-  const t1 = 2 * l - t2;
+  const m = l - C;
+  r += m;
+  g += m;
+  b += m;
+  r *= 255.0;
+  g *= 255.0;
+  b *= 255.0;
+  r = Math.floor(r);
+  g = Math.floor(g);
+  b = Math.floor(b);
 
-  const rgb = [0, 0, 0];
-  for (let i = 0; i < 3; i++) {
-    t3 = h + 1 / 3 * -(i - 1);
-    if (t3 < 0) {
-      t3++;
-    }
-
-    if (t3 > 1) {
-      t3--;
-    }
-
-    if (6 * t3 < 1) {
-      val = t1 + (t2 - t1) * 6 * t3;
-    } else if (2 * t3 < 1) {
-      val = t2;
-    } else if (3 * t3 < 2) {
-      val = t1 + (t2 - t1) * (2 / 3 - t3) * 6;
-    } else {
-      val = t1;
-    }
-
-    rgb[i] = val * 255;
-  }
-  RGB = { red: rgb[0], green: rgb[1], blue: rgb[2] };
+  const RGB = { red: r, green: g, blue: b };
   return RGB;
 }
 //=================================================
@@ -176,7 +177,7 @@ export function convertHueToColorCCT(hue: number): IColorCCT {
     coldWhite = 255 - warmWhite;
   }
 
-  return {warmWhite, coldWhite};
+  return { warmWhite, coldWhite };
 } //hueToWhiteTemperature
 
 export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
@@ -210,7 +211,7 @@ export function delayToSpeed(delay: never) {
   clamped -= 1; // bring into interval [0, 30]
   return 100 - (clamped / 30) * 100;
 }
-
+ 
 export function speedToDelay(speed: never) {
   const clamped = clamp(speed, 0, 100);
   return 30 - (clamped / 100) * 30 + 1;

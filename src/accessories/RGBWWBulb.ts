@@ -9,10 +9,11 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const { hue, saturation } = HSL;
-    const RGB: IColorRGB = convertHSLtoRGB(HSL);
+    
+    const RGB: IColorRGB = convertHSLtoRGB({ hue, saturation, luminance: brightness });
     // let _CCT: IColorCCT;
     // if (this.ColorCommandMode == 'HSL') {
-      const _CCT:IColorCCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
+    const _CCT: IColorCCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
     // } else {
     //   _CCT = cctToWhiteTemperature(colorTemperature);
     // }
@@ -49,7 +50,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       //if saturation is below config set threshold, set rgb to 0 and set the mask to white (0x0F). 
       //White colors were already calculated above
     } else if (saturation < 20) {
-      
+
       red = 0;
       green = 0;
       blue = 0;
@@ -87,7 +88,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
       saturation = 10;
 
     }
-    const accessoryState: IAccessoryState = { HSL: {hue, saturation, luminance}, isOn, colorTemperature: 140, brightness };
+    const accessoryState: IAccessoryState = { HSL: { hue, saturation, luminance }, isOn, colorTemperature: 140, brightness };
     return accessoryState;
   }
 

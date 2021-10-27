@@ -8,12 +8,10 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
-    if(HSL.saturation < 10){
-      this.animateMe();
-      return;
-    }
+
     const { hue, saturation } = HSL;
-    const RGB: IColorRGB = convertHSLtoRGB(HSL);
+    const RGB: IColorRGB = convertHSLtoRGB({ hue, saturation, luminance: brightness });
+
     // let _CCT: IColorCCT;
     // if (this.ColorCommandMode == 'HSL') {
     const _CCT = convertHueToColorCCT(HSL.hue); //calculate the white colors as a function of hue and saturation. See "convertHueToColorCCT()"
@@ -22,12 +20,6 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     // }
     let { red, green, blue } = RGB, { warmWhite, coldWhite } = _CCT;
     let colorMask = 0xFF;
-
-    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
-    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
-    red = Math.round((red / 100) * brightness);
-    green = Math.round((green / 100) * brightness);
-    blue = Math.round((blue / 100) * brightness);
 
     warmWhite = Math.round((warmWhite / 100) * brightness);
     coldWhite = Math.round((coldWhite / 100) * brightness);
@@ -108,7 +100,7 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
         hue = hueSat[0];
         saturation = 10;
       }
-    }
+    } 
 
     const accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
     return accessoryState;

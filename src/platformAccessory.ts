@@ -13,22 +13,46 @@ const thunderstruck: IAnimationLoop = {
 
       },
       'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
       },
-      'transitionTimeMS': 0,
-      'durationAtTargetMS': 100,
-      'chancePercent': 10,
+      'transitionTimeMS': 1000,
+      'durationAtTargetMS': [10000, 30000],
+      'chancePercent': 100,
     },
     {
       'colorStart': {
-        RGB: { red: 0, green: 255, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
 
       },
       'colorTarget': {
-        RGB: { red: 255, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
       },
-      'transitionTimeMS': 0,
-      'durationAtTargetMS': 100,
+      'transitionTimeMS': 50,
+      'durationAtTargetMS': [50, 150],
+      'chancePercent': 50,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': 30,
+      'durationAtTargetMS': [200, 300],
+      'chancePercent': 100,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+      },
+      'transitionTimeMS': 30,
+      'durationAtTargetMS': [50, 300],
       'chancePercent': 100,
     },
   ],
@@ -50,12 +74,12 @@ const { ready, pending, busy } = DeviceStatus;
 
 const CCT = 'CCT';
 const HSL = 'HSL';
-const BUFFER_MS = 100;
+const BUFFER_MS = 0;
 const FINAL_COMMAND_TIMEOUT = 100;
 const QUEUE_INTERVAL = 150;
 
-const SLOW_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 10, timeoutMS: 2000 };
-const MEDIUM_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 10, bufferMS: 10, timeoutMS: 200 };
+const SLOW_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 0, timeoutMS: 2000 };
+const MEDIUM_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 0, timeoutMS: 1000 };
 const FAST_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 0, bufferMS: 0, timeoutMS: 20 };
 
 /**
@@ -217,8 +241,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
     // for (const interval of this.intervals) {
-      this.controller.clearAnimations();
-      clearInterval(this.animationInterval);
+    this.controller.clearAnimations();
+    clearInterval(this.animationInterval);
 
     //}
 
@@ -251,15 +275,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         if (this.newAccessoryCommand.hasOwnProperty('isOn') && !(this.newAccessoryCommand.hasOwnProperty('HSL') || this.newAccessoryCommand.hasOwnProperty('brightness'))) {
           sanitizedAcessoryCommand.isPowerCommand = true;
         }
-
-        this.deviceWriteStatus = ready;
-
-        return this.prepareCommand(sanitizedAcessoryCommand);
+        resolve(this.prepareCommand(sanitizedAcessoryCommand));
       }, BUFFER_MS);
     });
   }
 
   protected async prepareCommand(accessoryCommand: IAccessoryCommand, options: ICommandOptions = MEDIUM_COMMAND_OPTIONS) {
+    // if(accessoryCommand.HSL.saturation < 10){
+    //   this.animateMe();
+    //   return;
+    // }
     const deviceCommand = this.accessoryCommandToDeviceCommand(accessoryCommand);
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
     this.latestDeviceCommand = deviceCommand;
@@ -462,16 +487,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-    protected async animateMe() {
+  protected animateMe() {
     this.logs.warn('animating thunderstruck');
-    clearInterval(this.animationInterval);
-    //this.controller.animateIndividual(thunderstruck);
-
-    
-     this.controller.animateIndividual(thunderstruck).then(() => this.animateMe());
-    // this.animationInterval = setInterval(() => {
-    //   this.controller.animateIndividual(thunderstruck);
-    // }, 1000);
+    this.controller.animateIndividual(thunderstruck);
   }
 
 } // ZackneticMagichomePlatformAccessory class

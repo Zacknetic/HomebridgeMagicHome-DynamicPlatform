@@ -10,17 +10,11 @@ export class RGBWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
 
     const { isOn, HSL, colorTemperature, brightness } = accessoryCommand;
     const { hue, saturation } = HSL;
-    const RGB: IColorRGB = convertHSLtoRGB(HSL);
-
+    const RGB: IColorRGB = convertHSLtoRGB({ hue, saturation, luminance: brightness });
     let { red, green, blue } = RGB, warmWhite;
 
     let colorMask = 0xFF;
 
-    //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
-    //next determine brightness by dividing by 100 and multiplying it back in as brightness (0-100)
-    red = Math.round((red / 100) * brightness);
-    green = Math.round((green / 100) * brightness);
-    blue = Math.round((blue / 100) * brightness);
     warmWhite = Math.round(2.55 * brightness);
 
     if (hue == 31 && saturation == 33) {
