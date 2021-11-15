@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report to help us solve the issue
-title: "[BUG] Concise Description of the Issue"
+title: "[BUG] (CHANGE ME -> eg. Powering off my raspberry pi causes devices to become unresponsive)"
 labels: bug
 assignees: isramos, Zacknetic
 
