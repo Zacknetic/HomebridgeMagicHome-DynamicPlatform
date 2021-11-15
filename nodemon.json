@@ -4,5 +4,5 @@
   ],
   "ext": "ts",
   "ignore": [],
-  "exec": "tsc && homebridge -I -D -U C:/Users/zacka/.homebridge-two"
+  "exec": "tsc && homebridge -I -D"
 }

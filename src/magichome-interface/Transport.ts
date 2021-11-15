@@ -19,9 +19,8 @@ function wait(emitter: net.Socket, eventName: string, timeout: number) {
     }, timeout);
 
     // listen for the first event, then stop listening (once)
-    emitter.once(eventName, (args: any ) => {
+    emitter.once(eventName, (args: any) => {
       clearTimeout(waitTimeout); // stop the timeout from executing
-
       if (!complete) {
         complete = true; // mark the job as done
         resolve(args);
@@ -81,7 +80,7 @@ export class Transport {
       return result;
     } catch (e) {
       const { code, address, port } = e;
-      if(code){
+      if (code) {
         // No need to show error here, shown upstream
         // this.log.debug(`Unable to connect to ${address} ${port} (code: ${code})`);
       } else {
@@ -90,13 +89,12 @@ export class Transport {
     } finally {
       this.socket.end();
       this.socket.destroy();
-
     }
 
     return null;
   }
 
-  disconnect() {  
+  disconnect() {
     this.socket.end();
     this.socket = null;
   }
@@ -104,24 +102,24 @@ export class Transport {
   async send(buffer: any, useChecksum = true, _timeout = 2000) {
     return this.queue.add(async () => (
       this.connect(async () => {
-        await this.write(buffer, useChecksum, _timeout);
+        await this.write(buffer);
         return this.read(_timeout);
       })
-    )); 
+    ));
   }
 
   async write(buffer: any, useChecksum = true, _timeout = 200) {
     let sent;
-    if(useChecksum){
+    if (useChecksum) {
 
       const chk = checksum(buffer);
       const payload = Buffer.concat([buffer, Buffer.from([chk])]);
-      sent = this.socket.write(payload, useChecksum, _timeout);
+      sent = this.socket.write(payload);
 
     } else {
-      sent = this.socket.write(buffer, useChecksum, _timeout);
+      sent = this.socket.write(buffer);
     }
- 
+
     // wait for drain event which means all data has been sent
     if (sent !== true) {
       await wait(this.socket, 'drain', _timeout);
@@ -133,14 +131,14 @@ export class Transport {
     return data;
   }
 
-  async getState(_timeout = 500){
+  async getState(_timeout = 500) {
     try {
       const data = await this.send(COMMAND_QUERY_STATE, true, _timeout);
       if (data == null) {
         return null;
       }
       return {
-      
+
         debugBuffer: data,
         controllerHardwareVersion: data.readUInt8(1),
         isOn: data.readUInt8(2) === 0x23,
@@ -154,7 +152,7 @@ export class Transport {
           coldWhite: data.readUInt8(11),
         },
         controllerFirmwareVersion: data.readUInt8(10),
-  
+
       };
     } catch (error) {
       this.logs.debug('Transport getState() error:', error);
