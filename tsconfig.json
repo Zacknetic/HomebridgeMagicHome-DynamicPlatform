@@ -16,6 +16,7 @@
     "esModuleInterop": true,
     "strictNullChecks": false,
     "strict": false,
+    "downlevelIteration": true
   },
   "include": [
     "src/"

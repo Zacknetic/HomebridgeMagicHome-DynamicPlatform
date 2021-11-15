@@ -51,9 +51,87 @@ const thunderstruck: IAnimationLoop = {
       'colorTarget': {
         RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
       },
+      'transitionTimeMS': 50,
+      'durationAtTargetMS': [50, 150],
+      'chancePercent': 50,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': 30,
+      'durationAtTargetMS': [200, 300],
+      'chancePercent': 100,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+      },
+      'transitionTimeMS': 50,
+      'durationAtTargetMS': [50, 150],
+      'chancePercent': 50,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': 30,
+      'durationAtTargetMS': [200, 300],
+      'chancePercent': 100,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+
+      },
+      'colorTarget': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+      },
       'transitionTimeMS': 30,
       'durationAtTargetMS': [50, 300],
       'chancePercent': 100,
+    },
+  ],
+  'accessories': [
+    'Office Light',
+  ],
+  'accessoryOffsetMS': 0,
+};
+
+const hell: IAnimationLoop = {
+
+  'name': 'hell',
+  'pattern': [
+    {
+      'colorTarget': {
+        RGB: { red: [100, 255], green: [0, 25], blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': [100, 300],
+      'durationAtTargetMS': [0, 5000],
+      'chancePercent': 100,
+    },
+    {
+      'colorStart': {
+        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
+      },
+      'colorTarget': {
+        RGB: { red: [100, 255], green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
+      },
+      'transitionTimeMS': 30,
+      'durationAtTargetMS': [100, 150],
+      'chancePercent': 10,
     },
   ],
   'accessories': [
@@ -242,8 +320,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
     // for (const interval of this.intervals) {
     this.controller.clearAnimations();
-    clearInterval(this.animationInterval);
-
     //}
 
     const deviceWriteStatus = this.deviceWriteStatus;
@@ -281,9 +357,12 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   protected async prepareCommand(accessoryCommand: IAccessoryCommand, options: ICommandOptions = MEDIUM_COMMAND_OPTIONS) {
-    // if(accessoryCommand.HSL.saturation < 10){
-    //   this.animateMe();
+    // if (accessoryCommand.HSL.saturation < 5) {
+    //   this.animateMe(thunderstruck);
     //   return;
+    // }
+    // if(accessoryCommand.HSL.hue < 5 || accessoryCommand.HSL.hue > 355){
+    //   this.animateMe(hell);
     // }
     const deviceCommand = this.accessoryCommandToDeviceCommand(accessoryCommand);
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
@@ -487,9 +566,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-  protected animateMe() {
-    this.logs.warn('animating thunderstruck');
-    this.controller.animateIndividual(thunderstruck);
+  protected animateMe(animation) {
+    this.logs.warn('animating', animation.name);
+    this.controller.animateIndividual(animation);
   }
 
 } // ZackneticMagichomePlatformAccessory class
