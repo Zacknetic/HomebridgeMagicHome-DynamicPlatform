@@ -104,7 +104,7 @@ export class Transport {
   async send(buffer: any, useChecksum = true, _timeout = 2000) {
     return this.queue.add(async () => (
       this.connect(async () => {
-        await this.write(buffer, useChecksum, _timeout);
+        await this.write(buffer);
         return this.read(_timeout);
       })
     )); 
@@ -116,10 +116,10 @@ export class Transport {
 
       const chk = checksum(buffer);
       const payload = Buffer.concat([buffer, Buffer.from([chk])]);
-      sent = this.socket.write(payload, useChecksum, _timeout);
+      sent = this.socket.write(payload);
 
     } else {
-      sent = this.socket.write(buffer, useChecksum, _timeout);
+      sent = this.socket.write(buffer);
     }
  
     // wait for drain event which means all data has been sent
