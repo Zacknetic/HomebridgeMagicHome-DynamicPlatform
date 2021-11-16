@@ -2,7 +2,7 @@ import { clamp, convertHSLtoRGB, convertRGBtoHSL } from '../magichome-interface/
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
-    
+
   async updateDeviceState() {
 
     //**** local variables ****\\
@@ -10,10 +10,10 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     let [red, green, blue] = convertHSLtoRGB(hsl); //convert HSL to RGB
     const whites = this.hueToWhiteTemperature(); //calculate the white colors as a function of hue and saturation. See "calculateWhiteColor()"
     const brightness = this.lightState.brightness;
-    
+
     //this.platform.log.debug('Current HSL and Brightness: h:%o s:%o l:%o br:%o', hsl.hue, hsl.saturation, hsl.luminance, brightness);
     //  this.platform.log.debug('Converted RGB: r:%o g:%o b:%o', red, green, blue);
-    
+
     let mask = 0xFF;
 
     //sanitize our color/white values with Math.round and clamp between 0 and 255, not sure if either is needed
@@ -59,8 +59,8 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
       //we've set the color saturation to 100% because the higher the white level the more washed out the colors become
       //the white brightness effectively acts as the saturation value
     } else if (hsl.saturation < this.colorWhiteThresholdSimultaniousDevices && this.simultaniousDevicesColorWhite) {
-            
-      [red, green, blue] = convertHSLtoRGB({ hue: hsl.hue, saturation: 100, luminance: hsl.luminance}); //re-generate rgb with full saturation
+
+      [red, green, blue] = convertHSLtoRGB({ hue: hsl.hue, saturation: 100, luminance: hsl.luminance }); //re-generate rgb with full saturation
       r = red;
       g = green;
       b = blue;
@@ -74,25 +74,25 @@ export class RGBWWStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     await this.send([0x31, r, g, b, ww, cw, mask, 0x0F]); //9th byte checksum calculated later in send()
-    
+
   }//setColor
-    
+
   async updateHomekitState() {
     this.service.updateCharacteristic(this.platform.Characteristic.On, this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
-    this.service.updateCharacteristic(this.platform.Characteristic.Saturation,  this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
+    this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
+    if (this.lightState.HSL.luminance > 0 && this.lightState.isOn) {
       this.service.updateCharacteristic(this.platform.Characteristic.Brightness, this.lightState.HSL.luminance * 2);
-    } else if (this.lightState.isOn){
-      this.service.updateCharacteristic(this.platform.Characteristic.Brightness,clamp(((this.lightState.whiteValues.coldWhite/2.55) + (this.lightState.whiteValues.warmWhite/2.55)), 0, 100));
-      if(this.lightState.whiteValues.warmWhite>this.lightState.whiteValues.coldWhite){
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite/255)));
+    } else if (this.lightState.isOn) {
+      this.service.updateCharacteristic(this.platform.Characteristic.Brightness, clamp(((this.lightState.whiteValues.coldWhite / 2.55) + (this.lightState.whiteValues.warmWhite / 2.55)), 0, 100));
+      if (this.lightState.whiteValues.warmWhite > this.lightState.whiteValues.coldWhite) {
+        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.coldWhite / 255)));
         this.service.updateCharacteristic(this.platform.Characteristic.Hue, 0);
       } else {
-        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite/255)));
+        this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.colorWhiteThreshold - (this.colorWhiteThreshold * (this.lightState.whiteValues.warmWhite / 255)));
         this.service.updateCharacteristic(this.platform.Characteristic.Hue, 180);
       }
     }
   }
-  
+
 }

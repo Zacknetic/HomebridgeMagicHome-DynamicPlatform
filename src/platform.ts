@@ -76,7 +76,11 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       // run the method to discover / register your devices as accessories
       this.discoverDevices(true);
       // Periodic scan for devices
-      this.periodicDiscovery = setInterval(() => this.discoverDevices(false), 30000);
+      const shouldRediscover = this.config.advancedOptions?.periodicDiscovery ?? false;
+
+      if (shouldRediscover) {
+        this.periodicDiscovery = setInterval(() => this.discoverDevices(false), 30000);
+      }
     });
   }
 
@@ -108,6 +112,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
     let discover = new Discover(this.logs, this.config);
+
+
+
     let devicesDiscovered: IDeviceDiscoveredProps[] = await discover.scan(2000);
 
     while (devicesDiscovered.length === 0 && scans < 5) {
@@ -187,9 +194,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
         }
 
       } catch (error) {
-        this.logs.error('[discovered+cached] platform.ts discoverDevices() accessory creation has thrown the following error: %o', error);
-        this.logs.error('[discovered+cached] The existingAccessory object is: ', existingAccessory);
-        this.logs.error('[discovered+cached] The deviceDiscovered object is: ', deviceDiscovered);
+        this.logs.debug('[discovered+cached] platform.ts discoverDevices() accessory creation has thrown the following error: %o', error);
+        this.logs.debug('[discovered+cached] The existingAccessory object is: ', existingAccessory);
+        this.logs.debug('[discovered+cached] The deviceDiscovered object is: ', deviceDiscovered);
       }
     }
     //=================================================

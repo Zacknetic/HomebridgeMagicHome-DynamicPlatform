@@ -1,9 +1,9 @@
 {
-  "pluginAlias": "homebridge-magichome-dynamic-platform",
-  "pluginType": "platform",
-  "singular": true,
-  "schema": {
-    "type": "object",
+    "pluginAlias": "homebridge-magichome-dynamic-platform",
+    "pluginType": "platform",
+    "singular": true,
+    "schema": {
+        "type": "object",
         "properties": {
             "pruning": {
                 "type": "object",
@@ -11,20 +11,19 @@
                     "pruneMissingCachedAccessories": {
                         "title": "Prune Missing Accesories Next Restart",
                         "type": "boolean",
-                        "default" : false,
+                        "default": false,
                         "required": true
-                
                     },
                     "restartsBeforeMissingAccessoriesPruned": {
                         "title": "Number Restarts Before Missing Accessories Are Pruned",
                         "type": "integer",
-                        "default" : 3,
+                        "default": 3,
                         "required": true
                     },
                     "pruneAllAccessoriesNextRestart": {
                         "title": " Prune All MagicHome Accessories Next Restart (WARNING: Dangerous!)",
                         "type": "boolean",
-                        "default" : false,
+                        "default": false,
                         "required": true
                     }
                 }
@@ -35,25 +34,25 @@
                     "simultaniousDevicesColorWhite": {
                         "title": "Allow Simultaneous Color and White for Compatible Devices",
                         "type": "boolean",
-                        "default" : true,
+                        "default": true,
                         "required": true
                     },
                     "colorWhiteThreshold": {
                         "title": "Saturation Threshold Between Color and White for Non-Simnultanious Devices",
                         "type": "integer",
-                        "default" : 10,
+                        "default": 10,
                         "required": true
                     },
                     "colorWhiteThresholdSimultaniousDevices": {
                         "title": "Saturation Threshold Between Color and White for Simultaneous Devices",
                         "type": "integer",
-                        "default" : 50,
+                        "default": 50,
                         "required": true
                     },
                     "colorOffThresholdSimultaniousDevices": {
                         "title": "Color Off Threshold for Simultaneous Devices",
                         "type": "integer",
-                        "default" : 5,
+                        "default": 5,
                         "required": true
                     }
                 }
@@ -66,33 +65,48 @@
                         "type": "string",
                         "default": "blacklist",
                         "oneOf": [
-                          { "title": "Blacklist", "enum": ["blacklist"] },
-                          { "title": "Whitelist", "enum": ["whitelist"] }
+                            {
+                                "title": "Blacklist",
+                                "enum": [
+                                    "blacklist"
+                                ]
+                            },
+                            {
+                                "title": "Whitelist",
+                                "enum": [
+                                    "whitelist"
+                                ]
+                            }
                         ],
                         "required": true
-                      },
+                    },
                     "blacklistedUniqueIDs": {
                         "title": "Blacklisted Unique ID",
                         "type": "array",
-                        "items" : {
+                        "items": {
                             "title": "Unique ID",
                             "type": "string",
-                            "default":[
-                            ]
+                            "default": []
                         }
                     }
-
                 }
             },
             "advancedOptions": {
                 "type": "object",
                 "properties": {
+                    "periodicDiscovery": {
+                        "title": "Rescan the network.",
+                        "description": "Rescan the network for new devices every 30 seconds.",
+                        "type": "boolean",
+                        "default": true,
+                        "required": true
+                    },
                     "namesWithMacAddress": {
-                    "title": "Device names with MAC address.",
-                    "description": "When this option is enabled, upon device registering each device name will contain the lst 6 digits of its MAC address, just like the default the MagicHome App gives. For example, when option is enabled a new lamp may get name of 'Bulb 22F481' instead of the default 'RGBW Non-Simultaneous'.",
-                    "type": "boolean",
-                    "default": false,
-                    "required": true
+                        "title": "Device names with MAC address.",
+                        "description": "When this option is enabled, upon device registering each device name will contain the lst 6 digits of its MAC address, just like the default the MagicHome App gives. For example, when option is enabled a new lamp may get name of 'Bulb 22F481' instead of the default 'RGBW Non-Simultaneous.",
+                        "type": "boolean",
+                        "default": false,
+                        "required": true
                     },
                     "logLevel": {
                         "title": "Log Level:",
@@ -102,39 +116,38 @@
                             {
                                 "title": "1 - Errors",
                                 "enum": [
-                                  1
+                                    1
                                 ]
                             },
                             {
                                 "title": "2 - Warnings",
                                 "enum": [
-                                  2
+                                    2
                                 ]
                             },
                             {
                                 "title": "3 - Info (Default)",
                                 "enum": [
-                                  3
+                                    3
                                 ]
                             },
                             {
                                 "title": "4 - Debug",
                                 "enum": [
-                                  4
+                                    4
                                 ]
                             },
                             {
                                 "title": "5 - Trace",
                                 "enum": [
-                                  5
+                                    5
                                 ]
                             }
-                    ],
-                    "required": true
+                        ],
+                        "required": true
                     }
-                }  
+                }
             }
         }
     }
 }
-  
