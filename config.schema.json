@@ -145,6 +145,15 @@
                             }
                         ],
                         "required": true
+                    },
+                    "additionalSubnets": {
+                        "title": "Additional Subnets to Scan",
+                        "type": "array",
+                        "items": {
+                            "title": "Subnet",
+                            "type": "string",
+                            "default": []
+                        }
                     }
                 }
             }

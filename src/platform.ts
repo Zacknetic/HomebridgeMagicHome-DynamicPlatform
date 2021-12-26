@@ -56,11 +56,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    if (this.config.advancedOptions.logLevel) {
-      this.logs = new Logs(hbLogger, this.config.advancedOptions.logLevel);
-    } else {
-      this.logs = new Logs(hbLogger);
-    }
+
+    this.logs = new Logs(hbLogger, this.config.advancedOptions?.logLevel ?? 3);
 
     //this.logs = getLogger();
     this.logs.warn('Finished initializing homebridge-magichome-dynamic-platform %o', loadJson<any>(join(__dirname, '../package.json'), {}).version);

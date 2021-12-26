@@ -1,16 +1,19 @@
 ---
 name: Bug report
 about: Create a report to help us solve the issue
-title: "[BUG] (CHANGE ME -> eg. Powering off my raspberry pi causes devices to become unresponsive)"
+title: "CHANGE ME -> [BUG] (eg. Powering off my raspberry pi causes devices to become unresponsive)"
 labels: bug
-assignees: isramos, Zacknetic
+assignees: Zacknetic
 
 ---
 
-### Logs
+# How to create a helpful issue
+### Instructions
 1. Enable debug mode in Homebridge
-1. Reproduce the issue so that it appears in the logs
-1. Upload a '.txt' file of your logs to this issue. ( Logs from screenshots, in '.rtf' format, or pasted directly into the post make debugging extremely difficult. Please just upload the file. )
+2. Reproduce the issue so that it appears in the logs
+3. Upload a '.txt' file of your logs to this issue. ( Logs from screenshots, in '.rtf' format, or pasted directly into the post make debugging extremely difficult. Please just upload the file. )
+
+Please modify below content to describe your own bug. Issues opened without relevant information are less likely to be fixed.
 
 ### Describe the bug
 _A clear and concise description of what the bug is._
