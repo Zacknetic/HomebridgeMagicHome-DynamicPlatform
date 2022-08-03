@@ -3,162 +3,18 @@ import type {
   CharacteristicSetCallback, CharacteristicGetCallback, HAP, Logger, Logging,
 } from 'homebridge';
 
-const thunderstruck: IAnimationLoop = {
-
-  'name': 'ThunderStruck',
-  'pattern': [
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': 1000,
-      'durationAtTargetMS': [10000, 30000],
-      'chancePercent': 100,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-      },
-      'transitionTimeMS': 50,
-      'durationAtTargetMS': [50, 150],
-      'chancePercent': 50,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': 30,
-      'durationAtTargetMS': [200, 300],
-      'chancePercent': 100,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-      },
-      'transitionTimeMS': 50,
-      'durationAtTargetMS': [50, 150],
-      'chancePercent': 50,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': 30,
-      'durationAtTargetMS': [200, 300],
-      'chancePercent': 100,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-      },
-      'transitionTimeMS': 50,
-      'durationAtTargetMS': [50, 150],
-      'chancePercent': 50,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': 30,
-      'durationAtTargetMS': [200, 300],
-      'chancePercent': 100,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-
-      },
-      'colorTarget': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-      },
-      'transitionTimeMS': 30,
-      'durationAtTargetMS': [50, 300],
-      'chancePercent': 100,
-    },
-  ],
-  'accessories': [
-    'Office Light',
-  ],
-  'accessoryOffsetMS': 0,
-};
-
-const hell: IAnimationLoop = {
-
-  'name': 'hell',
-  'pattern': [
-    {
-      'colorTarget': {
-        RGB: { red: [100, 255], green: [0, 25], blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': [100, 300],
-      'durationAtTargetMS': [0, 5000],
-      'chancePercent': 100,
-    },
-    {
-      'colorStart': {
-        RGB: { red: 0, green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 255 },
-      },
-      'colorTarget': {
-        RGB: { red: [100, 255], green: 0, blue: 0 }, CCT: { warmWhite: 0, coldWhite: 0 },
-      },
-      'transitionTimeMS': 30,
-      'durationAtTargetMS': [100, 150],
-      'chancePercent': 10,
-    },
-  ],
-  'accessories': [
-    'Office Light',
-  ],
-  'accessoryOffsetMS': 0,
-};
-
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './misc/utils';
 import { DefaultAccessoryCommand, IAccessoryCommand, IAccessoryState, IConfigOptions, MagicHomeAccessory } from './misc/types';
 import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
-import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, DeviceWriteStatus as DeviceStatus, IProtoDevice, IAnimationLoop } from 'magichome-platform';
-import { _ } from 'lodash';
-import Queue from 'queue-promise';
-import { Logs } from './logs';
+import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, IProtoDevice, IAnimationLoop } from 'magichome-platform';
 
-const { ready, pending, busy } = DeviceStatus;
+import { Logs } from './logs';
 
 const CCT = 'CCT';
 const HSL = 'HSL';
 const BUFFER_MS = 0;
 const FINAL_COMMAND_TIMEOUT = 100;
 const QUEUE_INTERVAL = 150;
-
-const SLOW_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 0, timeoutMS: 2000 };
-const MEDIUM_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 20, bufferMS: 0, timeoutMS: 1000 };
-const FAST_COMMAND_OPTIONS: ICommandOptions = { maxRetries: 0, bufferMS: 0, timeoutMS: 20 };
 
 /**
  * Platform Accessory
@@ -171,10 +27,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected readonly hap: HAP;
 
   protected adaptiveLightingService;
-  protected animationInterval;
-  protected interruptInterval;
-  protected intervals;
-
   protected newAccessoryCommand: IAccessoryCommand;
   protected latestDeviceCommand: IDeviceCommand;
   protected latestAccessoryCommand: IAccessoryCommand;
@@ -186,8 +38,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected colorOffSaturationLevel;
   protected simultaniousDevicesColorWhite;
 
-  protected deviceWriteStatus = ready;
-  protected deviceReadStatus = ready;
+  protected deviceWriteStatus = 'ready';
+  protected deviceReadStatus = 'ready';
   protected readRequestLevel = 0;
 
   protected queue;
@@ -211,7 +63,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.hap = api.hap;
     this.api = api;
     this.config = config;
-    this.setupCommandQueue();
     this.initializeCharacteristics();
     this.fetchAndUpdateState(2);
   }
@@ -319,18 +170,18 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
     // for (const interval of this.intervals) {
-    this.controller.clearAnimations();
+    // this.controller.clearAnimations();
     //}
 
     const deviceWriteStatus = this.deviceWriteStatus;
     switch (deviceWriteStatus) {
-      case ready:
+      case 'ready':
 
-        this.deviceWriteStatus = pending;
+        this.deviceWriteStatus = 'pending';
         await this.writeStateToDevice(accessoryCommand).then((msg) => {
           //error logging
         }).finally(() => {
-          this.deviceWriteStatus = ready;
+          this.deviceWriteStatus = 'ready';
         });
         break;
 
@@ -356,37 +207,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     });
   }
 
-  protected async prepareCommand(accessoryCommand: IAccessoryCommand, options: ICommandOptions = MEDIUM_COMMAND_OPTIONS) {
-    // if (accessoryCommand.HSL.saturation < 5) {
-    //   this.animateMe(thunderstruck);
-    //   return;
-    // }
-    // if(accessoryCommand.HSL.hue < 5 || accessoryCommand.HSL.hue > 355){
-    //   this.animateMe(hell);
-    // }
+  protected async prepareCommand(accessoryCommand: IAccessoryCommand, commandOptions: ICommandOptions) {
     const deviceCommand = this.accessoryCommandToDeviceCommand(accessoryCommand);
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
-    this.latestDeviceCommand = deviceCommand;
-    this.latestAccessoryCommand = accessoryCommand;
 
-    this.queue.enqueue(async () => {
-
-      if (this.queue.size > 0) {
-        this.slowQueueRetry = true;
-        options = FAST_COMMAND_OPTIONS;
-      }
-
-      if (!(this.slowQueueRetry && this.queue.size < 1)) {
-        let response;
-        if (!accessoryCommand.isPowerCommand) {
-          response = await this.controller.setAllValues(deviceCommand, options);
-        } else {
-          response = await this.controller.setOn(deviceCommand.isOn, options);
-        }
-        this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`, response);
-      }
-
-    });
+    let response;
+    if (!accessoryCommand.isPowerCommand) {
+      response = await this.controller.setAllValues(deviceCommand, commandOptions);
+    } else {
+      response = await this.controller.setOn(deviceCommand.isOn, commandOptions);
+    }
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`, response);
   }
 
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): IDeviceCommand {
@@ -461,43 +292,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     return accessoryState;
   }
 
-  setupCommandQueue() {
-    let deviceState;
-    this.queue = new Queue({
-      concurrent: 1,
-      interval: QUEUE_INTERVAL,
-    });
-
-    let timeout;
-
-    this.queue.on('start', () => {
-      clearTimeout(timeout);
-    });
-
-    this.queue.on('end', async () => {
-
-      if (!_.isEqual(_.omit(this.latestDeviceState?.LEDState ?? {}, ['colorMask']), _.omit(this.latestDeviceCommand, ['colorMask']))) {
-        if (this.slowQueueRetry) {
-          timeout = setTimeout(async () => {
-            this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Sending a slow write command to increase chance of success:\n`, this.latestDeviceCommand);
-            this.slowQueueRetry = false;
-            await this.prepareCommand(this.latestAccessoryCommand, SLOW_COMMAND_OPTIONS);
-            this.fetchAndUpdateState(2);
-
-          }, FINAL_COMMAND_TIMEOUT);
-        }
-        deviceState = null;
-      }
-    });
-
-    this.queue.on('resolve', _deviceState => {
-      deviceState = _deviceState;
-    });
-    this.queue.on('reject', error => {
-      this.logs.error(error);
-    });
-  }
-
   initializeCharacteristics() {
 
     let cachedDeviceInformation = this.controller?.getCachedDeviceInformation();
@@ -553,22 +347,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       case ready:
         this.deviceReadStatus = pending;
         this.readRequestLevel = requestLevel;
-        setTimeout(async () => {
-          await this.updateLocalState(this.readRequestLevel, null);
-          this.updateHomekitState();
-          this.deviceReadStatus = ready;
-        }, BUFFER_MS);
+        await this.updateLocalState(this.readRequestLevel, null);
+        this.updateHomekitState();
+        this.deviceReadStatus = ready;
         break;
       case pending:
         this.readRequestLevel = Math.max(requestLevel, this.readRequestLevel);
         break;
     }
-
   }
 
-  protected animateMe(animation) {
-    this.logs.warn('animating', animation.name);
-    this.controller.animateIndividual(animation);
+  getController() {
+    return this.controller;
   }
+
+
 
 } // ZackneticMagichomePlatformAccessory class

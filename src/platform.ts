@@ -15,7 +15,7 @@ import { ControllerGenerator } from 'magichome-platform';
 
 import { MagicHomeAccessory } from './misc/types';
 import { AccessoryGenerator } from './AccessoryGenerator';
-import  logger  from 'node-color-log';
+import logger from 'node-color-log';
 /**
  */
 
@@ -98,7 +98,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
 
     const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
-    await accesssoryGenerator.generateAccessories();
+    await accesssoryGenerator.discoverDevices();
     this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 30000);
 
   }
