@@ -1,4 +1,4 @@
-import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
 import { IAccessoryCommand, IAccessoryState } from '../misc/types';
 import { convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, clamp, whiteTemperatureToCCT, convertMiredColorTemperatureToHueSat } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
@@ -22,13 +22,13 @@ export class GRBStrip extends HomebridgeMagichomeDynamicPlatformAccessory {
     const _blue = Math.round((blue / 100) * brightness);
 
 
-    const deviceCommand: IDeviceCommand = { isOn, RGB: {red: _red, green: _green, blue: _blue } };
+    const deviceCommand: IDeviceCommand = { isOn, RGB: { red: _red, green: _green, blue: _blue }, CCT: { warmWhite: 0, coldWhite: 0 }, colorMask: 0xF0 };
     return deviceCommand;
   }//setColor
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
 
-    const { LEDState: { RGB: { red, green, blue }, isOn } } = deviceState;
+    const { RGB: { red, green, blue }, isOn } = deviceState;
     const RGB: IColorRGB = { red: green, green: red, blue };
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);

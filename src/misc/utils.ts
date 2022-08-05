@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
-import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
 import { IAccessoryCommand, IAccessoryState, IColorHSL } from './types';
 
 
@@ -79,7 +79,7 @@ export function convertRGBtoHSL(RGB: IColorRGB) {
 
 //=================================================
 // Start Convert HSLtoRGB //
-export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
+export function convertHSLtoRGB(HSL: IColorHSL) {
 
   const { hue, saturation, luminance } = HSL;
 
@@ -125,7 +125,7 @@ export function convertHSLtoRGB(HSL: IColorHSL): IColorRGB {
   g = Math.floor(g);
   b = Math.floor(b);
 
-  const RGB = { red: r, green: g, blue: b };
+  let RGB = Object.assign({}, { red: r, green: g, blue: b });
   return RGB;
 }
 //=================================================

@@ -1,4 +1,4 @@
-import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform/dist/types';
+import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
 import { IAccessoryCommand, IAccessoryState } from '../misc/types';
 import { clamp, convertHSLtoRGB, convertRGBtoHSL, convertHueToColorCCT, cctToWhiteTemperature, whiteTemperatureToCCT, convertMiredColorTemperatureToHueSat } from '../misc/utils';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
@@ -67,7 +67,7 @@ export class RGBWWBulb extends HomebridgeMagichomeDynamicPlatformAccessory {
   }//setColor
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
-    const { LEDState: { RGB, CCT: { coldWhite, warmWhite }, isOn } } = deviceState;
+    const  { RGB, CCT: { coldWhite, warmWhite }, isOn }  = deviceState;
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;

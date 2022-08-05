@@ -1,5 +1,5 @@
 import type { PlatformAccessory } from 'homebridge';
-import { BaseController } from 'magichome-platform';
+import { BaseController, IDeviceState, IDeviceCommand, IColorCCT, IDeviceInformation } from 'magichome-platform';
 
 import { Switch } from '../accessories/Switch';
 import { DimmerStrip } from '../accessories/DimmerStrip';
@@ -10,19 +10,18 @@ import { RGBWWBulb } from '../accessories/RGBWWBulb';
 import { RGBWStrip } from '../accessories/RGBWStrip';
 import { RGBWWStrip } from '../accessories/RGBWWStrip';
 import { CCTStrip } from '../accessories/CCTStrip';
-import { IDeviceState, IDeviceCommand, IColorCCT, IDeviceInformation } from 'magichome-platform/dist/types';
 
 
 export const homekitInterface = {
-	'Power Socket': Switch,
-	'Dimmer': DimmerStrip,
-	'GRB Strip': GRBStrip,
-	'RGB Strip': RGBStrip,
+	// 'Power Socket': Switch,
+	// 'Dimmer': DimmerStrip,
+	// 'GRB Strip': GRBStrip,
+	// 'RGB Strip': RGBStrip,
 	'RGBW Non-Simultaneous': RGBWBulb,
 	'RGBWW Non-Simultaneous': RGBWWBulb,
 	'RGBW Simultaneous': RGBWStrip,
 	'RGBWW Simultaneous': RGBWWStrip,
-	'CCT Strip': CCTStrip,
+	// 'CCT Strip': CCTStrip,
 };
 
 export interface MagicHomeAccessory extends PlatformAccessory {
@@ -33,7 +32,7 @@ export interface IAccessoryContext {
 	displayName?: string;
 	restartsSinceSeen: number,
 	accessoryState?: IAccessoryState;
-	cachedDeviceInformation: IDeviceInformation;
+	// cachedDeviceInformation: IDeviceInformation;
 }
 
 export interface IAccessoryState {
