@@ -32,7 +32,7 @@ export interface IAccessoryContext {
 	displayName?: string;
 	restartsSinceSeen: number,
 	accessoryState?: IAccessoryState;
-	// cachedDeviceInformation: IDeviceInformation;
+	cachedDeviceInformation: IDeviceInformation;
 }
 
 export interface IAccessoryState {

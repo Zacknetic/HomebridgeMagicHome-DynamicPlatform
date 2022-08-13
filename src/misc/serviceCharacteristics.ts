@@ -47,10 +47,10 @@ export function addColorTemperatureCharacteristic(_this) {
 
 export function addAccessoryInformationCharacteristic(_this) {
 
-	// const {
-	// 	protoDevice: { uniqueId, modelNumber },
-	// 	// deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
-	// } = _this.accessory.context.cachedDeviceInformation;
+	const {
+		protoDevice: { uniqueId, modelNumber },
+		deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
+	} = _this.accessory.context.cachedDeviceInformation;
 	// set accessory information
 	_this.accessory.getService(_this.hap.Service.AccessoryInformation)!
 		.setCharacteristic(_this.hap.Characteristic.Manufacturer, 'MagicHome')

@@ -234,7 +234,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected async updateLocalState(requestLevel, deviceState) {
     if (!deviceState) {
-      deviceState = await this.controller?.fetchState() 
+      deviceState = await this.controller?.fetchState()
       // ?? this.accessory.context.cachedDeviceInformation.deviceState;
     }
     this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
@@ -295,9 +295,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     let cachedDeviceInformation = this.controller?.getCachedDeviceInformation();
     if (cachedDeviceInformation) {
-      // this.accessory.context.cachedDeviceInformation = cachedDeviceInformation;
+      this.accessory.context.cachedDeviceInformation = cachedDeviceInformation;
     } else {
-      // cachedDeviceInformation = this.accessory.context.cachedDeviceInformation;
+      cachedDeviceInformation = this.accessory.context.cachedDeviceInformation;
     }
 
     const { deviceAPI: { hasBrightness, hasCCT, hasColor } } = cachedDeviceInformation;
@@ -329,7 +329,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setupMisc() {
-    // this.accessory.context.accessoryState = this.accessory.context.accessoryState ?? DefaultAccessoryCommand;
+    this.accessory.context.accessoryState = this.accessory.context.accessoryState ?? DefaultAccessoryCommand;
 
     // const localAccessoryOptions = new Map(Object.entries(this.config?.individualAccessoryOptions)).get(this.accessory.context.displayName?? "unknown");
     // const { colorOffSaturationLevel, colorWhiteSimultaniousSaturationLevel, logLevel } = Object.assign({}, this.config.globalAccessoryOptions, localAccessoryOptions);
