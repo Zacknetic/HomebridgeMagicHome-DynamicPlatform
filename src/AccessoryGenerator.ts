@@ -1,6 +1,6 @@
 import { BaseController, ControllerGenerator, ICustomProtoDevice, IDeviceAPI, ICompleteDevice, IProtoDevice, ICustomCompleteDevice } from 'magichome-platform';
 import { IAccessoryContext, IAccessoryState, MagicHomeAccessory } from './misc/types';
-import { API, HAP, PlatformAccessory, PlatformConfig, } from 'homebridge';
+import { API, HAP, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 import { homekitInterface } from './misc/types';
 import { Logs } from './logs';
@@ -39,7 +39,7 @@ export class AccessoryGenerator {
 			await this.generateActiveAccessories(controllers);
 			this.registerOfflineAccessories();
 		} catch (error) {
-			this.logs.error(error)
+			this.logs.error(error);
 		}
 
 	}
@@ -101,7 +101,7 @@ export class AccessoryGenerator {
 
 				this.activeAccessoriesMap.set(uniqueId, currAccessory);
 			} catch (error) {
-				this.logs.error(error)
+				this.logs.error(error);
 			}
 		}
 
@@ -127,17 +127,17 @@ export class AccessoryGenerator {
 	createNewAccessory(controller: BaseController) {
 
 		const cachedDeviceInformation = controller.getCachedDeviceInformation();
-		const { protoDevice: { uniqueId }, deviceAPI: { description } } = cachedDeviceInformation;
+		const { protoDevice: { uniqueId }, protoDevice, deviceAPI: { description }, completeDevice: { completeResponse: { deviceMetaData } } } = cachedDeviceInformation;
 		// console.log(description);
 		// console.log(uniqueId)
 		if (!this.isAllowed(uniqueId)) {
 			return;
 		}
 		const homebridgeUUID = this.hap.uuid.generate(uniqueId);
-		console.log(homebridgeUUID)
+		// console.log(homebridgeUUID);
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
 		// console.log(newAccessory)
-		newAccessory.context = {  displayName: description as string, restartsSinceSeen: 0 };
+		newAccessory.context = { displayName: description as string, restartsSinceSeen: 0, deviceMetaData, protoDevice, latestUpdate: Date.now() };
 		new homekitInterface[description](this.api, newAccessory, this.config, controller, this.hbLogger, this.logs);
 
 		return newAccessory;
@@ -163,32 +163,32 @@ export class AccessoryGenerator {
 	}
 
 	registerOfflineAccessories() {
-		// const offlineAccessoriesList: MagicHomeAccessory[] = [];
-		// const completeDevices: ICustomCompleteDevice[] = []
-		// this.accessoriesFromDiskMap.forEach(async (offlineAccessory) => {
-		// 	const { deviceState, deviceAPI, deviceAPI: { description }, completeDevice } = offlineAccessory.context.cachedDeviceInformation;
-		// 	const { protoDevice, completeResponse, latestUpdate } = completeDevice;
-		// 	completeDevices.push({ customProtoDevice: protoDevice, completeResponse, latestUpdate });
-		// });
+		const offlineAccessoriesList: MagicHomeAccessory[] = [];
+		const completeDevices: ICustomCompleteDevice[] = [];
+		this.accessoriesFromDiskMap.forEach(async (offlineAccessory) => {
+			const { displayName, deviceMetaData, protoDevice, latestUpdate} = offlineAccessory.context;
+			const customCompleteDevice: ICustomCompleteDevice = {customProtoDevice: protoDevice };
+			completeDevices.push({ customProtoDevice: protoDevice, latestUpdate });
+		});
 
-		// const controllers = this.controllerGenerator.generateCustomControllers(completeDevices);
+		const controllers = this.controllerGenerator.generateCustomControllers(completeDevices);
 
-		// for (const controller of controllers) {
-		// 	try {
-		// 		const { protoDevice: { uniqueId } } = controller.getCachedDeviceInformation();
-		// 		if (this.accessoriesFromDiskMap.has(uniqueId)) {
-		// 			const offlineAccessory = this.accessoriesFromDiskMap.get(uniqueId);
-		// 			this.accessoriesFromDiskMap.delete(uniqueId);
-		// 			this.processOfflineAccessory(offlineAccessory, controller);
-		// 			offlineAccessoriesList.push(offlineAccessory);
-		// 			this.cachedAccessoriesMap.set(offlineAccessory.context.cachedDeviceInformation.protoDevice.uniqueId, offlineAccessory);
-		// 		}
-		// 	} catch (error) {
-		// 		this.logs.error(error);
-		// 	}
-		// }
+		for (const controller of controllers) {
+			try {
+				const { protoDevice: { uniqueId } } = controller.getCachedDeviceInformation();
+				if (this.accessoriesFromDiskMap.has(uniqueId)) {
+					const offlineAccessory = this.accessoriesFromDiskMap.get(uniqueId);
+					this.accessoriesFromDiskMap.delete(uniqueId);
+					this.processOfflineAccessory(offlineAccessory, controller);
+					offlineAccessoriesList.push(offlineAccessory);
+					this.cachedAccessoriesMap.set(offlineAccessory.context.cachedDeviceInformation.protoDevice.uniqueId, offlineAccessory);
+				}
+			} catch (error) {
+				this.logs.error(error);
+			}
+		}
 
-		// this.updateExistingAccessories(offlineAccessoriesList);
+		this.updateExistingAccessories(offlineAccessoriesList);
 	}
 
 	processOfflineAccessory(offlineAccessory: MagicHomeAccessory, controller: BaseController) {
