@@ -26,7 +26,6 @@ let hap: HAP;
  * parse the user config and discover/register accessories with Homebridge.
  */
 export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
-  private log;
   private readonly api: API;
   // this is used to track restored cached accessories
 
@@ -38,6 +37,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly config: PlatformConfig;
   public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
   private readonly hbLogger: Logging;
+  private readonly log: Logs;
   constructor(
     logging: Logging,
     config: PlatformConfig,
@@ -75,9 +75,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // accessory.context.pendingRegistration = true;
     // // add the restored accessory to the accessories cache so we can track if it has already been registered
 
-    const homebridgeUUID = accessory.UUID;
+    const homebridgeUUID = accessory.context.protoDevice.uniqueId;
     this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
-    this.log.debug(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
+    this.log.info(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
 
   }
 

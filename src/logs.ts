@@ -2,7 +2,7 @@ import { Logging } from 'homebridge';
 
 export class Logs {
   constructor(private hbLogger: Logging, private readonly level = 3) {
-    logs = this;
+    // logs = this;
     this.level = level;
   }
 

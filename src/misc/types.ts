@@ -30,8 +30,6 @@ export interface MagicHomeAccessory extends PlatformAccessory {
 
 export interface IAccessoryContext {
 	displayName?: string;
-	restartsSinceSeen: number;
-	accessoryState?: IAccessoryState; //--todo REMOVE and ReLogic
 	deviceMetaData: IDeviceMetaData;
 	protoDevice: IProtoDevice;
 	latestUpdate: number;
@@ -41,7 +39,7 @@ export interface IAccessoryState {
 	isOn: boolean,
 	HSL: IColorHSL,
 	colorTemperature?: number,
-	brightness?: number,
+	brightness: number,
 }
 
 export interface IAccessoryCommand {

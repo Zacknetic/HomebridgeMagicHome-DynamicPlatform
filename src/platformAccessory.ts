@@ -2,20 +2,17 @@ import type {
   API, Service, PlatformConfig, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback, HAP, Logger, Logging,
 } from 'homebridge';
+import { CharacteristicEventTypes } from 'homebridge';
 
 import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './misc/utils';
 import { DefaultAccessoryCommand, IAccessoryCommand, IAccessoryState, IConfigOptions, MagicHomeAccessory } from './misc/types';
-import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
-import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, IProtoDevice, IAnimationLoop, ICompleteResponse } from 'magichome-platform';
-
+// import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
+import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, IProtoDevice, IAnimationLoop, ICompleteResponse, mergeDeep, overwriteDeep } from 'magichome-platform';
 import { Logs } from './logs';
 
 const CCT = 'CCT';
 const HSL = 'HSL';
-const BUFFER_MS = 0;
-const FINAL_COMMAND_TIMEOUT = 100;
-const QUEUE_INTERVAL = 150;
-
+const DEFAULT_ACCESSORY_STATE: IAccessoryState = { isOn: false, HSL: { hue: 0, saturation: 0, luminance: 50 }, brightness: 100 }
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -28,8 +25,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected adaptiveLightingService;
   protected newAccessoryCommand: IAccessoryCommand;
-  protected latestDeviceCommand: IDeviceCommand;
   protected latestAccessoryCommand: IAccessoryCommand;
+
+  protected accessoryState: IAccessoryState;
 
   protected ColorCommandMode = HSL;
 
@@ -43,7 +41,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected queue;
   protected slowQueueRetry = false;
-  latestDeviceState: IDeviceState;
 
   //=================================================
   // Start Constructor //
@@ -58,6 +55,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   ) {
 
     this.setupMisc();
+    this.accessoryState = DEFAULT_ACCESSORY_STATE;
     this.logs = logs;
     this.controller = controller;
     this.hap = api.hap;
@@ -78,7 +76,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   setHue(value: CharacteristicValue) {
-    this.accessory.context.accessoryState.HSL.hue = value as number;
+    this.accessoryState.HSL.hue = value as number;
     this.ColorCommandMode = HSL;
     const accessoryCommand: IAccessoryCommand = { isOn: true, HSL: { hue: value as number } };
     this.processAccessoryCommand(accessoryCommand);
@@ -86,7 +84,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   setSaturation(value: CharacteristicValue) {
 
-    this.accessory.context.accessoryState.HSL.saturation = value as number;
+    this.accessoryState.HSL.saturation = value as number;
 
     this.ColorCommandMode = HSL;
 
@@ -97,7 +95,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   async setBrightness(value: CharacteristicValue) {
 
 
-    this.accessory.context.accessoryState.brightness = value as number;
+    this.accessoryState.brightness = value as number;
     const accessoryCommand: IAccessoryCommand = { isOn: true, brightness: value as number };
     this.processAccessoryCommand(accessoryCommand);
   }
@@ -129,7 +127,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // Start Getters //
 
   getHue() {
-    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState)
+    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
 
     this.fetchAndUpdateState(2);
     return hue;
@@ -145,7 +143,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // }
 
   getBrightness() {
-    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState)
+    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
 
     this.fetchAndUpdateState(2);
     return brightness;
@@ -157,7 +155,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
    * next call this.getState() which will update all values asynchronously as they are ready
    */
   async getOn() {
-    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState)
+    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
 
     this.fetchAndUpdateState(2);
     return isOn;
@@ -182,20 +180,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected async prepareCommand(accessoryCommand: IAccessoryCommand): Promise<ICompleteResponse> {
     try {
 
-
-      this.newAccessoryCommand = accessoryCommand;
-
-      this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessory.context.accessoryState, '\n Received Command', this.newAccessoryCommand);
-      const sanitizedAcessoryCommand: IAccessoryCommand = Object.assign({}, this.accessory.context.accessoryState, this.newAccessoryCommand);
-
-      // eslint-disable-next-line no-prototype-builtins
-      if (this.newAccessoryCommand.hasOwnProperty('isOn') && !(this.newAccessoryCommand.hasOwnProperty('HSL') || this.newAccessoryCommand.hasOwnProperty('brightness'))) {
+      this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessoryState, '\n Received Command', this.newAccessoryCommand);
+      const sanitizedAcessoryCommand: IAccessoryCommand = mergeDeep({}, accessoryCommand, this.accessoryState );
+      console.log(accessoryCommand)
+      console.log(sanitizedAcessoryCommand)
+      if (accessoryCommand.hasOwnProperty('isOn') && !(accessoryCommand.hasOwnProperty('HSL') || accessoryCommand.hasOwnProperty('brightness'))) {
         sanitizedAcessoryCommand.isPowerCommand = true;
       }
       const completeResponse: ICompleteResponse = await this.sendCommand(sanitizedAcessoryCommand);
       return completeResponse;
     } catch (error) {
-
+      this.hbLogger.error(error);
     }
   }
 
@@ -208,13 +203,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       let response;
       if (!accessoryCommand.isPowerCommand) {
-        response = await this.controller.setAllValues(deviceCommand, commandOptions);
+        response = await this.controller.setAllValues(deviceCommand);
       } else {
-        response = await this.controller.setOn(deviceCommand.isOn, commandOptions);
+        response = await this.controller.setOn(deviceCommand.isOn);
       }
       this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`, response);
       return response;
     } catch (error) {
+      this.hbLogger.error(error);
 
     }
   }
@@ -233,36 +229,43 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   protected async updateLocalState(requestLevel, deviceState) {
-    if (!deviceState) {
-      deviceState = await this.controller?.fetchState()
-      // ?? this.accessory.context.cachedDeviceInformation.deviceState;
-    }
-    this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
-    // this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
-    const { HSL: { hue, saturation, luminance }, colorTemperature, brightness, isOn } = this.deviceStateToAccessoryState(deviceState);
-    let accessoryState: IAccessoryState;
-    if (deviceState) {
-      switch (requestLevel) {
-        case 0:
-          accessoryState = { HSL: { luminance }, isOn };
-          break;
-        case 1:
-          accessoryState = { HSL: { hue, luminance }, isOn };
-          break;
-        case 2:
-          accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
-          break;
-        case 3:
-          accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness, colorTemperature };
-          break;
+    try {
+      if (!deviceState) {
+        deviceState = await this.controller?.fetchState();
+        // ?? this.accessory.context.cachedDeviceInformation.deviceState;
+      }
+      this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
+      // this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
+      const { HSL: { hue, saturation, luminance }, colorTemperature, brightness, isOn } = this.deviceStateToAccessoryState(deviceState);
+      let accessoryState: IAccessoryState;
+      if (deviceState) {
+        switch (requestLevel) {
+          case 0:
+            // accessoryState = { HSL: { luminance }, isOn };
+            break;
+          case 1:
+            // accessoryState = { HSL: { hue, luminance }, isOn };
+            break;
+          case 2:
+            accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness };
+            break;
+          case 3:
+            accessoryState = { HSL: { hue, saturation, luminance }, isOn, brightness, colorTemperature };
+            break;
+        }
+
+        this.accessoryState = accessoryState;
+
+        this.logs.debug(`[${this.accessory.context.displayName}] - Homebridge State:\n`, accessoryState);
       }
 
-      this.logs.debug(`[${this.accessory.context.displayName}] - Homebridge State:\n`, accessoryState);
+    } catch (error) {
+
     }
   }
 
   updateHomekitState() {
-    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState)
+    const { isOn, HSL: { hue, saturation }, brightness } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
     this.service.updateCharacteristic(this.hap.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.hap.Characteristic.Hue, hue);
     this.service.updateCharacteristic(this.hap.Characteristic.Saturation, saturation);
@@ -272,6 +275,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
 
     const { RGB, CCT: { coldWhite, warmWhite }, isOn } = deviceState;
+    //TODO - REPLACE HSL WITH HSV
     // eslint-disable-next-line prefer-const
     let { hue, saturation, luminance } = convertRGBtoHSL(RGB);
     let brightness = 0;
@@ -293,43 +297,41 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   initializeCharacteristics() {
 
-    let cachedDeviceInformation = this.controller?.getCachedDeviceInformation();
-    if (cachedDeviceInformation) {
-      this.accessory.context.cachedDeviceInformation = cachedDeviceInformation;
-    } else {
-      cachedDeviceInformation = this.accessory.context.cachedDeviceInformation;
-    }
-
+    const cachedDeviceInformation = this.controller.getCachedDeviceInformation();
+    // if (cachedDeviceInformation) {
+    //   this.accessory.context.accessoryState = accessoryState;
+    // } else {
+    //   cachedDeviceInformation = this.accessory.context.cachedDeviceInformation;
+    // }
     const { deviceAPI: { hasBrightness, hasCCT, hasColor } } = cachedDeviceInformation;
 
-    addAccessoryInformationCharacteristic(this);
+    this.addAccessoryInformationCharacteristic();
 
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Lightbulb service to accessory.`);
     this.service = this.accessory.getService(this.hap.Service.Lightbulb) ?? this.accessory.addService(this.hap.Service.Lightbulb);
 
     if (hasColor) {
-      addHueCharacteristic(this);
-      addSaturationCharacteristic(this);
+      this.addHueCharacteristic();
+      this.addSaturationCharacteristic();
     }
 
     if (hasBrightness) {
-      addBrightnessCharacteristic(this);
+      this.addBrightnessCharacteristic();
     }
 
     if (hasCCT) {
-      // addColorTemperatureCharacteristic(this);
+      // addColorTemperatureCharacteristic();
     }
 
     if (!hasBrightness) {
       this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Switch service to accessory.`);  //device is switch, register it as such
       this.service = this.accessory.getService(this.hap.Service.Switch) ?? this.accessory.addService(this.hap.Service.Switch);
     }
-    addOnCharacteristic(this);
-    addConfiguredNameCharacteristic(this);
+    this.addOnCharacteristic();
+    this.addConfiguredNameCharacteristic();
   }
 
   setupMisc() {
-    this.accessory.context.accessoryState = this.accessory.context.accessoryState ?? DefaultAccessoryCommand;
 
     // const localAccessoryOptions = new Map(Object.entries(this.config?.individualAccessoryOptions)).get(this.accessory.context.displayName?? "unknown");
     // const { colorOffSaturationLevel, colorWhiteSimultaniousSaturationLevel, logLevel } = Object.assign({}, this.config.globalAccessoryOptions, localAccessoryOptions);
@@ -343,20 +345,133 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   async fetchAndUpdateState(requestLevel) {
     try {
-
-
       this.readRequestLevel = requestLevel;
       await this.updateLocalState(this.readRequestLevel, null);
       this.updateHomekitState();
-
     } catch (error) {
-
+      this.hbLogger.error(error);
     }
   }
 
   getController() {
     return this.controller;
   }
+
+  addOnCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding On characteristic to service.`);
+    this.service.getCharacteristic(this.hap.Characteristic.On)
+      .onSet(this.setOn.bind(this))
+      .onGet(this.getOn.bind(this));
+  }
+
+  addHueCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Hue characteristic to service.`);
+    this.service.getCharacteristic(this.hap.Characteristic.Hue)
+      .onSet(this.setHue.bind(this))
+      .onGet(this.getHue.bind(this));
+  }
+
+  addSaturationCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Saturation characteristic to service.`);
+    this.service.getCharacteristic(this.hap.Characteristic.Saturation)
+      .onSet(this.setSaturation.bind(this));
+    // .onGet(this.CHANGE_ME.bind(this));
+
+  }
+
+  addBrightnessCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Brightness characteristic to service.`);
+    this.service.getCharacteristic(this.hap.Characteristic.Brightness)
+      .onSet(this.setBrightness.bind(this))
+      .onGet(this.getBrightness.bind(this));
+  }
+
+  addColorTemperatureCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Color Temperature characteristic to service.`);
+    this.service.getCharacteristic(this.hap.Characteristic.ColorTemperature);
+    // .onSet(this.setColorTemperature.bind(this))
+    // .onGet(this.getColorTemperature.bind(this));
+
+    if (this.api.versionGreaterOrEqual && this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
+      this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Adaptive Lighting service to accessory.`);
+      this.adaptiveLightingService = new this.api.hap.AdaptiveLightingController(this.service);
+      this.accessory.configureController(this.adaptiveLightingService);
+    }
+  }
+
+  addAccessoryInformationCharacteristic() {
+
+    // const {
+    //   protoDevice: { uniqueId, modelNumber },
+    //   deviceState: { controllerFirmwareVersion, controllerHardwareVersion },
+    // } = this.accessory.context.cachedDeviceInformation;
+    // set accessory information
+    this.accessory.getService(this.hap.Service.AccessoryInformation)!
+      .setCharacteristic(this.hap.Characteristic.Manufacturer, 'MagicHome')
+      // .setCharacteristic(this.hap.Characteristic.SerialNumber, uniqueId)
+      // .setCharacteristic(this.hap.Characteristic.Model, modelNumber)
+      // .setCharacteristic(this.hap.Characteristic.HardwareRevision, controllerHardwareVersion?.toString(16) ?? 'unknown')
+      // .setCharacteristic(this.hap.Characteristic.FirmwareRevision, controllerFirmwareVersion?.toString(16) ?? 'unknown ')
+      .getCharacteristic(this.hap.Characteristic.Identify)
+      .removeAllListeners(CharacteristicEventTypes.SET)
+      .removeAllListeners(CharacteristicEventTypes.GET)
+      .on(CharacteristicEventTypes.SET, this.identifyLight.bind(this));       // SET - bind to the 'Identify` method below
+
+
+    this.accessory.getService(this.hap.Service.AccessoryInformation)!
+      .addOptionalCharacteristic(this.hap.Characteristic.ConfiguredName);
+  }
+
+  addConfiguredNameCharacteristic() {
+    if (!this.service.testCharacteristic(this.hap.Characteristic.ConfiguredName)) {
+      this.service.addCharacteristic(this.hap.Characteristic.ConfiguredName)
+        .onSet(this.setConfiguredName.bind(this));
+    } else {
+      this.service.getCharacteristic(this.hap.Characteristic.ConfiguredName)
+        .onSet(this.setConfiguredName.bind(this));
+    }
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Configured Name characteristic to service.`);
+
+  }
+
+
+  /*
+    // Add the garage door service if it doesn't already exist
+    this.service =
+      this.accessory.getService(this.hapServ.GarageDoorOpener) ||
+      this.accessory.addService(this.hapServ.GarageDoorOpener)
+	
+    // Add some extra Eve characteristics
+    if (!this.service.testCharacteristic(this.eveChar.LastActivation)) {
+      this.service.addCharacteristic(this.eveChar.LastActivation)
+    }
+    if (!this.service.testCharacteristic(this.eveChar.ResetTotal)) {
+      this.service.addCharacteristic(this.eveChar.ResetTotal)
+    }
+    if (!this.service.testCharacteristic(this.eveChar.TimesOpened)) {
+      this.service.addCharacteristic(this.eveChar.TimesOpened)
+    }
+	
+    // Add the set handler to the garage door target state characteristic
+    this.service
+      .getCharacteristic(this.hapChar.TargetDoorState)
+      .onSet(value => this.internalTargetUpdate(value))
+    this.cacheTarget = this.service.getCharacteristic(this.hapChar.TargetDoorState).value
+    this.cacheCurrent = this.service.getCharacteristic(this.hapChar.CurrentDoorState).value
+	
+    // Add the set handler to the garage door reset total characteristic
+    this.service.getCharacteristic(this.eveChar.ResetTotal).onSet(value => {
+      this.service.updateCharacteristic(this.eveChar.TimesOpened, 0)
+    })
+	
+    // Update the obstruction detected to false on plugin load
+    this.service.updateCharacteristic(this.hapChar.ObstructionDetected, false)
+	
+    // Pass the accessory to Fakegato to set up with Eve
+    this.accessory.eveService = new platform.eveService('door', this.accessory, {
+      log: platform.config.debugFakegato ? this.log : () => {}
+    })
+    */
 
 
 
