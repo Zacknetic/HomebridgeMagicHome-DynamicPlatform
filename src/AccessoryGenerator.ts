@@ -2,9 +2,10 @@ import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProt
 import { IAccessoryContext, IAccessoryState, MagicHomeAccessory } from './misc/types';
 import { API, HAP, PlatformAccessory, PlatformConfig } from 'homebridge';
 
-import { homekitInterface } from './misc/types';
+// import { homekitInterface } from './misc/types';
 import { Logs } from './logs';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
+import { Console } from 'console';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
@@ -86,9 +87,15 @@ export class AccessoryGenerator {
 				// console.log(controller)
 				const { protoDevice: { uniqueId }, deviceState, deviceAPI } = controller.getCachedDeviceInformation();
 				let currAccessory: MagicHomeAccessory;
-
 				if (this.accessoriesFromDiskMap.has(uniqueId)) {
 					const existingAccessory = this.accessoriesFromDiskMap.get(uniqueId);
+					console.log(existingAccessory.context.displayName)
+					console.log(existingAccessory.context.displayName.toLocaleLowerCase().includes('zack'));
+
+					if (!existingAccessory.context.displayName.includes('Zacks')) {
+						// console.log("NOT ZACK")
+						continue;
+					}
 					this.accessoriesFromDiskMap.delete(uniqueId);
 					this.logs.info(`[${existingAccessory.context.displayName}] - Found existing accessory. Updating...`);
 					currAccessory = this.processOnlineAccessory(controller, existingAccessory);
@@ -149,12 +156,12 @@ export class AccessoryGenerator {
 	processOnlineAccessory(controller: BaseController, existingAccessory: MagicHomeAccessory) {
 
 		const { protoDevice, deviceAPI: { description }, deviceMetaData } = controller.getCachedDeviceInformation();
-		
+
 		// if (!this.isAllowed(uniqueId)) {
 		// 	// throw new Error(`[Error] [${existingAccessory.context.displayName}] - Accessory is not allowed. Skipping...`);
 		// }
 
-		overwriteDeep(existingAccessory.context, { protoDevice, deviceMetaData, latestUpdate: Date.now()});
+		overwriteDeep(existingAccessory.context, { protoDevice, deviceMetaData, latestUpdate: Date.now() });
 
 		try {
 			new HomebridgeMagichomeDynamicPlatformAccessory(this.api, existingAccessory, this.config, controller, this.hbLogger, this.logs)

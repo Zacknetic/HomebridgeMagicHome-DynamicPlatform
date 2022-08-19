@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
-import { IAccessoryCommand, IAccessoryState, IColorHSL } from './types';
+import { IAccessoryCommand, IAccessoryState, IColorHSV } from './types';
 
 
 export function clamp(value: number, min: number, max: number) {
@@ -32,46 +32,46 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // Start Convert RGBtoHSL //
-export function convertRGBtoHSL(RGB: IColorRGB) {
+// export function convertRGBtoHSL(RGB: IColorRGB) {
 
-  const { red, green, blue } = RGB;
+//   const { red, green, blue } = RGB;
 
 
-  const r = red / 255;
-  const g = green / 255;
-  const b = blue / 255;
+//   const r = red / 255;
+//   const g = green / 255;
+//   const b = blue / 255;
 
-  let h, s, l;
-  h = s = l = 0;
+//   let h, s, l;
+//   h = s = l = 0;
 
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const C = max - min;
-  if (C == 0) {
-    h = 0;
-  } else if (max == r) {
-    h = ((g - b) / C) % 6;
-  } else if (max == g) {
-    h = (b - r) / C + 2;
-  } else {
-    h = (r - g) / C + 4;
-  }
-  h *= 60;
-  if (h < 0) {
-    h += 360;
-  }
-  l = max;
-  if (l == 0) {
-    s = 0;
-  } else {
-    s = C / l;
-  }
-  s *= 100;
-  l *= 100;
+//   const max = Math.max(r, g, b);
+//   const min = Math.min(r, g, b);
+//   const C = max - min;
+//   if (C == 0) {
+//     h = 0;
+//   } else if (max == r) {
+//     h = ((g - b) / C) % 6;
+//   } else if (max == g) {
+//     h = (b - r) / C + 2;
+//   } else {
+//     h = (r - g) / C + 4;
+//   }
+//   h *= 60;
+//   if (h < 0) {
+//     h += 360;
+//   }
+//   l = max;
+//   if (l == 0) {
+//     s = 0;
+//   } else {
+//     s = C / l;
+//   }
+//   s *= 100;
+//   l *= 100;
 
-  const HSL: IColorHSL = { hue: Math.floor(h), saturation: Math.floor(s), luminance: Math.floor(l) };
-  return HSL;
-}
+//   const HSL: IColorHSL = { hue: Math.floor(h), saturation: Math.floor(s), luminance: Math.floor(l) };
+//   return HSL;
+// }
 
 //=================================================
 // End Convert RGBtoHSL //
@@ -79,55 +79,55 @@ export function convertRGBtoHSL(RGB: IColorRGB) {
 
 //=================================================
 // Start Convert HSLtoRGB //
-export function convertHSLtoRGB(HSL: IColorHSL) {
+// export function convertHSLtoRGB(HSL: IColorHSL) {
 
-  const { hue, saturation, luminance } = HSL;
+//   const { hue, saturation, luminance } = HSL;
 
-  const h = hue;
-  const s = saturation / 100.0;
-  const l = luminance / 100.0;
+//   const h = hue;
+//   const s = saturation / 100.0;
+//   const l = luminance / 100.0;
 
-  const C = l * s;
-  const hh = h / 60.0;
-  const X = C * (1.0 - Math.abs((hh % 2) - 1.0));
+//   const C = l * s;
+//   const hh = h / 60.0;
+//   const X = C * (1.0 - Math.abs((hh % 2) - 1.0));
 
-  let r, g, b;
-  r = g = b = 0;
+//   let r, g, b;
+//   r = g = b = 0;
 
-  if (hh >= 0 && hh < 1) {
-    r = C;
-    g = X;
-  } else if (hh >= 1 && hh < 2) {
-    r = X;
-    g = C;
-  } else if (hh >= 2 && hh < 3) {
-    g = C;
-    b = X;
-  } else if (hh >= 3 && hh < 4) {
-    g = X;
-    b = C;
-  } else if (hh >= 4 && hh < 5) {
-    r = X;
-    b = C;
-  } else {
-    r = C;
-    b = X;
-  }
+//   if (hh >= 0 && hh < 1) {
+//     r = C;
+//     g = X;
+//   } else if (hh >= 1 && hh < 2) {
+//     r = X;
+//     g = C;
+//   } else if (hh >= 2 && hh < 3) {
+//     g = C;
+//     b = X;
+//   } else if (hh >= 3 && hh < 4) {
+//     g = X;
+//     b = C;
+//   } else if (hh >= 4 && hh < 5) {
+//     r = X;
+//     b = C;
+//   } else {
+//     r = C;
+//     b = X;
+//   }
 
-  const m = l - C;
-  r += m;
-  g += m;
-  b += m;
-  r *= 255.0;
-  g *= 255.0;
-  b *= 255.0;
-  r = Math.floor(r);
-  g = Math.floor(g);
-  b = Math.floor(b);
+//   const m = l - C;
+//   r += m;
+//   g += m;
+//   b += m;
+//   r *= 255.0;
+//   g *= 255.0;
+//   b *= 255.0;
+//   r = Math.floor(r);
+//   g = Math.floor(g);
+//   b = Math.floor(b);
 
-  let RGB = Object.assign({}, { red: r, green: g, blue: b });
-  return RGB;
-}
+//   let RGB = Object.assign({}, { red: r, green: g, blue: b });
+//   return RGB;
+// }
 //=================================================
 // End Convert HSLtoRGB //
 
@@ -180,6 +180,74 @@ export function convertHueToColorCCT(hue: number): IColorCCT {
   return { warmWhite, coldWhite };
 } //hueToWhiteTemperature
 
+/*
+HSV to RGB conversion formula
+When 0 ≤ H < 360, 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1:
+C = V × S
+X = C × (1 - |(H / 60°) mod 2 - 1|)
+m = V - C
+(R,G,B) = ((R'+m)×255, (G'+m)×255, (B'+m)×255)
+*/
+
+export function HSVtoRGB(HSV: IColorHSV): IColorRGB {
+  const { hue, saturation, value }: IColorHSV = HSV;
+  let [H, S, V] = [hue, saturation, value];
+  H = clamp(H, 0, 359)
+  S = clamp(S, 0, 100)
+  V = clamp(V, 0, 100)
+
+  // console.log("-- SENDING -- H: ", H, "S: ", S, "V: ", V)
+  S /= 100.0
+  V /= 100.0
+  const C = V * S;
+  const X = C * (1 - Math.abs(((H / 60) % 2) - 1))
+  const m = V - C;
+
+  let order;
+  if (H < 60) order = [C, X, 0];
+  else if (H < 120) order = [X, C, 0];
+  else if (H < 180) order = [0, C, X];
+  else if (H < 240) order = [0, X, C];
+  else if (H < 300) order = [X, 0, C];
+  else if (H < 360) order = [C, 0, X];
+
+  const [dR, dG, dB] = order;
+  const [red, green, blue] = [(dR + m) * 255, (dG + m) * 255, (dB + m) * 255]
+  // console.log(`--SENDING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
+  return { red, green, blue };
+}
+
+export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
+  
+  const { red, green, blue }: IColorRGB = RGB;
+
+  // console.log(`--RECEIVING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
+
+  const [R, G, B] = [red, green, blue];
+  const [dR, dG, dB] = [R / 255, G / 255, B / 255];
+
+  const Dmax = Math.max(dR, dG, dB);
+  const Dmin = Math.min(dR, dG, dB);
+  const D = Dmax - Dmin;
+
+  let H, S, V;
+  if (D === 0) H = 0;
+  else if (Dmax === dR) H = ((dG - dB) / D) % 6;
+  else if (Dmax === dG) H = ((dB - dR) / D) + 2;
+  else H = ((dR - dG) / D) + 4
+  H *= 60;
+  if (H < 0) H += 360;
+  V = Dmax;
+  if (V === 0) S = 0;
+  else S = D / V;
+
+  S *= 100;
+  V *= 100;
+  // console.log("-- RECEIVED -- H: ", H, "S: ", S, "V: ", V)
+
+  return { hue: H, saturation: S, value: V };
+}
+
 export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
   CCT -= 140;
   let warmWhite, coldWhite;
@@ -211,73 +279,73 @@ export function delayToSpeed(delay: never) {
   clamped -= 1; // bring into interval [0, 30]
   return 100 - (clamped / 30) * 100;
 }
- 
+
 export function speedToDelay(speed: never) {
   const clamped = clamp(speed, 0, 100);
   return 30 - (clamped / 100) * 30 + 1;
 }
 */
-export function convertMiredColorTemperatureToHueSat(temperature: number): [number, number] {
-  const xy = convertMiredColorTemperatureToXY(500 - temperature);
-  return convertXyToHueSat(xy[0], xy[1]);
-}
+// export function convertMiredColorTemperatureToHueSat(temperature: number): [number, number] {
+//   const xy = convertMiredColorTemperatureToXY(500 - temperature);
+//   return convertXyToHueSat(xy[0], xy[1]);
+// }
 
-export function convertXyToHueSat(x: number, y: number): [number, number] {
-  // Based on: https://developers.meethue.com/develop/application-design-guidance/color-conversion-formulas-rgb-to-xy-and-back/
-  const z: number = 1.0 - x - y;
-  const Y = 1.0;
-  const X: number = (Y / y) * x;
-  const Z: number = (Y / y) * z;
+// export function convertXyToHueSat(x: number, y: number): [number, number] {
+//   // Based on: https://developers.meethue.com/develop/application-design-guidance/color-conversion-formulas-rgb-to-xy-and-back/
+//   const z: number = 1.0 - x - y;
+//   const Y = 1.0;
+//   const X: number = (Y / y) * x;
+//   const Z: number = (Y / y) * z;
 
-  // sRGB D65 conversion
-  let r: number = (X * 1.656492) - (Y * 0.354851) - (Z * 0.255038);
-  let g: number = (-X * 0.707196) + (Y * 1.655397) + (Z * 0.036152);
-  let b: number = (X * 0.051713) - (Y * 0.121364) + (Z * 1.011530);
+//   // sRGB D65 conversion
+//   let r: number = (X * 1.656492) - (Y * 0.354851) - (Z * 0.255038);
+//   let g: number = (-X * 0.707196) + (Y * 1.655397) + (Z * 0.036152);
+//   let b: number = (X * 0.051713) - (Y * 0.121364) + (Z * 1.011530);
 
-  // Remove negative values
-  const m = Math.min(r, g, b);
-  if (m < 0.0) {
-    r -= m;
-    g -= m;
-    b -= m;
-  }
+//   // Remove negative values
+//   const m = Math.min(r, g, b);
+//   if (m < 0.0) {
+//     r -= m;
+//     g -= m;
+//     b -= m;
+//   }
 
-  // Normalize
-  if (r > b && r > g && r > 1.0) {
-    // red is too big
-    g = g / r;
-    b = b / r;
-    r = 1.0;
-  } else if (g > b && g > r && g > 1.0) {
-    // green is too big
-    r = r / g;
-    b = b / g;
-    g = 1.0;
-  } else if (b > r && b > g && b > 1.0) {
-    // blue is too big
-    r = r / b;
-    g = g / b;
-    b = 1.0;
-  }
+//   // Normalize
+//   if (r > b && r > g && r > 1.0) {
+//     // red is too big
+//     g = g / r;
+//     b = b / r;
+//     r = 1.0;
+//   } else if (g > b && g > r && g > 1.0) {
+//     // green is too big
+//     r = r / g;
+//     b = b / g;
+//     g = 1.0;
+//   } else if (b > r && b > g && b > 1.0) {
+//     // blue is too big
+//     r = r / b;
+//     g = g / b;
+//     b = 1.0;
+//   }
 
-  // Gamma correction
-  r = reverseGammaCorrection(r);
-  g = reverseGammaCorrection(g);
-  b = reverseGammaCorrection(b);
+//   // Gamma correction
+//   r = reverseGammaCorrection(r);
+//   g = reverseGammaCorrection(g);
+//   b = reverseGammaCorrection(b);
 
-  // Maximize
-  const max = Math.max(r, g, b);
-  r = (r === max) ? 255 : (255 * (r / max));
-  g = (g === max) ? 255 : (255 * (g / max));
-  b = (b === max) ? 255 : (255 * (b / max));
+//   // Maximize
+//   const max = Math.max(r, g, b);
+//   r = (r === max) ? 255 : (255 * (r / max));
+//   g = (g === max) ? 255 : (255 * (g / max));
+//   b = (b === max) ? 255 : (255 * (b / max));
 
-  const RGB: IColorRGB = { red: r, green: g, blue: b };
-  const HSL = convertRGBtoHSL(RGB);
+//   const RGB: IColorRGB = { red: r, green: g, blue: b };
+//   const HSL = convertRGBtoHSL(RGB);
 
-  const hsv = [HSL.hue, HSL.saturation];
+//   const hsv = [HSL.hue, HSL.saturation];
 
-  return [hsv[0], hsv[1]];
-}
+//   return [hsv[0], hsv[1]];
+// }
 
 function convertMiredColorTemperatureToXY(temperature: number): [number, number] {
   // Based on MiredColorTemperatureToXY from:

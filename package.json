@@ -39,7 +39,8 @@
     "lint": "eslint src/**.ts",
     "watch": "npm run build && nodemon",
     "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "npm run lint && npm run build"
+    "prepublishOnly": "npm run lint && npm run build",
+    "test:watch": "ts-mocha --timeout 10000 --watch-extensions ts --watch --watch-files src 'src/specs/*.spec.ts'"
   },
   "keywords": [
     "homebridge-plugin",
@@ -65,13 +66,17 @@
     "homebridge-lib": "^5.1.14"
   },
   "devDependencies": {
+    "@types/expect": "^24.3.0",
+    "@types/mocha": "^9.1.1",
     "@types/node": "^16.10.9",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "eslint": "^8.0.1",
     "homebridge": "^1.5.0",
+    "mocha": "^10.0.0",
     "nodemon": "^2.0.13",
     "rimraf": "^3.0.2",
+    "ts-mocha": "^10.0.0",
     "ts-node": "^10.3.0",
     "typescript": "^4.4.4"
   }
