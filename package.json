@@ -62,7 +62,6 @@
     "smart lights"
   ],
   "dependencies": {
-    "color-convert": "^2.0.1",
     "homebridge-lib": "^5.1.14"
   },
   "devDependencies": {
