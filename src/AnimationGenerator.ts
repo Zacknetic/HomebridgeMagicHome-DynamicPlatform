@@ -1,4 +1,4 @@
-import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep, IAnimationLoop } from 'magichome-platform';
+import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep, IAnimationLoop, cctWave } from 'magichome-platform';
 import { thunderStruck, colorWave, AnimationController } from 'magichome-platform';
 import { AnimationAccessory, IAccessoryContext, IAccessoryState, MagicHomeAccessory } from './misc/types';
 import { API, HAP, PlatformAccessory, PlatformConfig, uuid } from 'homebridge';
@@ -10,7 +10,7 @@ import { HomebridgeAnimationAccessory } from './animationAccessory';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
-const animationLoops = [colorWave, thunderStruck]
+const animationLoops = [colorWave, thunderStruck, cctWave]
 export class AnimationGenerator {
 
     public readonly animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();

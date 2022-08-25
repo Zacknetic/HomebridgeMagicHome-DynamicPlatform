@@ -52,7 +52,7 @@ export class HomebridgeAnimationAccessory {
         protected accessoriesList: HomebridgeMagichomeDynamicPlatformAccessory[],
         protected animationLoop
     ) {
-        
+
         this.setupMisc();
         this.accessoryState = DEFAULT_ACCESSORY_STATE;
         // this.logs = logs;
@@ -71,18 +71,20 @@ export class HomebridgeAnimationAccessory {
     //=================================================
     // Start Setters //
     async setOn(value: CharacteristicValue) {
+        if (this.animationController.isActive) this.animationController.clearAnimations();
 
-        if(value) {
+        if (value) {
             const accessoryList = this.accessoriesList.filter(accessory => {
-                return accessory.accessoryState.isOn;
+                // return accessory.accessoryState.isOn;
+                return true;
             });
-    
+
             const controllerList = []
-            for(const accessory of accessoryList) {
+            for (const accessory of accessoryList) {
                 controllerList.push(accessory.getController());
             }
-    
-            await this.animationController.animateAsynchronously(controllerList, this.animationLoop).catch(e => console.log(e))
+
+            await this.animationController.animateAsynchronously(controllerList, this.animationLoop).catch(e => { })
         } else {
             this.animationController.clearAnimations();
         }
@@ -178,14 +180,14 @@ export class HomebridgeAnimationAccessory {
 
     protected async processAccessoryCommand(accessoryCommand: IAccessoryCommand) {
 
-        const ret = await this.prepareCommand(accessoryCommand).catch(e => { console.log(e) });
-        console.log('return value: ', ret)
+        const ret = await this.prepareCommand(accessoryCommand).catch(e => { { } });
+        // console.log('return value: ', ret)
     }
 
     protected async prepareCommand(accessoryCommand: IAccessoryCommand) {
 
         this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessoryState, '\n Received Command', this.newAccessoryCommand);
-        const sanitizedAcessoryCommand: IAccessoryCommand = mergeDeep({}, accessoryCommand, this.accessoryState);
+        const sanitizedAcessoryCommand: IAccessoryCommand = mergeDeep({}, accessoryCommand, this.accessoryState, DEFAULT_ACCESSORY_STATE);
         // console.log(accessoryCommand)
         // console.log(sanitizedAcessoryCommand)
         if (accessoryCommand.hasOwnProperty('isOn') && !(accessoryCommand.hasOwnProperty('HSV') || accessoryCommand.hasOwnProperty('brightness'))) {
@@ -221,8 +223,7 @@ export class HomebridgeAnimationAccessory {
     protected async updateLocalState(requestLevel, deviceState) {
 
         if (!deviceState) {
-            // deviceState = await this.controller.fetchState();
-            console.log(deviceState)
+            // deviceState = await this..fetchState();
         }
         this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
         // this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
@@ -325,7 +326,7 @@ export class HomebridgeAnimationAccessory {
     async fetchAndUpdateState(requestLevel) {
         try {
             this.readRequestLevel = requestLevel;
-            await this.updateLocalState(this.readRequestLevel, null);
+            await this.updateLocalState(this.readRequestLevel, null).catch(e => { });
             this.updateHomekitState();
         } catch (error) {
             // this.hbLogger.error(error);
