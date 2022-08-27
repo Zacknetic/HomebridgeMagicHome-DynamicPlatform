@@ -11,7 +11,7 @@ import {
 } from 'homebridge';
 
 import { ControllerGenerator } from 'magichome-platform';
-import { AnimationGenerator } from './AnimationGenerator'
+// import { AnimationGenerator } from './AnimationGenerator'
 import { AnimationAccessory, MagicHomeAccessory } from './misc/types';
 import { AccessoryGenerator } from './AccessoryGenerator';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
@@ -106,8 +106,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await accesssoryGenerator.discoverDevices();
-    const animationGenerator = new AnimationGenerator(this.api, this.log, this.hbLogger, this.config, this.animationsFromDiskMap, activeAccessories);
-    animationGenerator.generateActiveAccessories();
+    // const animationGenerator = new AnimationGenerator(this.api, this.log, this.hbLogger, this.config, this.animationsFromDiskMap, activeAccessories);
+    // animationGenerator.generateActiveAccessories();
     // this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 30000);
 
   }

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
-import { IAccessoryCommand, IAccessoryState, IColorHSV } from './types';
+import { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB } from './types';
 
 
 export function clamp(value: number, min: number, max: number) {
@@ -153,32 +153,34 @@ export function loadJson<T>(file: string, replacement: T): T {
  *  the closer to 180 the weaker warmWhite brightness becomes
  *  the closer to 90/270 the stronger both warmWhite and coldWhite become simultaniously
  */
-export function convertHueToColorCCT(hue: number): IColorCCT {
-  let multiplier = 0;
+export function TBtoCCT(TB: IColorTB): IColorCCT {
+  let multiplier = 1;
   let warmWhite = 0, coldWhite = 0;
+  const { temperature, brightness } = TB;
 
+  console.log(`TEMP: ${temperature}, BRIGHT: ${brightness}`)
 
-  if (hue <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
-    multiplier = ((hue / 90));
-    coldWhite = Math.round((127 * multiplier));
-    warmWhite = 255 - coldWhite;
-  } else if (hue > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
-    multiplier = (1 - (hue - 270) / 90);
-    coldWhite = Math.round((127 * multiplier));
-    warmWhite = 255 - coldWhite;
-  } else if (hue > 180 && hue <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
-    multiplier = ((hue - 180) / 90);
-    warmWhite = Math.round((127 * multiplier));
-    coldWhite = 255 - warmWhite;
+  if (temperature <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
+    multiplier = ((temperature / 90));
+    coldWhite = Math.round((255 * multiplier));
+    warmWhite = 255;
+  } else if (temperature > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
+    multiplier = (1 - (temperature - 270) / 90);
+    coldWhite = Math.round((255 * multiplier));
+    warmWhite = 255;
+  } else if (temperature > 180 && temperature <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
+    multiplier = ((temperature - 180) / 90);
+    warmWhite = Math.round((255 * multiplier));
+    coldWhite = 255;
 
-  } else if (hue > 90 && hue <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
-    multiplier = (1 - (hue - 90) / 90);
-    warmWhite = Math.round((127 * multiplier));
-    coldWhite = 255 - warmWhite;
+  } else if (temperature > 90 && temperature <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
+    multiplier = (1 - (temperature - 90) / 90);
+    warmWhite = Math.round((255 * multiplier));
+    coldWhite = 255;
   }
-
-  return { warmWhite, coldWhite };
-} //hueToWhiteTemperature
+  const CCT = { warmWhite: Math.round((warmWhite * brightness) / 100), coldWhite: Math.round((coldWhite * brightness) / 100) }
+  return CCT
+} //TBtoCCT
 
 /*
 HSV to RGB conversion formula
@@ -192,7 +194,7 @@ m = V - C
 export function HSVtoRGB(HSV: IColorHSV): IColorRGB {
   const { hue, saturation, value }: IColorHSV = HSV;
   let [H, S, V] = [hue, saturation, value];
-  H = clamp(H, 0, 359)
+  H = clamp(H, 0, 360)
   S = clamp(S, 0, 100)
   V = clamp(V, 0, 100)
 
@@ -203,13 +205,14 @@ export function HSVtoRGB(HSV: IColorHSV): IColorRGB {
   const X = C * (1 - Math.abs(((H / 60) % 2) - 1));
   const m = V - C;
 
+
   let order;
   if (H < 60) order = [C, X, 0];
   else if (H < 120) order = [X, C, 0];
   else if (H < 180) order = [0, C, X];
   else if (H < 240) order = [0, X, C];
   else if (H < 300) order = [X, 0, C];
-  else if (H < 360) order = [C, 0, X];
+  else if (H <= 360) order = [C, 0, X];
 
   const [dR, dG, dB] = order;
   const [red, green, blue] = [Math.round((dR + m) * 255), Math.round((dG + m) * 255), Math.round((dB + m) * 255)]
@@ -242,7 +245,7 @@ export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
   if (V === 0) S = 0;
   else S = D / V;
 
-  
+
   S *= 100;
   V *= 100;
   // console.log("-- RECEIVED -- H: ", H, "S: ", S, "V: ", V)
@@ -250,29 +253,28 @@ export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
   return { hue: H, saturation: S, value: V };
 }
 
-export function cctToWhiteTemperature(CCT: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
-  CCT -= 140;
+export function temperatureToCCT(temperature: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
   let warmWhite, coldWhite;
 
   const threshold = 110;
-  if (CCT >= threshold) {
+  if (temperature >= threshold) {
     warmWhite = 127;
-    multiplier = (1 - ((CCT - threshold) / (360 - threshold)));
+    multiplier = (1 - ((temperature - threshold) / (360 - threshold)));
     coldWhite = Math.round((127 * multiplier));
   } else {
     coldWhite = 127;
-    multiplier = (CCT / threshold);
+    multiplier = (temperature / threshold);
     warmWhite = Math.round((127 * multiplier));
   }
 
   return { warmWhite, coldWhite };
 }
 
-export function whiteTemperatureToCCT(whiteTemperature: IColorCCT) {
-  const { coldWhite } = whiteTemperature;
-  const CCT = (coldWhite * 1.41) + 140;
-
-  return CCT;
+export function CCTtoTB(CCT: IColorCCT): IColorTB {
+  const { warmWhite, coldWhite } = CCT;
+  const temperature = Math.round(coldWhite * 1.4117);
+  const brightness = Math.round(Math.max(warmWhite, coldWhite) / 2.55)
+  return { temperature, brightness };
 }
 
 /*

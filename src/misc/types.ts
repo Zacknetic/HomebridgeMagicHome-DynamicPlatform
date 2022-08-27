@@ -46,22 +46,43 @@ export interface IAccessoryContext {
 export interface IAccessoryState {
 	isOn: boolean,
 	HSV: IColorHSV,
-	brightness: number,
+	TB: IColorTB
+}
+export interface IPartialAccessoryCommand {
+	isOn?: boolean,
+	HSV?: IPartialColorHSV,
+	TB?: IPartialColorTB,
 	colorTemperature?: number,
+	isPowerCommand?: boolean,
 }
 
 export interface IAccessoryCommand {
-	isOn?: boolean,
-	HSV?: IColorHSV,
-	colorTemperature?: number,
-	brightness?: number,
-	isPowerCommand?: boolean,
+	isOn: boolean,
+	HSV: IColorHSV,
+	TB: IColorTB
+	isPowerCommand: boolean,
 }
 
 export interface IColorHSV {
 	hue: number;
 	saturation: number;
 	value: number;
+}
+
+export interface IColorTB {
+	temperature: number;
+	brightness: number;
+}
+
+export interface IPartialColorTB {
+	temperature?: number;
+	brightness?: number;
+}
+
+export interface IPartialColorHSV {
+	hue?: number;
+	saturation?: number;
+	value?: number;
 }
 
 
@@ -72,20 +93,36 @@ export interface IConfigOptions {
 	colorWhiteSimultaniousSaturationLevel?: number,
 }
 
-/*----------------------[Constants]----------------------*/
+/*----------------------[DEFAULT VALIES]----------------------*/
 
-export const ColorCommandModes = {
+export const COLOR_COMMAND_MODES = {
 	CCT: 'CCT',
 	HSV: 'HSV',
 };
 
-export const DefaultAccessoryCommand = {
+export const DEFAULT_ACCESSORY_STATE: IAccessoryState = {
 	isOn: false,
 	HSV: {
 		hue: 0,
 		saturation: 0,
 		value: 0,
 	},
-	colorTemperature: 0,
-	brightness: 0,
+	TB: {
+		temperature: 0,
+		brightness: 0
+	}
+};
+
+export const DEFAULT_ACCESSORY_COMMAND: IAccessoryCommand = {
+	isOn: false,
+	isPowerCommand: false,
+	HSV: {
+		hue: 0,
+		saturation: 0,
+		value: 0,
+	},
+	TB: {
+		temperature: 0,
+		brightness: 0
+	}
 };
