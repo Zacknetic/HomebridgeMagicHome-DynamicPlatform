@@ -93,7 +93,7 @@ export class AccessoryGenerator {
 					// console.log(existingAccessory.context.displayName)
 					// console.log(existingAccessory.context.displayName.toLocaleLowerCase().includes('zack'));
 
-					// if (!existingAccessory.context.displayName.includes('Zacks')) {
+					// if (!existingAccessory.context.displayName.includes('Office')) {
 					// 	continue;
 					// }
 					this.accessoriesFromDiskMap.delete(uniqueId);

@@ -24,7 +24,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected readonly hap: HAP;
 
   protected adaptiveLightingService;
-  protected newAccessoryCommand: IAccessoryCommand;
+  protected newAccessoryCommand: IPartialAccessoryCommand = {};
   protected latestAccessoryCommand: IAccessoryCommand;
 
   public accessoryState: IAccessoryState;
@@ -44,6 +44,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected lastValue: number;
   lastHue: number;
   lastBrightness: number;
+  waitingSendoff: boolean;
 
   //=================================================
   // Start Constructor //
@@ -161,8 +162,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const { HSV: { value }, TB: { brightness } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
 
     let _brightness;
-    if (this.colorCommandMode = COLOR_MODE) _brightness = brightness;
-    else _brightness = value;
+    if (this.colorCommandMode == COLOR_MODE) _brightness = value;
+    else _brightness = brightness;
 
     this.fetchAndUpdateState(2);
     return _brightness;
@@ -188,19 +189,35 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   // End LightEffects //
 
   //TODO, Severe! Bundle commands so that close consecutive changes in hue, sat, and brightness aren't sent as separate commands
-  protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
+  protected processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
 
-    const sanitizedAcessoryCommand = await this.completeAccessoryCommand(partialAccessoryCommand);
-    const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
+    overwriteDeep(this.newAccessoryCommand, partialAccessoryCommand);
+    if (!this.waitingSendoff) {
+      this.waitingSendoff = true;
 
-    const completeResponse: ICompleteResponse | void = await this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand).catch(e => { });
-    return completeResponse;
+      return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+
+
+          const sanitizedAcessoryCommand = this.completeAccessoryCommand(this.newAccessoryCommand);
+          this.newAccessoryCommand = {};
+          const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
+
+          const completeResponse: ICompleteResponse | void = await this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand).catch(e => { });
+          resolve(completeResponse);
+          return;
+        }, 20);
+      })
+
+    }
+
+
   }
 
   protected completeAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand): IAccessoryCommand {
     this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessoryState, '\n Received Command', this.newAccessoryCommand);
     const sanitizedAcessoryCommand: IAccessoryCommand = mergeDeep({}, partialAccessoryCommand, this.accessoryState);
-    console.log(partialAccessoryCommand, this.accessoryState)
+    // console.log(partialAccessoryCommand, this.accessoryState)
     if (partialAccessoryCommand.hasOwnProperty('isOn') && !(partialAccessoryCommand.hasOwnProperty('HSV') || partialAccessoryCommand.hasOwnProperty('brightness'))) {
       sanitizedAcessoryCommand.isPowerCommand = true;
     }
@@ -208,11 +225,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): { deviceCommand: IDeviceCommand, commandOptions: ICommandOptions } {
-    const { isOn, HSV: { hue, saturation, value }, TB } = accessoryCommand;
-    const commandOptions: ICommandOptions = { colorAssist: true, commandType: COMMAND_TYPE.COLOR_COMMAND, waitForResponse: true, maxRetries: 5, timeoutMS: 50 };
-    console.log(this.colorCommandMode)
+    let { isOn, HSV: { hue, saturation, value }, TB } = accessoryCommand;
+    const { temperature, brightness } = TB;
 
-    let red, green, blue, warmWhite, coldWhite;
+    if (Math.max(brightness, value) > 0) isOn = true;
+    const commandOptions: ICommandOptions = { colorAssist: false, commandType: COMMAND_TYPE.COLOR_COMMAND, waitForResponse: true, maxRetries: 5, timeoutMS: 50 };
+
+    let red, green, blue, warmWhite, coldWhite, colorMask = null;
 
     if (saturation < 95) {
       this.colorCommandMode = WHITE_MODE;
@@ -222,17 +241,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
       if (saturation < 5) {
         red = 0, green = 0, blue = 0;
+        colorMask = COLOR_MASKS.WHITE
       }
 
     } else {
+      colorMask = COLOR_MASKS.COLOR
       this.colorCommandMode = COLOR_MODE;
       ({ red, green, blue } = HSVtoRGB({ hue, saturation, value }));
       warmWhite = 0;
       coldWhite = 0;
     }
+    console.log(this.colorCommandMode)
 
-    const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, colorMask: null, CCT: { warmWhite, coldWhite } };
-
+    const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, colorMask, CCT: { warmWhite, coldWhite } };
+    console.log(deviceCommand)
     return { deviceCommand, commandOptions };
   }
 
@@ -302,7 +324,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     this.service.updateCharacteristic(this.hap.Characteristic.On, isOn);
-    this.service.updateCharacteristic(this.hap.Characteristic.Saturation, saturation);
+    // this.service.updateCharacteristic(this.hap.Characteristic.Saturation, saturation);
     this.service.updateCharacteristic(this.hap.Characteristic.Hue, _hue);
     this.service.updateCharacteristic(this.hap.Characteristic.Brightness, _brightness);
   }
@@ -312,7 +334,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     let { RGB, CCT, isOn } = deviceState;
     const HSV: IColorHSV = RGBtoHSV(RGB);
     const TB: IColorTB = CCTtoTB(CCT);
-    HSV.saturation = clamp(HSV.saturation - (TB.brightness / 4), 0, 100)
+    HSV.saturation = clamp(HSV.saturation - TB.brightness, 0, 100)
+    // if(HSV.saturation < 95) this.colorCommandMode = WHITE_MODE
+    console.log(RGB, CCT, HSV, TB)
     const accessoryState: IAccessoryState = { HSV, TB, isOn };
     return accessoryState;
   }

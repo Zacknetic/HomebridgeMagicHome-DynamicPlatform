@@ -101,15 +101,15 @@ export const COLOR_COMMAND_MODES = {
 };
 
 export const DEFAULT_ACCESSORY_STATE: IAccessoryState = {
-	isOn: false,
+	isOn: true,
 	HSV: {
 		hue: 0,
 		saturation: 0,
-		value: 0,
+		value: 100,
 	},
 	TB: {
 		temperature: 0,
-		brightness: 0
+		brightness: 100
 	}
 };
 
