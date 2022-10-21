@@ -34,6 +34,8 @@ export interface AnimationAccessory extends PlatformAccessory {
 
 export interface IAnimationContext {
 	animationLoop: IAnimationLoop;
+	activeControllerList: BaseController[];
+	displayName?: string;
 }
 
 export interface IAccessoryContext {
@@ -93,13 +95,15 @@ export interface IConfigOptions {
 	colorWhiteSimultaniousSaturationLevel?: number,
 }
 
-/*----------------------[DEFAULT VALIES]----------------------*/
+/*----------------------[DEFAULT VALIUES]----------------------*/
 
 export const COLOR_COMMAND_MODES = {
 	CCT: 'CCT',
 	HSV: 'HSV',
 };
-
+export const DEFAULT_ANIMATION_STATE = {
+	isOn: false,
+};
 export const DEFAULT_ACCESSORY_STATE: IAccessoryState = {
 	isOn: true,
 	HSV: {
@@ -108,7 +112,7 @@ export const DEFAULT_ACCESSORY_STATE: IAccessoryState = {
 		value: 100,
 	},
 	TB: {
-		temperature: 0,
+		temperature: 140,
 		brightness: 100
 	}
 };
@@ -122,7 +126,7 @@ export const DEFAULT_ACCESSORY_COMMAND: IAccessoryCommand = {
 		value: 0,
 	},
 	TB: {
-		temperature: 0,
+		temperature: 140,
 		brightness: 0
 	}
 };

@@ -14,6 +14,7 @@ import { ControllerGenerator } from 'magichome-platform';
 // import { AnimationGenerator } from './AnimationGenerator'
 import { AnimationAccessory, MagicHomeAccessory } from './misc/types';
 import { AccessoryGenerator } from './AccessoryGenerator';
+import { AnimationGenerator } from './AnimationGenerator';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 /**
  */
@@ -82,7 +83,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
       this.log.info(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
     } else {
-      const homebridgeUUID = accessory.context.animationLoop.name;
+      const homebridgeUUID = this.hap.uuid.generate(accessory.context.animationLoop.name);
+
+      // const homebridgeUUID = accessory.context.animationLoop;
 
       this.animationsFromDiskMap.set(homebridgeUUID, accessory);
     }
@@ -106,8 +109,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this.api, this.log, this.hbLogger, this.config, this.accessoriesFromDiskMap, controllerGenerator);
     const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await accesssoryGenerator.discoverDevices();
-    // const animationGenerator = new AnimationGenerator(this.api, this.log, this.hbLogger, this.config, this.animationsFromDiskMap, activeAccessories);
-    // animationGenerator.generateActiveAccessories();
+    const animationGenerator = new AnimationGenerator(this.api, this.log, this.hbLogger, this.config, this.animationsFromDiskMap, activeAccessories);
+    animationGenerator.generateActiveAccessories();
     // this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 30000);
 
   }

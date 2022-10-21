@@ -158,8 +158,6 @@ export function TBtoCCT(TB: IColorTB): IColorCCT {
   let warmWhite = 0, coldWhite = 0;
   const { temperature, brightness } = TB;
 
-  console.log(`TEMP: ${temperature}, BRIGHT: ${brightness}`)
-
   if (temperature <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
     multiplier = ((temperature / 90));
     coldWhite = Math.round((255 * multiplier));
