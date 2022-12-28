@@ -3,7 +3,7 @@ import type {
   CharacteristicSetCallback, CharacteristicGetCallback, HAP, Logger, Logging,
 } from 'homebridge';
 
-import { temperatureToCCT, clamp, TBtoCCT, HSVtoRGB, RGBtoHSV, CCTtoTB } from './misc/utils';
+import { clamp, TBtoCCT, HSVtoRGB, RGBtoHSV, CCTtoTB } from './misc/utils';
 import { AnimationAccessory, DEFAULT_ACCESSORY_COMMAND, DEFAULT_ACCESSORY_STATE, IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB, IConfigOptions, IPartialAccessoryCommand, MagicHomeAccessory } from './misc/types';
 // import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
 import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, IProtoDevice, IAnimationLoop, ICompleteResponse, mergeDeep, overwriteDeep, COMMAND_TYPE, COLOR_MASKS } from 'magichome-platform';
@@ -38,19 +38,22 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected deviceReadStatus = 'ready';
   protected readRequestLevel = 0;
 
-  protected recentlyControlled: boolean = false;
-  protected currentlyAnimating: boolean = false;
+  protected recentlyControlled = false;
+  protected currentlyAnimating = false;
   protected currentAnimator: AnimationAccessory = null;
 
   protected queue;
-  protected slowQueueRetry = false;
   protected lastValue: number;
   lastHue: number;
   lastBrightness: number;
   waitingSendoff: boolean;
   resistOff: boolean;
-  brightnessTimeout: NodeJS.Timeout;
+  HSVTimeout: NodeJS.Timeout;
   powerTimeout: NodeJS.Timeout;
+  isCountingTime: boolean;
+  timeout: NodeJS.Timeout;
+  processAccessoryCommandTimeout: NodeJS.Timeout;
+  service2: any;
 
   //=================================================
   // Start Constructor //
@@ -65,111 +68,232 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   ) {
 
     this.setupMisc();
-    this.accessoryState = DEFAULT_ACCESSORY_STATE;
+    this.accessoryState = mergeDeep({}, DEFAULT_ACCESSORY_STATE);
     this.logs = logs;
     this.controller = controller;
     this.hap = api.hap;
     this.api = api;
     this.config = config;
     this.initializeCharacteristics();
-    this.fetchAndUpdateState(2);
+    this.fetchDeviceState(2);
+    this.isCountingTime = false;
+    this.lastValue = this.accessoryState.HSV.value;
+    this.periodicScan();
   }
 
-  //=================================================
-  // End Constructor //
+  async periodicScan() {
+    while (true) {
+      await new Promise(resolve => setTimeout(resolve, 5000,
+      ));
+      this.fetchDeviceState(2, true);
+    }
+  }
 
-  //=================================================
-  // Start Setters //
+  // setOn(value: CharacteristicValue) {
+  //   if (!this.isCountingTime) {
+  //     this.isCountingTime = true;
+  //     console.time('setters');
+  //     console.timeLog('setters');
+  //     console.log('setters: isOn: ', value);
+  //   } else {
+  //     console.timeLog('setters');
+  //     console.log('setters: isOn: ', value);
+  //   }
+  //   this.startResetTimeout();
+  // }
+
+  // setHue(value: CharacteristicValue) {
+  //   if (!this.isCountingTime) {
+  //     this.isCountingTime = true;
+  //     console.time('setters');
+  //     console.timeLog('setters');
+  //     console.log('setters: setHue: ', value);
+  //   } else {
+  //     console.timeLog('setters');
+  //     console.log('setters: setHue: ', value);
+  //   }
+  //   this.startResetTimeout();
+  // }
+
+  // setSaturation(value: CharacteristicValue) {
+  //   if (!this.isCountingTime) {
+  //     this.isCountingTime = true;
+  //     console.time('setters');
+  //     console.timeLog('setters');
+  //     console.log('setters: setSaturation: ', value);
+  //   } else {
+  //     console.timeLog('setters');
+  //     console.log('setters: setSaturation: ', value);
+  //   }
+  //   this.startResetTimeout();
+  // }
+
+  // setValue(value: CharacteristicValue) {
+  //   if (!this.isCountingTime) {
+  //     this.isCountingTime = true;
+  //     console.time('setters');
+  //     console.timeLog('setters');
+  //     console.log('setters: setValue: ', value);
+  //   } else {
+  //     console.timeLog('setters');
+  //     console.log('setters: setValue: ', value);
+  //   }
+  //   this.startResetTimeout();
+  // }
+
+  // startResetTimeout() {
+  //   clearTimeout(this.timeout);
+  //   this.timeout = setTimeout(() => {
+  //     console.timeEnd('setters');
+  //     console.log('reset setters boolean');
+  //     this.isCountingTime = false;
+  //   }, 3000);
+  // }
+
   setOn(value: CharacteristicValue) {
     this.powerTimeout = setTimeout(() => {
       if (!this.resistOff) {
         const partialAccessoryCommand: IPartialAccessoryCommand = { isOn: value as boolean, isPowerCommand: true };
         this.processAccessoryCommand(partialAccessoryCommand);
       }
-    }, 100);
+    }, 20);
   }
 
   setHue(value: CharacteristicValue) {
+    this.resistSetOnCommand()
     this.accessoryState.HSV.hue = value as number;
     const partialAccessoryCommand: IPartialAccessoryCommand = { HSV: { hue: value as number } };
-
     this.processAccessoryCommand(partialAccessoryCommand);
   }
 
   setSaturation(value: CharacteristicValue) {
-
+    this.resistSetOnCommand()
     this.accessoryState.HSV.saturation = value as number;
     const partialAccessoryCommand: IPartialAccessoryCommand = { HSV: { saturation: value as number } };
     this.processAccessoryCommand(partialAccessoryCommand);
   }
 
-  setBrightness(value: CharacteristicValue) {
-    clearTimeout(this.brightnessTimeout)
-    clearTimeout(this.powerTimeout)
-    this.resistOff = true;
-    this.brightnessTimeout = setTimeout(() => {
-      this.resistOff = false;
-    }, 100);
-
+  setValue(value: CharacteristicValue) {
+    this.resistSetOnCommand()
     this.accessoryState.HSV.value = value as number;
     const partialAccessoryCommand: IPartialAccessoryCommand = { HSV: { value: value as number } };
     this.processAccessoryCommand(partialAccessoryCommand);
   }
 
-  // setColorTemperature(value: CharacteristicValue) {
-  //   this.ColorCommandMode = CCT;
-  //   const accessoryCommand: IAccessoryCommand = { colorTemperature: value as number };
-  //   this.processAccessoryCommand(accessoryCommand);
+  // setBrightness2(value: CharacteristicValue) {
+  //   this.resistSetOnCommand()
+  //   this.accessoryState.TB.brightness = value as number;
+  //   const partialAccessoryCommand: IPartialAccessoryCommand = { TB: { brightness: value as number } };
+  //   this.processAccessoryCommand(partialAccessoryCommand);
   // }
+
+  setColorTemperature(value: CharacteristicValue) {
+    this.resistSetOnCommand()
+    this.accessoryState.TB.temperature = value as number;
+    const partialAccessoryCommand: IPartialAccessoryCommand = { TB: { temperature: value as number } };
+    console.log('set color temp', value)
+    this.processAccessoryCommand(partialAccessoryCommand);
+  }
 
   setConfiguredName(value: CharacteristicValue) {
 
     const name: string = value.toString();
-    this.logs.warn(`Renaming device to ${name}`,);
+    this.logs.warn(`Renaming device to ${name}`);
     this.accessory.context.displayName = name;
     this.api.updatePlatformAccessories([this.accessory]);
+  }
+
+  resistSetOnCommand() {
+    this.resistOff = true;
+    clearTimeout(this.HSVTimeout);
+    clearTimeout(this.powerTimeout);
+    this.HSVTimeout = setTimeout(() => {
+      this.resistOff = false;
+    }, 50);
   }
 
   identifyLight() {
     this.flashEffect();
   }
 
-  //=================================================
-  // End Setters //
-
-  //=================================================
-  // Start Getters //
-
   getHue() {
-    const { HSV: { hue }, TB: { temperature } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
-    this.fetchAndUpdateState(2);
-    return hue;
+    return new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const { HSV: { hue }, TB: { temperature } } = await this.fetchDeviceState(5, false);
+          this.logValue('getHue', hue);
+          resolve(hue);
+        } catch (error) {
+          console.log('getHue Error: ', error)
+
+        }
+      }, 50)
+    });
   }
 
-  // getColorTemperature() {
-  //   const { isOn, HSV: { hue, saturation }, brightness, colorTemperature } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState)
+  getSaturation() {
+    return new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const { HSV: { saturation }, TB: { temperature } } = await this.fetchDeviceState(5, false);
+          this.logValue('getSaturation', saturation);
+          resolve(saturation);
+        } catch (error) {
+          console.log('getSaturation Error: ', error)
 
-  //   this.fetchAndUpdateState(3);
-  //   return colorTemperature;
+        }
+      }, 50)
+    });
+  }
+
+  getValue() {
+    return new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const { HSV: { value }, TB: { temperature } } = await this.fetchDeviceState(5, false);
+          this.logValue('getValue', value);
+          resolve(value);
+        } catch (error) {
+          console.log('getValue Error: ', error)
+
+        }
+      }, 50)
+    });
+  }
+
+  getOn() {
+    return new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const { isOn } = await this.fetchDeviceState(5, false);
+          this.logValue('isOn', isOn);
+          resolve(isOn);
+        } catch (error) {
+          console.log('isOn Error: ', error)
+        }
+      }, 50)
+    });
+  }
+
+  // getBrightness2() {
+
+  //   const { HSV: { value }, TB: { brightness } } = this.deviceStateToAccessoryState(this.controller.getLastOutboundState());
+  //   console.log(this.controller.getLastOutboundState())
+  //   this.fetchAndUpdateState(5);
+  //   return value;
   // }
 
-  getBrightness() {
-    const { HSV: { value }, TB: { brightness } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
-
-    this.fetchAndUpdateState(2);
-    return value;
+  getColorTemperature() {
+    const { HSV: { hue }, TB: { temperature } } = this.deviceStateToAccessoryState(this.controller.getLastOutboundState());
+    this.fetchDeviceState(5);
+    return temperature;
   }
 
-  /**  
-   ** @getOn
-   * instantly retrieve the current on/off state stored in our object
-   * next call this.getState() which will update all values asynchronously as they are ready
-   */
-  async getOn() {
-    const { isOn } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
 
-    this.fetchAndUpdateState(2);
-    return isOn;
+
+
+  logValue(valueType: string, value: any) {
+    console.log(`${valueType} value: ${value}`);
   }
 
   flashEffect() {
@@ -181,20 +305,25 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   //TODO, Severe! Bundle commands so that close consecutive changes in hue, sat, and brightness aren't sent as separate commands
   protected processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
+    if (this.waitingSendoff) {
+      return;
+    }
     try {
-
-
       this.setRecentlyControlled();
-      this.waitingSendoff = false;
-      const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
-      if (partialAccessoryCommand.isPowerCommand) {
-        this.controller.setOn(sanitizedAcessoryCommand.isOn);
-      } else {
-        const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
-        this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand);
-      }
+      this.waitingSendoff = true;
+      this.processAccessoryCommandTimeout = setTimeout(() => {
+        this.waitingSendoff = false;
+        const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
+        if (partialAccessoryCommand.isPowerCommand) {
+          this.controller.setOn(sanitizedAcessoryCommand.isOn);
+        } else {
+          const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
+          console.log(deviceCommand)
+          this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand);
+        }
+      }, 10);
     } catch (error) {
-      console.log('processAccessoryCommand: ', error)
+      console.log('processAccessoryCommand: ', error);
     }
   }
 
@@ -210,30 +339,37 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected accessoryCommandToDeviceCommand(accessoryCommand: IAccessoryCommand): { deviceCommand: IDeviceCommand, commandOptions: ICommandOptions } {
     let { isOn, HSV: { hue, saturation, value }, TB } = accessoryCommand;
     const { temperature, brightness } = TB;
-
-
-    if (Math.max(brightness, value) > 0) isOn = true;
-    const commandOptions: ICommandOptions = { colorAssist: true, commandType: COMMAND_TYPE.COLOR_COMMAND, waitForResponse: true, maxRetries: 5, timeoutMS: 50 };
+    if (Math.max(brightness, value) > 0) {
+      isOn = true;
+    }
+    const commandOptions: ICommandOptions = { colorAssist: false, commandType: COMMAND_TYPE.COLOR_COMMAND, waitForResponse: true, maxRetries: 5, timeoutMS: 50 };
 
     let red, green, blue, warmWhite, coldWhite, colorMask = null;
-    colorMask = COLOR_MASKS.BOTH
-
-    if (saturation < 95) {
-      ({ warmWhite, coldWhite } = TBtoCCT({ temperature: hue, brightness: value }));
-
-      ({ red, green, blue } = HSVtoRGB({ hue, saturation: 100, value: this.lastValue }));
-      if (saturation < 5) {
-        red = 0, green = 0, blue = 0;
-        colorMask = COLOR_MASKS.WHITE
-      }
-
+    colorMask = COLOR_MASKS.BOTH;
+    if (this.controller.getCachedDeviceInformation().deviceAPI.simultaneousCCT) {
+      ({ warmWhite, coldWhite } = TBtoCCT({ temperature, brightness }));
+      ({ red, green, blue } = HSVtoRGB({ hue, saturation: 100, value }));
     } else {
-      colorMask = COLOR_MASKS.COLOR;
-      this.lastValue = value;
-      ({ red, green, blue } = HSVtoRGB({ hue, saturation, value }));
-      warmWhite = 0;
-      coldWhite = 0;
+      if (saturation < 95) {
+
+        ({ warmWhite, coldWhite } = TBtoCCT({ temperature: hue + 140, brightness: value }));
+        ({ red, green, blue } = HSVtoRGB({ hue, saturation: 100, value: this.lastValue }));
+        console.log(red, green, blue, warmWhite, coldWhite)
+        if (saturation < 5) {
+          this.lastValue = value;
+          red = 0, green = 0, blue = 0;
+          colorMask = COLOR_MASKS.WHITE;
+        }
+
+      } else {
+        colorMask = COLOR_MASKS.COLOR;
+        this.lastValue = value;
+        ({ red, green, blue } = HSVtoRGB({ hue, saturation, value }));
+        warmWhite = 0;
+        coldWhite = 0;
+      }
     }
+
 
     const deviceCommand: IDeviceCommand = { isOn, RGB: { red, green, blue }, colorMask, CCT: { warmWhite, coldWhite } };
     return { deviceCommand, commandOptions };
@@ -242,47 +378,17 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected sendCommand(deviceCommand: IDeviceCommand, commandOptions: ICommandOptions, accessoryCommand) {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
     try {
-      this.controller.setAllValues(deviceCommand, commandOptions).catch(e => {this.logs.warn(e)})
+      this.controller.setAllValues(deviceCommand, commandOptions);
     } catch (error) {
-      console.log(error)
+      console.log("sendCommand ERROR: ", error);
     }
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`);
   }
 
-
-
-  protected async updateLocalState(requestLevel, deviceState) {
-
-    if (!deviceState) deviceState = await this.controller.fetchState().then(res => res).catch(e => { this.logs.warn(e) });
-
-    this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
-    // this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
-    const { HSV: { hue, saturation, value }, isOn, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(deviceState);
-    let accessoryState: IAccessoryState;
-    if (deviceState) {
-      switch (requestLevel) {
-        case 0:
-          // accessoryState = { HSV: { value }, isOn };
-          break;
-        case 1:
-          // accessoryState = { HSV: { hue, value }, isOn };
-          break;
-        case 2:
-          accessoryState = { HSV: { hue, saturation, value }, isOn, TB: { brightness, temperature } };
-          break;
-        case 3:
-          accessoryState = { HSV: { hue, saturation, value }, isOn, TB: { brightness, temperature } };
-          break;
-      }
-      this.accessoryState = accessoryState;
-      // console.log(accessoryState)
-      this.logs.debug(`[${this.accessory.context.displayName}] - Homebridge State:\n`, accessoryState);
-    }
-  }
-
-  updateHomekitState() {
-    let { isOn, HSV: { hue, saturation, value }, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
-
+  updateStateHomekitCharacteristic(deviceState: IDeviceState) {
+    console.log(deviceState)
+    const { isOn, HSV: { hue, saturation, value }, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(deviceState);
+    console.log(isOn, hue, saturation, value, brightness, temperature)
     this.service.updateCharacteristic(this.hap.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.hap.Characteristic.Saturation, this.accessoryState.HSV.saturation);
     this.service.updateCharacteristic(this.hap.Characteristic.Hue, hue);
@@ -290,23 +396,38 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   deviceStateToAccessoryState(deviceState: IDeviceState): IAccessoryState {
-    if (!deviceState) throw 'device state not provided';
-    let { RGB, CCT, isOn } = deviceState;
-    const HSV: IColorHSV = RGBtoHSV(RGB);
-    const TB: IColorTB = CCTtoTB(CCT);
+    if (!deviceState) {
+      throw 'device state not provided';
+    }
+    const { RGB, CCT, isOn } = deviceState;
+    const { red, green, blue } = RGB;
+    const { deviceAPI: { hasBrightness, hasCCT, hasColor, simultaneousCCT } } = this.controller.getCachedDeviceInformation();
+
+    let TB: IColorTB;
+    let HSV: IColorHSV;
+
+    HSV = RGBtoHSV(RGB);
+    TB = CCTtoTB(CCT);
+    if (!simultaneousCCT) {
+      if (Math.max(red, green, blue) <= 0) {
+        HSV = { hue: 5, saturation: 4, value: TB.brightness }
+      }
+    }
     const accessoryState: IAccessoryState = { HSV, TB, isOn };
     return accessoryState;
   }
 
   initializeCharacteristics() {
 
-    const cachedDeviceInformation = this.controller.getCachedDeviceInformation();
-    const { deviceAPI: { hasBrightness, hasCCT, hasColor } } = cachedDeviceInformation;
+    const { deviceAPI: { hasBrightness, hasCCT, hasColor, simultaneousCCT } } = this.controller.getCachedDeviceInformation();
 
     this.addAccessoryInformationCharacteristic();
 
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Lightbulb service to accessory.`);
     this.service = this.accessory.getService(this.hap.Service.Lightbulb) ?? this.accessory.addService(this.hap.Service.Lightbulb);
+    // if (simultaneousCCT) {
+    //   this.service2 = this.accessory.getService('Light Bulb 1') ?? this.accessory.addService(this.hap.Service.Lightbulb, 'Light Bulb 1', 'subtype1');
+    // }
 
     if (hasColor) {
       this.addHueCharacteristic();
@@ -317,8 +438,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.addBrightnessCharacteristic();
     }
 
-    if (hasCCT) {
-      // this.addColorTemperatureCharacteristic();
+    if (simultaneousCCT) {
+      this.addColorTemperatureCharacteristic();
     }
 
     if (!hasBrightness) {
@@ -341,15 +462,32 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-  async fetchAndUpdateState(requestLevel) {
+  public async fetchDeviceState(attempts = 1, updateHomekit = false) {
+    let deviceState: IDeviceState;
+    let accessoryState: IAccessoryState;
     try {
-      this.readRequestLevel = requestLevel;
-      await this.updateLocalState(this.readRequestLevel, null).catch(e => { console.log('fetchAndUpdateState ERROR', e) });
-      this.updateHomekitState();
+      deviceState = await this.controller.fetchState();
+      accessoryState = this.deviceStateToAccessoryState(deviceState);
+      this.accessoryState = accessoryState;
+      if (updateHomekit) {
+        this.updateStateHomekitCharacteristic(deviceState);
+      }
     } catch (error) {
-      this.hbLogger.error(error);
+      console.log("fetchDeviceState ERROR: ", error);
+      if (attempts > 0) {
+        setTimeout(() => {
+          this.fetchDeviceState(attempts - 1), updateHomekit;
+        }, 500);
+      } else {
+        this.hbLogger.error(`Failed to fetch and update state for ${this.accessory.displayName}: ${error}`);
+      }
     }
+    if (!deviceState) {
+      return this.accessoryState;
+    }
+    return accessoryState;
   }
+
 
   getController() {
     return this.controller;
@@ -372,30 +510,36 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   addSaturationCharacteristic() {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Saturation characteristic to service.`);
     this.service.getCharacteristic(this.hap.Characteristic.Saturation)
-      .onSet(this.setSaturation.bind(this));
-    // .onGet(this.CHANGE_ME.bind(this));
+      .onSet(this.setSaturation.bind(this))
+      .onGet(this.getSaturation.bind(this));
 
   }
 
   addBrightnessCharacteristic() {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Brightness characteristic to service.`);
     this.service.getCharacteristic(this.hap.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this))
-      .onGet(this.getBrightness.bind(this));
+      .onSet(this.setValue.bind(this))
+      .onGet(this.getValue.bind(this));
+
+    if (this.controller.getCachedDeviceInformation().deviceAPI.simultaneousCCT) {
+      // this.service2.getCharacteristic(this.hap.Characteristic.Brightness)
+      //   // .onSet(this.setBrightness2.bind(this))
+      //   .onGet(this.getBrightness2.bind(this));
+    }
   }
 
-  // addColorTemperatureCharacteristic() {
-  //   this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Color Temperature characteristic to service.`);
-  //   this.service.getCharacteristic(this.hap.Characteristic.ColorTemperature)
-  //     .onSet(this.setColorTemperature.bind(this))
-  //     .onGet(this.getColorTemperature.bind(this));
+  addColorTemperatureCharacteristic() {
+    this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Color Temperature characteristic to service.`);
+    // this.service2.getCharacteristic(this.hap.Characteristic.ColorTemperature)
+    //   // .onSet(this.setColorTemperature.bind(this))
+    //   .onGet(this.getColorTemperature.bind(this));
 
-  //   if (this.api.versionGreaterOrEqual && this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
-  //     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Adaptive Lighting service to accessory.`);
-  //     this.adaptiveLightingService = new this.api.hap.AdaptiveLightingController(this.service);
-  //     this.accessory.configureController(this.adaptiveLightingService);
-  //   }
-  // }
+    if (this.api.versionGreaterOrEqual && this.api.versionGreaterOrEqual('1.3.0-beta.46')) {
+      this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Adaptive Lighting service to accessory.`);
+      // this.adaptiveLightingService = new this.api.hap.AdaptiveLightingController(this.service2);
+      // this.accessory.configureController(this.adaptiveLightingService);
+    }
+  }
 
   addAccessoryInformationCharacteristic() {
 
@@ -430,6 +574,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Configured Name characteristic to service.`);
 
   }
+
   setRecentlyControlled() {
     this.recentlyControlled = true;
     setTimeout(() => {
@@ -440,10 +585,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   public isReadyToAnimate() {
     return this.recentlyControlled;
   }
-
-
-
-
 
 } // ZackneticMagichomePlatformAccessory class
 

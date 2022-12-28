@@ -156,7 +156,8 @@ export function loadJson<T>(file: string, replacement: T): T {
 export function TBtoCCT(TB: IColorTB): IColorCCT {
   let multiplier = 1;
   let warmWhite = 0, coldWhite = 0;
-  const { temperature, brightness } = TB;
+  let { temperature, brightness } = TB;
+  temperature -= 140;
 
   if (temperature <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
     multiplier = ((temperature / 90));
@@ -179,6 +180,29 @@ export function TBtoCCT(TB: IColorTB): IColorCCT {
   const CCT = { warmWhite: Math.round((warmWhite * brightness) / 100), coldWhite: Math.round((coldWhite * brightness) / 100) }
   return CCT
 } //TBtoCCT
+
+export function CCTtoTB(CCT: IColorCCT): IColorTB {
+  const { warmWhite, coldWhite } = CCT;
+  let temperature = 0;
+  let brightness = 0;
+
+  // Calculate the total CCT value
+  const totalCCT = warmWhite + coldWhite;
+
+  // Calculate the temperature based on the total CCT value
+  if (totalCCT <= 255) {
+    temperature = 90 + Math.round((totalCCT / 255) * 90);
+  } else if (totalCCT > 255 && totalCCT <= 510) {
+    temperature = 180 + Math.round(((totalCCT - 255) / 255) * 90);
+  }
+
+  // Calculate the brightness based on the coldWhite value
+  brightness = Math.round((coldWhite / 255) * 100);
+
+  // Return the temperature and brightness as a TB value
+  return { temperature, brightness };
+}
+
 
 /*
 HSV to RGB conversion formula
@@ -251,29 +275,47 @@ export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
   return { hue: H, saturation: S, value: V };
 }
 
-export function temperatureToCCT(temperature: number, multiplier = 0): { warmWhite: number, coldWhite: number } {
-  let warmWhite, coldWhite;
+// export function TBtoCCT(tb: { temperature: number, brightness: number }): { warmWhite: number, coldWhite: number } {
+//   const minCCT = 0;
+//   const maxCCT = 255;
+//   const minTemperature = 140;
+//   const maxTemperature = 500;
+//   const minColdWhite = 0;
+//   const maxColdWhite = 255;
+//   const minBrightness = 0;
+//   const maxBrightness = 100;
 
-  const threshold = 110;
-  if (temperature >= threshold) {
-    warmWhite = 127;
-    multiplier = (1 - ((temperature - threshold) / (360 - threshold)));
-    coldWhite = Math.round((127 * multiplier));
-  } else {
-    coldWhite = 127;
-    multiplier = (temperature / threshold);
-    warmWhite = Math.round((127 * multiplier));
-  }
+//   const totalCCT = (tb.temperature - minTemperature) * (maxCCT - minCCT) / (maxTemperature - minTemperature) + minCCT;
+//   const coldWhite = (tb.brightness - minBrightness) * (maxColdWhite - minColdWhite) / (maxBrightness - minBrightness) + minColdWhite;
+//   const warmWhite = totalCCT - coldWhite;
 
-  return { warmWhite, coldWhite };
-}
+//   return { warmWhite: warmWhite, coldWhite: coldWhite };
+// }
 
-export function CCTtoTB(CCT: IColorCCT): IColorTB {
-  const { warmWhite, coldWhite } = CCT;
-  const temperature = Math.round(coldWhite * 1.4117);
-  const brightness = Math.round(Math.max(warmWhite, coldWhite) / 2.55)
-  return { temperature, brightness };
-}
+
+// export function CCTtoTB(cct: { warmWhite: number, coldWhite: number }): { temperature: number, brightness: number } {
+//   const minCCT = 0;
+//   const maxCCT = 255;
+//   const minTemperature = 140;
+//   const maxTemperature = 500;
+//   const minColdWhite = 0;
+//   const maxColdWhite = 255;
+//   const minBrightness = 0;
+//   const maxBrightness = 100;
+
+//   const totalCCT = cct.warmWhite + cct.coldWhite;
+//   const temperature = (totalCCT - minCCT) * (maxTemperature - minTemperature) / (maxCCT - minCCT) + minTemperature;
+//   const brightness = (cct.coldWhite - minColdWhite) * (maxBrightness - minBrightness) / (maxColdWhite - minColdWhite) + minBrightness;
+
+//   return { temperature, brightness };
+// }
+
+// export function CCTtoTB(CCT: IColorCCT): IColorTB {
+//   const { warmWhite, coldWhite } = CCT;
+//   const temperature = Math.round(coldWhite * 1.4117);
+//   const brightness = Math.round(Math.max(warmWhite, coldWhite) / 2.55)
+//   return { temperature, brightness };
+// }
 
 /*
 export function delayToSpeed(delay: never) {

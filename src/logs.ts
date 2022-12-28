@@ -42,3 +42,4 @@ let logs: Logs;
 export function getLogs() {
   return logs;
 }
+

@@ -37,8 +37,16 @@ export class AccessoryGenerator {
 		this.logs.info('Scanning network for MagicHome accessories...');
 
 		try {
-			const completeDevices: ICompleteDevice[] = await this.controllerGenerator.discoverCompleteDevices();
+			let completeDevices: ICompleteDevice[] = await this.controllerGenerator.discoverCompleteDevices();
+			completeDevices = completeDevices.filter((device) => {
+				//if the device.completeDeviceInfo includes "ABCD"
+				if (device.completeDeviceInfo.protoDevice.uniqueId.includes('DC4F22CF7C31')) {
+					return true;
+				} else {
+					return false;
+				}
 
+			});
 
 			const controllers: BaseController[] = await this.controllerGenerator.generateControllers(completeDevices);
 			const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await this.generateActiveAccessories(controllers);
@@ -145,7 +153,7 @@ export class AccessoryGenerator {
 		// console.log(newAccessory)
 		newAccessory.context = { displayName: description as string, deviceMetaData, protoDevice, latestUpdate: Date.now() };
 		// new homekitInterface[description](this.api, newAccessory, this.config, controller, this.hbLogger, this.logs);
-		const hBAccessory = new HomebridgeMagichomeDynamicPlatformAccessory(this.api, newAccessory, this.config, controller, this.hbLogger, this.logs)
+		const hBAccessory = new HomebridgeMagichomeDynamicPlatformAccessory(this.api, newAccessory, this.config, controller, this.hbLogger, this.logs);
 		this.activeAccessoriesList.push(hBAccessory);
 		return newAccessory;
 

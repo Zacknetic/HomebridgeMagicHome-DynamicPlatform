@@ -30,12 +30,14 @@
       "url": "https://www.paypal.com/paypalme/ZacharyAvino"
     }
   ],
-  "engines": {
-    "node": ">=10.17.0",
-    "homebridge": ">=1.0.0"
-  },
+
   "main": "dist/index.js",
+  "engines": {
+    "homebridge": "^1.5.0 || 2.0.0-beta.0",
+    "node": "^14.21.1 || ^16.18.1 || ^18.12.1"
+  },
   "scripts": {
+    "rebuild": "rm package-lock.json && rm -r node_modules/ && npm install",
     "lint": "eslint src/**.ts",
     "watch": "npm run build && nodemon",
     "build": "rimraf ./dist && tsc",

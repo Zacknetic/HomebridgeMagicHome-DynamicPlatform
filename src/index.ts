@@ -7,7 +7,7 @@ import {
 
 let hap: HAP;
 import { PLATFORM_NAME } from './settings';
-import { HomebridgeMagichomeDynamicPlatform } from './platform'; 
+import { HomebridgeMagichomeDynamicPlatform } from './platform';
 
 let Accessory: typeof PlatformAccessory;
 export = (api: API) => {
