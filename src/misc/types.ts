@@ -1,5 +1,6 @@
 import type { PlatformAccessory } from 'homebridge';
-import { BaseController, IDeviceState, IDeviceCommand, IColorCCT, IDeviceInformation, IDeviceMetaData, IProtoDevice, IAnimationLoop } from 'magichome-platform';
+import { BaseController, IDeviceState, IDeviceCommand, IColorCCT, IDeviceInformation, IDeviceMetaData, IProtoDevice, IAnimationBlueprint } from 'magichome-platform';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 // import { Switch } from '../accessories/Switch';
 // import { DimmerStrip } from '../accessories/DimmerStrip';
@@ -33,14 +34,15 @@ export interface AnimationAccessory extends PlatformAccessory {
 }
 
 export interface IAnimationContext {
-	animationLoop: IAnimationLoop;
-	activeControllerList: BaseController[];
+    activeAccessoryList: any;
+	animationBlueprint: IAnimationBlueprint;
 	displayName?: string;
 }
 
 export interface IAccessoryContext {
 	displayName?: string;
 	deviceMetaData: IDeviceMetaData;
+	assignedAnimations: string[]
 	protoDevice: IProtoDevice;
 	latestUpdate: number;
 }
@@ -50,6 +52,11 @@ export interface IAccessoryState {
 	HSV: IColorHSV,
 	TB: IColorTB
 }
+
+export interface IAnimationState {
+	isOn: boolean,
+}
+
 export interface IPartialAccessoryCommand {
 	isOn?: boolean,
 	HSV?: IPartialColorHSV,

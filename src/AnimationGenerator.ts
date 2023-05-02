@@ -1,5 +1,5 @@
-import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep, IAnimationLoop, cctWave } from 'magichome-platform';
-import { thunderStruck, colorWave, AnimationController } from 'magichome-platform';
+import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep, IAnimationLoop, cctWave, IAnimationBlueprint } from 'magichome-platform';
+import { thunderStruck, rainbow, AnimationManager } from 'magichome-platform';
 import { AnimationAccessory, IAccessoryContext, IAccessoryState, MagicHomeAccessory } from './misc/types';
 import { API, HAP, PlatformAccessory, PlatformConfig, uuid } from 'homebridge';
 
@@ -10,7 +10,7 @@ import { HomebridgeAnimationAccessory } from './animationAccessory';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
-const animationLoops = [colorWave, thunderStruck]
+const animationLoops = [rainbow, thunderStruck]
 export class AnimationGenerator {
 
     public readonly animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();
@@ -28,7 +28,8 @@ export class AnimationGenerator {
         hbLogger,
         config,
         animationsFromDiskMap,
-        activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[]) {
+        activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[]
+        ) {
         this.api = api;
         this.hap = api.hap;
         this.hbLogger = hbLogger;
@@ -48,7 +49,6 @@ export class AnimationGenerator {
 
         for (const animationLoop of animationLoops) {
             const homebridgeUUID = this.hap.uuid.generate(animationLoop.name);
-            console.log(animationLoop.name)
             try {
                 if (this.animationsFromDiskMap.has(homebridgeUUID)) {
                     const existingAnimationAccessory = this.animationsFromDiskMap.get(homebridgeUUID);
@@ -77,16 +77,15 @@ export class AnimationGenerator {
         this.updateExistingAccessories(existingAccessoriesList);
     }
 
-    createNewAnimation(animationLoop: IAnimationLoop): AnimationAccessory {
+    createNewAnimation(animationLoop: IAnimationBlueprint): AnimationAccessory {
         let homebridgeUUID = this.hap.uuid.generate(animationLoop.name);
-        console.log(homebridgeUUID, animationLoop.name)
         const newAccessory: AnimationAccessory = new this.api.platformAccessory(animationLoop.name, homebridgeUUID) as AnimationAccessory;
-        newAccessory.context.animationLoop = animationLoop;
+        newAccessory.context.animationBlueprint = animationLoop;
         new HomebridgeAnimationAccessory(this.hap, this.logs, this.api, newAccessory, this.activeAccessories, animationLoop);
         return newAccessory;
     }
 
-    processOnlineAccessory(existingAccessory: AnimationAccessory, animationLoop: IAnimationLoop) {
+    processOnlineAccessory(existingAccessory: AnimationAccessory, animationLoop: IAnimationBlueprint) {
 
 
         // const { name, pattern, accessoryOffsetMS } = animationLoop;
@@ -102,7 +101,6 @@ export class AnimationGenerator {
     }
 
     registerNewAccessories(newAccessories: AnimationAccessory[]) {
-
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, newAccessories);
 

@@ -1,6 +1,6 @@
 import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep } from 'magichome-platform';
 import { IAccessoryContext, IAccessoryState, MagicHomeAccessory } from './misc/types';
-import { API, HAP, PlatformAccessory, PlatformConfig } from 'homebridge';
+import { API, HAP, PlatformAccessory, PlatformConfig, uuid } from 'homebridge';
 
 // import { homekitInterface } from './misc/types';
 import { Logs } from './logs';
@@ -38,22 +38,22 @@ export class AccessoryGenerator {
 
 		try {
 			let completeDevices: ICompleteDevice[] = await this.controllerGenerator.discoverCompleteDevices();
-			completeDevices = completeDevices.filter((device) => {
-				//if the device.completeDeviceInfo includes "ABCD"
-				if (device.completeDeviceInfo.protoDevice.uniqueId.includes('DC4F22CF7C31')) {
-					return true;
-				} else {
-					return false;
-				}
+			// completeDevices = completeDevices.filter((device) => {
+			// 	//if the device.completeDeviceInfo includes "ABCD"
+			// 	if (device.completeDeviceInfo.protoDevice.uniqueId.includes('DC4F22CF7C31')) {
+			// 		return true;
+			// 	} else {
+			// 		return false;
+			// 	}
 
-			});
+			// });
 
 			const controllers: BaseController[] = await this.controllerGenerator.generateControllers(completeDevices);
 			const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await this.generateActiveAccessories(controllers);
 			// this.registerOfflineAccessories();
 			return activeAccessories;
 		} catch (error) {
-			this.logs.error(error);
+			// this.logs.error(error);
 		}
 
 	}
@@ -151,7 +151,7 @@ export class AccessoryGenerator {
 		// console.log(homebridgeUUID);
 		const newAccessory: MagicHomeAccessory = new this.api.platformAccessory(description, homebridgeUUID) as MagicHomeAccessory;
 		// console.log(newAccessory)
-		newAccessory.context = { displayName: description as string, deviceMetaData, protoDevice, latestUpdate: Date.now() };
+		newAccessory.context = { displayName: description as string, deviceMetaData, protoDevice, latestUpdate: Date.now(), assignedAnimations: [] };
 		// new homekitInterface[description](this.api, newAccessory, this.config, controller, this.hbLogger, this.logs);
 		const hBAccessory = new HomebridgeMagichomeDynamicPlatformAccessory(this.api, newAccessory, this.config, controller, this.hbLogger, this.logs);
 		this.activeAccessoriesList.push(hBAccessory);

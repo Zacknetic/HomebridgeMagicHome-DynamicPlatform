@@ -197,7 +197,7 @@ export function CCTtoTB(CCT: IColorCCT): IColorTB {
   }
 
   // Calculate the brightness based on the coldWhite value
-  brightness = Math.round((coldWhite / 255) * 100);
+  brightness = Math.round(Math.max((coldWhite / 255) * 100, (warmWhite / 255) * 100));
 
   // Return the temperature and brightness as a TB value
   return { temperature, brightness };
