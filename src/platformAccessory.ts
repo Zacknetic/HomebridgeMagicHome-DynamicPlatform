@@ -35,6 +35,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   protected queue;
   protected lastValue: number;
+  public uuid: string;
   lastHue: number;
   lastBrightness: number;
   waitingSendoff: boolean;
@@ -77,6 +78,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.fetchDeviceState(2);
     this.isCountingTime = false;
     this.lastValue = this.accessoryState.HSV.value;
+    this.uuid = this.accessory.UUID;
     this.periodicScan();
   }
 

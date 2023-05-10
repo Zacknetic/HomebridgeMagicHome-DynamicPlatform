@@ -2,7 +2,7 @@ import type { Service, CharacteristicValue, HAP } from 'homebridge';
 import * as CustomHomeKitTypes from "./CustomHomeKitTypes";
 import { AnimationAccessory, DEFAULT_ACCESSORY_STATE, DEFAULT_ANIMATION_STATE, IAccessoryState, IAnimationState } from './misc/types';
 // import { addAccessoryInformationCharacteristic, addBrightnessCharacteristic, addColorTemperatureCharacteristic, addConfiguredNameCharacteristic, addHueCharacteristic, addOnCharacteristic, addSaturationCharacteristic } from './misc/serviceCharacteristics';
-import { BaseController, AnimationManager, overwriteDeep } from 'magichome-platform';
+import { BaseController, AnimationManager, overwriteDeep, IAnimationBlueprint } from 'magichome-platform';
 import { Logs } from './logs';
 import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
 
@@ -14,32 +14,31 @@ export class HomebridgeAnimationAccessory {
     protected service2: Service;
 
     protected accessoryState: IAnimationState = { isOn: false };
-    protected animationManager: AnimationManager;
     protected isRecoding = false;
     protected numToggles = 0;
     listeningTimeout: NodeJS.Timeout;
     listenCount: number = 0;
     countTimeout: NodeJS.Timeout;
     isListening: boolean = false;
+    protected animationManager: AnimationManager;
+
     //=================================================
     // Start Constructor //
-
     constructor(
         protected hap: HAP,
         protected logs,
         protected api,
         protected accessory: AnimationAccessory,
         protected accessoriesList: HomebridgeMagichomeDynamicPlatformAccessory[],
-        protected animationLoop
+        protected animationBlueprint: IAnimationBlueprint,
     ) {
         overwriteDeep(this.accessoryState, DEFAULT_ANIMATION_STATE);
-        // this.logs = logs;
-        // this.controller = controller;
-        this.hap = api.hap;
-        this.api = api;
-        // this.config = config;
         this.initializeCharacteristics();
-        this.animationManager = new AnimationController();
+        this.animationManager = AnimationManager.getInstance();
+    }
+
+    private initialize() {
+
     }
 
     //=================================================
@@ -48,23 +47,24 @@ export class HomebridgeAnimationAccessory {
     //=================================================
     // Start Setters //
     async setOn(value: CharacteristicValue) {
+        console.log(value)
         this.accessoryState.isOn = value as boolean;
-
-        if (this.animationManager.isActive || !value) {
-            this.animationManager.clearAnimations()
+        const isActive = this.animationManager.isAnimationLoopActiveByName(this.animationBlueprint.name);
+        if (isActive && !value) {
+            this.animationManager.deactivateAnimationLoopByName(this.animationBlueprint.name)
             for (const accessory of this.accessoriesList) {
-                if (accessory.hasAssignedAnimation(this.animationLoop.name)) accessory.restoreBackupAccessoryState();
+                if (accessory.hasAssignedAnimation(this.animationBlueprint.name)) accessory.restoreBackupAccessoryState();
             }
-        } else if (value) {
+        } else if (!isActive && value) {
 
             const controllers = this.accessoriesList
-                .filter(accessory => accessory.hasAssignedAnimation(this.animationLoop.name))
+                .filter(accessory => accessory.hasAssignedAnimation(this.animationBlueprint.name))
                 .map(accessory => {
                     accessory.setBackupAccessoryState();
                     return accessory.getController();
                 });
 
-            await this.animationManager.animateAsynchronously(controllers, this.animationLoop).catch(e => { })
+            this.animationManager.activateAnimationLoopByName(this.animationBlueprint.name);
         }
 
     }
@@ -75,7 +75,8 @@ export class HomebridgeAnimationAccessory {
         this.accessoriesList.filter(accessory => {
             return accessory.isReadyToAnimate();
         }).forEach(accessory => {
-            accessory.addAssignedAnimation(this.animationLoop.name);
+            accessory.addAssignedAnimation(this.animationBlueprint.name);
+            this.animationManager.addLightToAnimationLoop(accessory.getController(), this.animationBlueprint)
         });
     }
 
@@ -84,7 +85,8 @@ export class HomebridgeAnimationAccessory {
         this.logs.info("Unassigning All Devices.")
         this.accessoriesList.forEach(
             accessory => {
-                accessory.removeAssignedAnimation(this.animationLoop.name);
+                accessory.removeAssignedAnimation(this.animationBlueprint.name);
+                this.animationManager.removeLightFromAnimationLoop(accessory.getController(), this.animationBlueprint);
             });
     }
 

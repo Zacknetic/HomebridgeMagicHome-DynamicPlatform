@@ -40,7 +40,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
   private readonly hbLogger: Logging;
   private readonly log: Logs;
-  animationsFromDiskMap:Map<string, AnimationAccessory> = new Map();
+  animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();
   constructor(
     logging: Logging,
     config: PlatformConfig,
@@ -83,11 +83,13 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
       this.log.info(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
     } else {
-      const homebridgeUUID = this.hap.uuid.generate(accessory.context.animationLoop.name);
+
+        const homebridgeUUID = this.hap.uuid.generate(accessory.context.animationBlueprint.name);
+
+        this.animationsFromDiskMap.set(homebridgeUUID, accessory);
 
       // const homebridgeUUID = accessory.context.animationLoop;
 
-      this.animationsFromDiskMap.set(homebridgeUUID, accessory);
     }
 
 
