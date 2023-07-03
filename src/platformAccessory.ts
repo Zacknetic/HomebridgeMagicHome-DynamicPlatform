@@ -285,31 +285,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //   console.log(`${valueType} value: ${value}`);
   // }
 
-<<<<<<< Updated upstream
-=======
-  getBrightness() {
-    const { HSV: { value }, TB: { brightness } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
-
-    this.fetchAndUpdateState(2);
-    return value;
-  }
-
-  /**  
-   ** @getOn
-   * instantly retrieve the current on/off state stored in our object
-   * next call this.getState() which will update all values asynchronously as they are ready
-   */
-  async getOn() {
-    await this.updateLocalState(this.readRequestLevel, null).catch(e => { console.log('fetchAndUpdateState ERROR', e) });
-
-    const { deviceState } = await this.controller.getCachedDeviceInformation();
-    const { isOn } = this.deviceStateToAccessoryState(deviceState);
-
-    this.fetchAndUpdateState(2);
-    return isOn;
-  }
-
->>>>>>> Stashed changes
   flashEffect() {
     //
   } //flashEffect
@@ -317,7 +292,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //=================================================
   // End LightEffects //
 
-<<<<<<< Updated upstream
   protected processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
     if (this.waitingSendoff) {
       return;
@@ -336,20 +310,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
           this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand);
         }
       }, 50);
-=======
-  //TODO, Severe! Bundle commands so that close consecutive changes in hue, sat, and brightness aren't sent as separate commands
-  protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
-    try {
-      this.setRecentlyControlled();
-      this.waitingSendoff = false;
-      const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
-      if (partialAccessoryCommand.isPowerCommand) {
-        await this.controller.setOn(sanitizedAcessoryCommand.isOn);
-      } else {
-        const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
-        await this.sendCommand(deviceCommand, commandOptions, sanitizedAcessoryCommand);
-      }
->>>>>>> Stashed changes
     } catch (error) {
       // console.log('processAccessoryCommand: ', error);
     }
@@ -446,46 +406,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected sendCommand(deviceCommand: IDeviceCommand, commandOptions: ICommandOptions, accessoryCommand) {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
     try {
-<<<<<<< Updated upstream
       this.controller.setAllValues(deviceCommand, commandOptions);
-=======
-      this.controller.setAllValues(deviceCommand, commandOptions).catch(e => { this.logs.warn(e) })
->>>>>>> Stashed changes
     } catch (error) {
       // console.log("sendCommand ERROR: ", error);
     }
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`);
   }
 
-<<<<<<< Updated upstream
   updateStateHomekitCharacteristic() {
     if (this.waitingSendoff) return;
     // console.log(deviceState)
     // const { isOn, HSV: { hue, saturation, value }, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(deviceState);
     // console.log(isOn, hue, saturation, value, brightness, temperature)
     const { isOn, HSV: { hue, saturation, value }, TB: { brightness, temperature } } = this.accessoryState;
-=======
-
-
-  protected async updateLocalState(requestLevel, deviceState) {
-
-    if (!deviceState) deviceState = await this.controller.fetchState().then(res => res).catch(e => { this.logs.warn(e) });
-
-    this.logs.debug(`[${this.accessory.context.displayName}] - Device State:\n`, deviceState);
-    // this.accessory.context.cachedDeviceInformation.deviceState = deviceState;
-    const { HSV: { hue, saturation, value }, isOn, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(deviceState);
-    let accessoryState: IAccessoryState;
-    if (deviceState) {
-      accessoryState = { HSV: { hue, saturation, value }, isOn, TB: { brightness, temperature } };
-      this.accessoryState = accessoryState;
-      // console.log(accessoryState)
-      this.logs.debug(`[${this.accessory.context.displayName}] - Homebridge State:\n`, accessoryState);
-    }
-  }
-
-  updateHomekitState() {
-    let { isOn, HSV: { hue, saturation, value }, TB: { brightness, temperature } } = this.deviceStateToAccessoryState(this.controller.getCachedDeviceInformation().deviceState);
->>>>>>> Stashed changes
 
     this.service.updateCharacteristic(this.hap.Characteristic.On, isOn);
     this.service.updateCharacteristic(this.hap.Characteristic.Saturation, saturation);
@@ -589,19 +522,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
   }
 
-<<<<<<< Updated upstream
-
-=======
-  async fetchAndUpdateState(requestLevel) {
-    try {
-      this.readRequestLevel = requestLevel;
-      await this.updateLocalState(this.readRequestLevel, null).catch(e => { console.log('fetchAndUpdateState ERROR', e) });
-      // this.updateHomekitState();
-    } catch (error) {
-      this.hbLogger.error(error);
-    }
-  }
->>>>>>> Stashed changes
 
   getController() {
     return this.controller;
@@ -632,7 +552,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   addBrightnessCharacteristic() {
     this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Brightness characteristic to service.`);
     this.service.getCharacteristic(this.hap.Characteristic.Brightness)
-<<<<<<< Updated upstream
       .onSet(this.setValue.bind(this))
       .onGet(this.getValue.bind(this));
 
@@ -647,10 +566,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       //   .onSet(this.setBrightness2.bind(this))
       //   // .onGet(this.getBrightness2.bind(this));
     }
-=======
-      .onSet(this.setBrightness.bind(this))
-    // .onGet(this.getBrightness.bind(this));
->>>>>>> Stashed changes
   }
 
   addColorTemperatureCharacteristic() {
