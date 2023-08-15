@@ -38,7 +38,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //=================================================
   // Start Constructor //
 
-  constructor(protected readonly platform: HomebridgeMagichomeDynamicPlatform, protected readonly accessory: MagicHomeAccessory, protected readonly controller: BaseController) {
+  constructor(protected readonly platform: HomebridgeMagichomeDynamicPlatform, public accessory: MagicHomeAccessory, public controller: BaseController) {
     this.setupMisc();
     this.accessoryState = mergeDeep({}, DEFAULT_ACCESSORY_STATE);
     this.initializeCharacteristics();
@@ -51,11 +51,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     if (this.resistOffFromBrightness) return;
     this.accessoryState.isOn = value as boolean;
     this.scheduleAccessoryCommand(true);
-    // const partialAccessoryCommand: IPartialAccessoryCommand = {
-    //   isOn: value as boolean,
-    //   isPowerCommand: true,
-    // };
-    // this.processAccessoryCommand(partialAccessoryCommand);
   }
 
   async resistOff() {
@@ -93,7 +88,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     this.sendStateDebounce = setTimeout(() => {
-      const partialAccessoryCommand: IPartialAccessoryCommand = mergeDeep({ isPowerCommand }, this.accessoryState);
+      const partialAccessoryCommand: IPartialAccessoryCommand = mergeDeep({}, this.accessoryState, { isPowerCommand },);
       this.processAccessoryCommand(partialAccessoryCommand);
     }, 10); // 100 milliseconds debounce time
   }
@@ -164,7 +159,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //
   } //flashEffect
 
-  protected processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
+  protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
     if (this.accessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();
@@ -174,12 +169,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     try {
       const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
       if (partialAccessoryCommand.isPowerCommand) {
-        this.controller.setOn(sanitizedAcessoryCommand.isOn);
+        await this.controller.setOn(sanitizedAcessoryCommand.isOn);
       } else {
         const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
-        this.sendCommand(deviceCommand, commandOptions);
+        await this.sendCommand(deviceCommand, commandOptions);
       }
-    } catch (error) {}
+    } catch (error) {
+      MHLogger.trace(`[${this.accessory.context.displayName}] - Error processing accessory command:`, error);
+    }
   }
 
   public setBackupAccessoryState() {
@@ -281,15 +278,14 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // return this.backupHSV;
   }
 
-  protected sendCommand(deviceCommand: IDeviceCommand, commandOptions: ICommandOptions) {
+  protected async sendCommand(deviceCommand: IDeviceCommand, commandOptions: ICommandOptions) {
     // this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
 
     try {
-      this.controller.setAllValues(deviceCommand, commandOptions);
-    } catch (error) {}
-    // this.logs.trace(
-    //   `[Trace] [${this.accessory.context.displayName}] - After sending command, received response from device:`
-    // );
+      await this.controller.setAllValues(deviceCommand, commandOptions);
+    } catch (error) {
+      MHLogger.trace(` [${this.accessory.context.displayName}] - After sending command, received response from device:`, error);
+    }
   }
 
   updateStateHomekitCharacteristic() {
@@ -304,7 +300,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness, value);
   }
 
-  public async fetchDeviceState(attempts = 1, updateHomekit = false, restrictedToCharacteristics: string[] = []) {
+  public async fetchDeviceState(attempts = 1, restrictedToCharacteristics: string[] = []) {
     if (this.accessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();
@@ -312,18 +308,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
     let deviceState: IDeviceState;
     let accessoryState: IAccessoryState;
+
     try {
       deviceState = await this.controller.fetchStateRGB();
       accessoryState = this.deviceStateToAccessoryState(deviceState, restrictedToCharacteristics);
       mergeDeep(this.accessoryState, accessoryState);
     } catch (error) {
       if (attempts > 0) {
-        setTimeout(() => {
-          this.fetchDeviceState(attempts - 1, updateHomekit, restrictedToCharacteristics);
-        }, 500);
+        // Introduce a delay using setTimeout and a Promise
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Retry fetching the device state by calling the method recursively
+        return await this.fetchDeviceState(attempts - 1, restrictedToCharacteristics);
       } else {
         this.accessoryState.isOn = false;
-        MHLogger.warn(`Failed to fetch and update state for ${this.accessory.context.displayName}: ${error}`);
+        MHLogger.trace(`Failed to fetch and update state for ${this.accessory.context.displayName}: ${error}`);
       }
     }
     this.updateStateHomekitCharacteristic();
