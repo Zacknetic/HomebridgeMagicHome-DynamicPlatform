@@ -1,7 +1,7 @@
 import type { PlatformAccessory } from 'homebridge';
 import { IDeviceMetaData, IProtoDevice, IAnimationBlueprint } from 'magichome-platform';
 
-export interface MagicHomeAccessory extends PlatformAccessory {
+export interface HomebridgeAccessory extends PlatformAccessory {
 	context: IAccessoryContext;
 }
 

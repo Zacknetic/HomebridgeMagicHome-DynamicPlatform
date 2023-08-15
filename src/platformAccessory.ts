@@ -1,7 +1,7 @@
 import type { Service, PlatformConfig, CharacteristicValue, HAP } from "homebridge";
 import { HomebridgeMagichomeDynamicPlatform } from "./platform";
 import { TBtoCCT, HSVtoRGB, RGBtoHSV, CCTtoTB } from "./misc/utils";
-import type { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB, IPartialAccessoryCommand, MagicHomeAccessory } from "./misc/types";
+import type { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB, IPartialAccessoryCommand, HomebridgeAccessory } from "./misc/types";
 
 import { DEFAULT_ACCESSORY_STATE } from "./misc/constants";
 
@@ -38,13 +38,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   //=================================================
   // Start Constructor //
 
-  constructor(protected readonly platform: HomebridgeMagichomeDynamicPlatform, public accessory: MagicHomeAccessory, public controller: BaseController) {
+  constructor(protected readonly platform: HomebridgeMagichomeDynamicPlatform, public hbAccessory: HomebridgeAccessory, public controller: BaseController) {
     this.setupMisc();
     this.accessoryState = mergeDeep({}, DEFAULT_ACCESSORY_STATE);
     this.initializeCharacteristics();
     this.fetchDeviceState(2);
     this.lastValue = this.accessoryState.HSV.value;
-    this.uuid = this.accessory.UUID;
+    this.uuid = this.hbAccessory.UUID;
   }
 
   async setOn(value: CharacteristicValue) {
@@ -106,8 +106,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   setConfiguredName(value: CharacteristicValue) {
     const name: string = value.toString();
     // this.logs.warn(`Renaming device to ${name}`);
-    this.accessory.context.displayName = name;
-    this.platform.api.updatePlatformAccessories([this.accessory]);
+    this.hbAccessory.context.displayName = name;
+    this.platform.api.updatePlatformAccessories([this.hbAccessory]);
   }
 
   identifyLight() {
@@ -160,7 +160,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   } //flashEffect
 
   protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
-    if (this.accessory.context.isOnline === false) {
+    if (this.hbAccessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();
       return;
@@ -175,7 +175,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         await this.sendCommand(deviceCommand, commandOptions);
       }
     } catch (error) {
-      MHLogger.trace(`[${this.accessory.context.displayName}] - Error processing accessory command:`, error);
+      MHLogger.trace(`[${this.hbAccessory.context.displayName}] - Error processing accessory command:`, error);
     }
   }
 
@@ -284,7 +284,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     try {
       await this.controller.setAllValues(deviceCommand, commandOptions);
     } catch (error) {
-      MHLogger.trace(` [${this.accessory.context.displayName}] - After sending command, received response from device:`, error);
+      MHLogger.trace(` [${this.hbAccessory.context.displayName}] - After sending command, received response from device:`, error);
     }
   }
 
@@ -301,7 +301,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   public async fetchDeviceState(attempts = 1, restrictedToCharacteristics: string[] = []) {
-    if (this.accessory.context.isOnline === false) {
+    if (this.hbAccessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();
       return;
@@ -321,7 +321,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
         return await this.fetchDeviceState(attempts - 1, restrictedToCharacteristics);
       } else {
         this.accessoryState.isOn = false;
-        MHLogger.trace(`Failed to fetch and update state for ${this.accessory.context.displayName}: ${error}`);
+        MHLogger.trace(`Failed to fetch and update state for ${this.hbAccessory.context.displayName}: ${error}`);
       }
     }
     this.updateStateHomekitCharacteristic();
@@ -363,7 +363,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.addAccessoryInformationCharacteristic();
 
     // this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Lightbulb service to accessory.`);
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+    this.service = this.hbAccessory.getService(this.platform.Service.Lightbulb) || this.hbAccessory.addService(this.platform.Service.Lightbulb);
 
     if (hasColor) {
       this.addHueCharacteristic();
@@ -380,7 +380,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     if (!hasBrightness) {
       // this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Switch service to accessory.`); //device is switch, register it as such
-      this.service = this.accessory.getService(this.platform.Service.Switch) ?? this.accessory.addService(this.platform.Service.Switch);
+      this.service = this.hbAccessory.getService(this.platform.Service.Switch) ?? this.hbAccessory.addService(this.platform.Service.Switch);
     }
     this.addOnCharacteristic();
     this.addConfiguredNameCharacteristic();
@@ -472,7 +472,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       deviceMetaData: { controllerFirmwareVersion, controllerHardwareVersion },
     } = this.controller.getCachedDeviceInformation();
     // set accessory information
-    this.accessory
+    this.hbAccessory
       .getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, "MagicHome")
       .setCharacteristic(this.platform.Characteristic.SerialNumber, uniqueId)
@@ -484,7 +484,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       .removeAllListeners(this.platform.api.hap.CharacteristicEventTypes.GET)
       .on(this.platform.api.hap.CharacteristicEventTypes.SET, this.identifyLight.bind(this)); // SET - bind to the 'Identify` method below
 
-    this.accessory.getService(this.platform.Service.AccessoryInformation)!.addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+    this.hbAccessory.getService(this.platform.Service.AccessoryInformation)!.addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
   }
 
   addConfiguredNameCharacteristic() {

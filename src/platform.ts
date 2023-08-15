@@ -4,7 +4,7 @@ import { MHLogger } from "./MHLogger";
 import { API, APIEvent, DynamicPlatformPlugin, HAP, Logger, PlatformConfig, Service } from "homebridge";
 
 // import { AnimationGenerator } from './AnimationGenerator'
-import { AnimationAccessory, MagicHomeAccessory } from "./misc/types";
+import { AnimationAccessory, HomebridgeAccessory } from "./misc/types";
 import { AccessoryGenerator } from "./AccessoryGenerator";
 import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
 import  {MHConfig} from "./MHConfig";
@@ -23,7 +23,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   private periodicDiscovery: NodeJS.Timeout | null = null;
 
   // public readonly logger: MHLogger;
-  public readonly hbAccessoriesFromDisk: Map<string, MagicHomeAccessory> = new Map();
+  public readonly hbAccessoriesFromDisk: Map<string, HomebridgeAccessory> = new Map();
   animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();
 
   constructor(public readonly log: Logger, public readonly config: PlatformConfig, public readonly api: API) {
