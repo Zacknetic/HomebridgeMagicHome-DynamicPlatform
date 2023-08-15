@@ -23,7 +23,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
   private periodicDiscovery: NodeJS.Timeout | null = null;
 
   // public readonly logger: MHLogger;
-  public readonly accessoriesFromDiskMap: Map<string, MagicHomeAccessory> = new Map();
+  public readonly hbAccessoriesFromDisk: Map<string, MagicHomeAccessory> = new Map();
   animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();
 
   constructor(public readonly log: Logger, public readonly config: PlatformConfig, public readonly api: API) {
@@ -51,9 +51,9 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     if (typeof accessory.context.protoDevice != "undefined") {
 
       const homebridgeUUID = accessory.context.protoDevice?.uniqueId;
-      this.accessoriesFromDiskMap.set(homebridgeUUID, accessory);
+      this.hbAccessoriesFromDisk.set(homebridgeUUID, accessory);
 
-      MHLogger.info(`${this.accessoriesFromDiskMap.size} - Loading accessory from cache: ${accessory.context.displayName}`);
+      MHLogger.info(`${this.hbAccessoriesFromDisk.size} - Loading accessory from cache: ${accessory.context.displayName}`);
     } else {
       const homebridgeUUID = this.api.hap.uuid.generate(accessory.context.animationBlueprint.name);
 
@@ -76,10 +76,10 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     // let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
 
-    const accesssoryGenerator = new AccessoryGenerator(this, this.accessoriesFromDiskMap, this.api);
+    const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
     // accesssoryGenerator.removeAllAccessories();
-    const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await accesssoryGenerator.discoverDevices();
-    // this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanAccessories(), 30000);
+    const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await accesssoryGenerator.discoverAccessories();
+    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanDevices(), 30000);
   }
 
   // sanitizeConfig() {
