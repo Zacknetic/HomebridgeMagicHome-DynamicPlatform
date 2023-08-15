@@ -78,7 +78,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
     // accesssoryGenerator.removeAllAccessories();
-    const activeAccessories: HomebridgeMagichomeDynamicPlatformAccessory[] = await accesssoryGenerator.discoverAccessories();
+ await accesssoryGenerator.discoverAccessories();
     this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanDevices(), 30000);
   }
 
