@@ -1,10 +1,10 @@
 import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep } from "magichome-platform";
-import { IAccessoryContext, IAccessoryState, HomebridgeAccessory } from "./misc/types";
+import { IAccessoryContext, IAccessoryState, HomebridgeAccessory } from "./misc/types/types";
 import { API, HAP, PlatformAccessory, PlatformConfig, uuid } from "homebridge";
 import { HomebridgeMagichomeDynamicPlatform } from "./platform";
 
-import { MHLogger } from "./MHLogger";
-import { MHConfig } from "./MHConfig";
+import { MHLogger } from "./misc/helpers/MHLogger";
+import { MHConfig } from "./misc/helpers/MHConfig";
 
 import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
 
@@ -71,7 +71,7 @@ export class AccessoryGenerator {
     try {
       setInterval(async () => {
         MHLogger.trace("Scanning network for MagicHome accessories...");
-        console.log(this.offlineMHAccessories.keys());
+        MHLogger.trace("Offline devices: ", this.offlineMHAccessories.keys());
         try {
           const completeDevices: ICompleteDevice[] = await controllerGenerator.discoverCompleteDevices();
           const baseControllers: Map<string, BaseController> = controllerGenerator.generateControllers(completeDevices);

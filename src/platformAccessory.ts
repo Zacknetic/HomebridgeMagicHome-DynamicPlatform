@@ -1,12 +1,12 @@
 import type { Service, PlatformConfig, CharacteristicValue, HAP } from "homebridge";
 import { HomebridgeMagichomeDynamicPlatform } from "./platform";
-import { TBtoCCT, HSVtoRGB, RGBtoHSV, CCTtoTB } from "./misc/utils";
-import type { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB, IPartialAccessoryCommand, HomebridgeAccessory } from "./misc/types";
+import { TBtoCCT, HSVtoRGB, RGBtoHSV, CCTtoTB } from "./misc/helpers/utils";
+import type { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB, IPartialAccessoryCommand, HomebridgeAccessory } from "./misc/types/types";
 
-import { DEFAULT_ACCESSORY_STATE } from "./misc/constants";
+import { DEFAULT_ACCESSORY_STATE } from "./misc/types/constants";
 
-import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, mergeDeep, overwriteDeep, COMMAND_TYPE, COLOR_MASKS } from "magichome-platform";
-import { MHLogger } from "./MHLogger";
+import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, mergeDeep, overwriteDeep, COMMAND_TYPE, COLOR_MASKS, ICompleteResponse } from "magichome-platform";
+import { MHLogger } from "./misc/helpers/MHLogger";
 
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected service: Service;
@@ -170,7 +170,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     try {
       const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
       if (partialAccessoryCommand.isPowerCommand) {
-        await this.controller.setOn(sanitizedAcessoryCommand.isOn);
+        const response = await this.controller.setOn(sanitizedAcessoryCommand.isOn);
+        MHLogger.trace(`[${this.hbAccessory.context.displayName}] - Response from Device:`, response);
       } else {
         const { deviceCommand, commandOptions } = this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
         await this.sendCommand(deviceCommand, commandOptions);
@@ -283,9 +284,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     // this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
 
     try {
-      await this.controller.setAllValues(deviceCommand, commandOptions);
+      const response:ICompleteResponse = await this.controller.setAllValues(deviceCommand, commandOptions);
+      MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Response from Device:`, response);
     } catch (error) {
-      MHLogger.trace(` [${this.hbAccessory.context.displayName}] - After sending command, received response from device:`, error);
+      MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Error from device:`, error);
     }
   }
 

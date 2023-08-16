@@ -1,13 +1,13 @@
 import { join } from "path";
-import { loadJson } from "./misc/utils";
-import { MHLogger } from "./MHLogger";
+import { loadJson } from "./misc/helpers/utils";
+import { MHLogger } from "./misc/helpers/MHLogger";
 import { API, APIEvent, DynamicPlatformPlugin, HAP, Logger, PlatformConfig, Service } from "homebridge";
 
 // import { AnimationGenerator } from './AnimationGenerator'
-import { AnimationAccessory, HomebridgeAccessory } from "./misc/types";
+import { AnimationAccessory, HomebridgeAccessory } from "./misc/types/types";
 import { AccessoryGenerator } from "./AccessoryGenerator";
 import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
-import { MHConfig } from "./MHConfig";
+import { MHConfig } from "./misc/helpers/MHConfig";
 
 /**
  * HomebridgePlatform

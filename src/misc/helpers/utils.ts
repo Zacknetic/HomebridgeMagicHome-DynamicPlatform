@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
-import { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB } from './types';
+import { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB } from '../types/types';
+import { MHLogger } from './MHLogger';
 
 
 export function clamp(value: number, min: number, max: number) {
@@ -467,4 +468,119 @@ function convertMiredColorTemperatureToXY(temperature: number): [number, number]
 
 function reverseGammaCorrection(v: number): number {
   return (v <= 0.0031308) ? 12.92 * v : (1.0 + 0.055) * Math.pow(v, (1.0 / 2.4)) - 0.055;
+}
+
+export function correctObjectShape(targetObject: any, expectedKeys: any): any {
+  const correctedObject: any = {};
+
+  // Function to create a deep copy of an object
+  function deepCopy(obj: any): any {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    const copy: any = Array.isArray(obj) ? [] : {};
+    for (const key in obj) {
+      copy[key] = deepCopy(obj[key]);
+    }
+    return copy;
+  }
+  // Initialize correctedObject with a deep copy of expectedKeys
+  for (const key in expectedKeys) {
+    correctedObject[key] = deepCopy(expectedKeys[key]);
+  }
+
+function findAndCorrectKey(key: string, value: any, expectedObject: any, correctedObject: any) {
+  let closestKey: string | null = null;
+  let minDistance = Infinity;
+  let closestSection: string |string[]| null = null;
+
+  function searchKeys(obj: any, path: string[] = []) {
+    for (const k in obj) {
+      const newPath = [...path, k];
+      if (typeof obj[k] === 'object') {
+        searchKeys(obj[k], newPath);
+      } else {
+        const distance = levenshteinDistance(key, k);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestKey = k;
+          closestSection = newPath.slice(0, -1)
+        }
+      }
+    }
+  }
+
+  searchKeys(expectedObject);
+
+  if (minDistance < 5 && closestKey !== null && closestSection !== null) { // Threshold of 5, adjust as needed
+    let target = correctedObject;
+    for (const section of closestSection) {
+      target = target[section];
+    }
+    target[closestKey] = value;
+  } else {
+    console.warn(`Unexpected key: ${key}`);
+    // Handle the misplaced or misspelled key as needed
+  }
+}
+
+
+  function correctSection(targetSection: any, expectedSection: any, correctedSection: any) {
+    if (!targetSection || !expectedSection) return; // Return if targetSection or expectedSection is null
+
+    for (const key in targetSection) {
+      if (expectedSection.hasOwnProperty(key)) {
+        if (expectedSection[key] === null) {
+          correctedSection[key] = targetSection[key]; // Use value from target object if expected value is null
+        } else if (typeof expectedSection[key] === 'object') {
+          correctedSection[key] = correctedSection[key] || {};
+          correctSection(targetSection[key], expectedSection[key], correctedSection[key]); // Recursively correct nested objects
+        } else {
+          correctedSection[key] = targetSection[key]; // Correct key, use value from target object
+        }
+      } else {
+        findAndCorrectKey(key, targetSection[key], expectedKeys, correctedObject); // Potentially misplaced key, find correct place
+      }
+    }
+
+    // Recursively search for misplaced keys in nested objects
+    for (const key in targetSection) {
+      if (typeof targetSection[key] === 'object') {
+        correctSection(targetSection[key], expectedSection, correctedSection);
+      }
+    }
+  }
+
+  correctSection(targetObject, expectedKeys, correctedObject);
+
+  return correctedObject;
+}
+
+
+function levenshteinDistance(a: string, b: string) {
+  const matrix = [];
+  let i, j;
+
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  for (i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (i = 1; i <= b.length; i++) {
+    for (j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
 }

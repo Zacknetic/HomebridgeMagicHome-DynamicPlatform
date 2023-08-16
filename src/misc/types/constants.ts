@@ -1,6 +1,6 @@
 /*----------------------[DEFAULT VALIUES]----------------------*/
-import type { CorrectedMHConfig } from "../MHConfig";
-import type { IAccessoryCommand, IAccessoryState } from "./types";
+import type { CorrectedMHConfig } from "../helpers/MHConfig";
+import type { IAccessoryCommand, IAccessoryContext, IAccessoryState } from "./types";
 
 export const COLOR_COMMAND_MODES = {
 	CCT: 'CCT',
@@ -59,3 +59,20 @@ export const EXPECTED_CONFIG_STRUCTURE: CorrectedMHConfig = {
 	additionalSubnets: [],
   },
 };
+
+export const EXPECTED_CONTEXT_STRUCTURE = {
+	displayName: 'Error',
+	deviceMetaData: {
+	 
+	  controllerHardwareVersion: -1,
+	  controllerFirmwareVersion: -1
+	},
+	assignedAnimations: null,
+	protoDevice: {
+	  ipAddress: "",
+	  uniqueId: "",
+	  modelNumber: "",
+	},
+	latestUpdate: null,
+	isOnline: true,
+  }
