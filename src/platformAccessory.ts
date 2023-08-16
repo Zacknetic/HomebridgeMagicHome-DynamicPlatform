@@ -160,6 +160,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   } //flashEffect
 
   protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
+    console.log(this.hbAccessory.context.isOnline);
     if (this.hbAccessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();

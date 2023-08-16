@@ -7,7 +7,7 @@ import { API, APIEvent, DynamicPlatformPlugin, HAP, Logger, PlatformConfig, Serv
 import { AnimationAccessory, HomebridgeAccessory } from "./misc/types";
 import { AccessoryGenerator } from "./AccessoryGenerator";
 import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
-import  {MHConfig} from "./MHConfig";
+import { MHConfig } from "./MHConfig";
 
 /**
  * HomebridgePlatform
@@ -20,17 +20,17 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
   public count = 1;
 
-  private periodicDiscovery: NodeJS.Timeout | null = null;
-
   // public readonly logger: MHLogger;
   public readonly hbAccessoriesFromDisk: Map<string, HomebridgeAccessory> = new Map();
   animationsFromDiskMap: Map<string, AnimationAccessory> = new Map();
 
   constructor(public readonly log: Logger, public readonly config: PlatformConfig, public readonly api: API) {
     new MHConfig(config);
-    const {advancedOptions: {logLevel}} = MHConfig;
+    const {
+      advancedOptions: { logLevel },
+    } = MHConfig;
     new MHLogger(log, logLevel);
-   
+
     MHLogger.warn("If this plugin brings you joy, consider visiting GitHub and giving it a ⭐.");
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, () => {
@@ -49,7 +49,6 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // accessory.context.pendingRegistration = true;
     // // add the restored accessory to the accessories cache so we can track if it has already been registered
     if (typeof accessory.context.protoDevice != "undefined") {
-
       const homebridgeUUID = accessory.context.protoDevice?.uniqueId;
       this.hbAccessoriesFromDisk.set(homebridgeUUID, accessory);
 
@@ -78,8 +77,8 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 
     const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
     // accesssoryGenerator.removeAllAccessories();
- await accesssoryGenerator.discoverAccessories();
-    this.periodicDiscovery = setInterval(() => accesssoryGenerator.rescanDevices(), 30000);
+    await accesssoryGenerator.discoverAccessories();
+    accesssoryGenerator.rescanDevices();
   }
 
   // sanitizeConfig() {
