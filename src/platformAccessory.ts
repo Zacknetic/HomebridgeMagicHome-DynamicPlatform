@@ -7,6 +7,7 @@ import { DEFAULT_ACCESSORY_STATE } from "./misc/types/constants";
 
 import { BaseController, ICommandOptions, IDeviceCommand, IDeviceState, mergeDeep, overwriteDeep, COMMAND_TYPE, COLOR_MASKS, ICompleteResponse } from "magichome-platform";
 import { MHLogger } from "./misc/helpers/MHLogger";
+import { AccessoryGenerator } from "./AccessoryGenerator";
 
 export class HomebridgeMagichomeDynamicPlatformAccessory {
   protected service: Service;
@@ -34,6 +35,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   CustomCharacteristics: any;
   UUID_CCT: string;
   resistOffFromBrightness: boolean;
+  badResponseCounter: any;
+  badResponseTimeout: any;
 
   //=================================================
   // Start Constructor //
@@ -160,9 +163,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   } //flashEffect
 
   protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
-    //TODO: this is much too strict. If the device only appears offline, but is actually online, it will prevent proper useage.
-    //instead, a simple warning should be logged, and the command should be sent anyway.
-    //must ensure that the controller won't crash if the device is actually offline. Must test.
     mergeDeep(this.accessoryState, partialAccessoryCommand);
     try {
       const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
@@ -282,9 +282,53 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 
     try {
       const response: ICompleteResponse = await this.controller.setAllValues(deviceCommand, commandOptions);
-      MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Response from Device:`, response);
+      this.handleResponse(response);
     } catch (error) {
+      this.hbAccessory.context.isOnline = false;
+      this.resetBadResponseCounter();
       MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Error from device:`, error);
+      throw error;
+    }
+  }
+
+  private handleResponse(response: ICompleteResponse) {
+    MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Response from Device:`, response);
+
+    const {context: {protoDevice: {uniqueId}}} = this.hbAccessory;
+    if (response.responseCode > 0) {
+      if (!this.hbAccessory.context.isOnline) {
+        AccessoryGenerator.onlineMHAccessories.set(uniqueId, this);
+        AccessoryGenerator.offlineMHAccessories.delete(uniqueId);
+      }
+      this.hbAccessory.context.isOnline = true;
+      this.resetBadResponseCounter();
+    } else {
+      if (this.hbAccessory.context.isOnline) {
+        AccessoryGenerator.offlineMHAccessories.set(uniqueId, this);
+        AccessoryGenerator.onlineMHAccessories.delete(uniqueId);
+      }
+      this.badResponseCounter++;
+      if (this.badResponseCounter >= 3) {
+        this.hbAccessory.context.isOnline = false;
+      }
+      this.startBadResponseTimeout();
+    }
+  }
+
+  private startBadResponseTimeout() {
+    if (this.badResponseTimeout) {
+      clearTimeout(this.badResponseTimeout);
+    }
+    this.badResponseTimeout = setTimeout(() => {
+      this.resetBadResponseCounter();
+    }, 60000); // 1 minute
+  }
+
+  private resetBadResponseCounter() {
+    this.badResponseCounter = 0;
+    if (this.badResponseTimeout) {
+      clearTimeout(this.badResponseTimeout);
+      this.badResponseTimeout = null;
     }
   }
 
@@ -301,9 +345,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   public async fetchDeviceState(attempts = 1, restrictedToCharacteristics: string[] = []) {
-    //TODO: this is a bit too strict. If the device only appears offline, it will never be updated.
-    //instead, we should set the isOnline status to false only after a certain amount of failed attempts
-    if (this.hbAccessory.context.isOnline === false) {
+    if (!this.hbAccessory.context.isOnline) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();
       return;
@@ -317,7 +359,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       mergeDeep(this.accessoryState, accessoryState);
     } catch (error) {
       if (attempts > 0) {
-        // Introduce a delay using setTimeout and a Promise
         await new Promise((resolve) => setTimeout(resolve, 500));
         // Retry fetching the device state by calling the method recursively
         return await this.fetchDeviceState(attempts - 1, restrictedToCharacteristics);
@@ -459,13 +500,13 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     //   // .onSet(this.setColorTemperature.bind(this))
     //   .onGet(this.getColorTemperature.bind(this));
 
-    if (this.platform.api.versionGreaterOrEqual && this.platform.api.versionGreaterOrEqual("1.3.0-beta.46")) {
+
       // this.logs.trace(
       //   `[Trace] [${this.accessory.context.displayName}] - Adding Adaptive Lighting service to accessory.`
       // );
       // this.adaptiveLightingService = new this.api.hap.AdaptiveLightingController(this.service2);
       // this.accessory.configureController(this.adaptiveLightingService);
-    }
+    
   }
 
   addAccessoryInformationCharacteristic() {

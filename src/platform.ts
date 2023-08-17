@@ -1,13 +1,10 @@
-import { join } from "path";
-import { loadJson } from "./misc/helpers/utils";
 import { MHLogger } from "./misc/helpers/MHLogger";
-import { API, APIEvent, DynamicPlatformPlugin, HAP, Logger, PlatformConfig, Service } from "homebridge";
+import { API, APIEvent, DynamicPlatformPlugin, Logger, PlatformConfig, Service } from "homebridge";
 import { repairObjectShape } from "./misc/helpers/utils";
 import { EXPECTED_CONTEXT_STRUCTURE } from "./misc/types/constants";
 // import { AnimationGenerator } from './AnimationGenerator'
 import { AccessoryTypes, AnimationAccessory, HomebridgeAccessory } from "./misc/types/types";
 import { AccessoryGenerator } from "./AccessoryGenerator";
-import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
 import { MHConfig } from "./misc/helpers/MHConfig";
 
 /**
@@ -58,7 +55,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
       this.animationsFromDiskMap.set(homebridgeUUID, accessory);
     } else {
       //we need to fix the accessory
-      MHLogger.warn(`Accessory has outdated persistant data which is incompatible with the current version. Attempting to repair. This should be a one time operation.`);
+      MHLogger.warn(`Accessory has outdated persistant data which is incompatible with the current version. Attempting to repair. This should be a one time operation (per device).`);
       try {
         const updatedContext = repairObjectShape(accessory.context, EXPECTED_CONTEXT_STRUCTURE);
         if (updatedContext.protoDevice.ipAddress && updatedContext.protoDevice.uniqueId) {
@@ -93,7 +90,7 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
     // accesssoryGenerator.removeAllAccessories();
     await accesssoryGenerator.discoverAccessories();
-    accesssoryGenerator.rescanDevices();
+    AccessoryGenerator.rescanDevices();
   }
 
 } //ZackneticMagichomePlatform class
