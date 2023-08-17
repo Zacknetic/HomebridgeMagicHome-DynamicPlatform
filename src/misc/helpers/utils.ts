@@ -470,7 +470,7 @@ function reverseGammaCorrection(v: number): number {
   return (v <= 0.0031308) ? 12.92 * v : (1.0 + 0.055) * Math.pow(v, (1.0 / 2.4)) - 0.055;
 }
 
-export function correctObjectShape(targetObject: any, expectedKeys: any): any {
+export function repairObjectShape(targetObject: any, expectedKeys: any): any {
   const correctedObject: any = {};
 
   // Function to create a deep copy of an object
@@ -519,7 +519,7 @@ function findAndCorrectKey(key: string, value: any, expectedObject: any, correct
     }
     target[closestKey] = value;
   } else {
-    console.warn(`Unexpected key: ${key}`);
+    MHLogger.warn(`Unexpected key: ${key}`);
     // Handle the misplaced or misspelled key as needed
   }
 }

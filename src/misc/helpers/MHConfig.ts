@@ -1,6 +1,6 @@
 import { PlatformConfig } from "homebridge";
 import { EXPECTED_CONFIG_STRUCTURE } from "../types/constants";
-import { correctObjectShape } from "./utils";
+import { repairObjectShape } from "./utils";
 interface AdvancedOptions {
   periodicDiscovery: boolean;
   namesWithMacAddress: boolean;
@@ -46,7 +46,7 @@ export class MHConfig {
       return;
     }
 
-    const correctedConfig = correctObjectShape(hbConfig, EXPECTED_CONFIG_STRUCTURE) as CorrectedMHConfig;
+    const correctedConfig = repairObjectShape(hbConfig, EXPECTED_CONFIG_STRUCTURE) as CorrectedMHConfig;
 
     MHConfig.pruning = correctedConfig.pruning;
     MHConfig.whiteEffects = correctedConfig.whiteEffects;

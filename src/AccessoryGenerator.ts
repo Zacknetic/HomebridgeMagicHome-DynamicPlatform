@@ -1,8 +1,7 @@
-import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep, overwriteDeep } from "magichome-platform";
-import { IAccessoryContext, IAccessoryState, HomebridgeAccessory } from "./misc/types/types";
+import { BaseController, ControllerGenerator, IDeviceAPI, ICompleteDevice, IProtoDevice, ICompleteDeviceInfo, mergeDeep } from "magichome-platform";
+import { IAccessoryContext, IAccessoryState, HomebridgeAccessory, AccessoryTypes } from "./misc/types/types";
 import { API, HAP, PlatformAccessory, PlatformConfig, uuid } from "homebridge";
 import { HomebridgeMagichomeDynamicPlatform } from "./platform";
-
 import { MHLogger } from "./misc/helpers/MHLogger";
 import { MHConfig } from "./misc/helpers/MHConfig";
 
@@ -21,7 +20,8 @@ export class AccessoryGenerator {
     MHLogger.info("Accessory Generator Initialized");
   }
 
-  public async discoverAccessories(): Promise<Map<string, HomebridgeMagichomeDynamicPlatformAccessory>> {
+  public async discoverAccessories() // : Promise<Map<string, HomebridgeMagichomeDynamicPlatformAccessory>>
+  {
     MHLogger.info("Scanning network for MagicHome accessories...");
 
     try {
@@ -49,10 +49,9 @@ export class AccessoryGenerator {
     const newHBAccessories: HomebridgeAccessory[] = [];
 
     hbAccessories.forEach((hbAccessory) => {
-      const repairedHBAccessory = hbAccessory; //to Implement with method call
-      const { uniqueId } = repairedHBAccessory.context.protoDevice;
-      if (baseControllers.has(uniqueId)) onlineHBAccessories.push(repairedHBAccessory);
-      else offlineHBAccessories.push(repairedHBAccessory);
+      const { uniqueId } = hbAccessory.context.protoDevice;
+      if (baseControllers.has(uniqueId)) onlineHBAccessories.push(hbAccessory);
+      else offlineHBAccessories.push(hbAccessory);
     });
 
     baseControllers.forEach((controller) => {
@@ -78,12 +77,12 @@ export class AccessoryGenerator {
 
           this.repairAccessory(this.offlineMHAccessories, baseControllers, false);
           this.repairAccessory(this.onlineMHAccessories, baseControllers, true);
-          const {newHBAccessories} = this.filterHBAccessories(baseControllers, this.hbAccessoriesFromDisk);
+          const { newHBAccessories } = this.filterHBAccessories(baseControllers, this.hbAccessoriesFromDisk);
           this.generateActiveAccessories([], newHBAccessories, baseControllers);
         } catch (error) {
           MHLogger.error("Rescan Error: ", error);
         }
-      }, 10000);
+      }, 60000);
     } catch (error) {
       MHLogger.error("Rescan Error Outer: ", error);
     }
@@ -169,6 +168,7 @@ export class AccessoryGenerator {
       latestUpdate: Date.now(),
       assignedAnimations: [],
       isOnline: true,
+      accessoryType: AccessoryTypes.Light,
     };
     return newHBAccessory;
   }

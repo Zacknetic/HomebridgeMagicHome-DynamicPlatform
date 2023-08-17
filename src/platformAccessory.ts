@@ -88,9 +88,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     }
 
     this.sendStateDebounce = setTimeout(() => {
-      const partialAccessoryCommand: IPartialAccessoryCommand = mergeDeep({}, this.accessoryState, { isPowerCommand },);
+      const partialAccessoryCommand: IPartialAccessoryCommand = mergeDeep({}, this.accessoryState, { isPowerCommand });
       this.processAccessoryCommand(partialAccessoryCommand);
-    }, 10); // 100 milliseconds debounce time
+    }, 100); // 100 milliseconds debounce time
   }
 
   private scheduleFetchDeviceState() {
@@ -160,12 +160,9 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   } //flashEffect
 
   protected async processAccessoryCommand(partialAccessoryCommand: IPartialAccessoryCommand) {
-    console.log(this.hbAccessory.context.isOnline);
-    if (this.hbAccessory.context.isOnline === false) {
-      this.accessoryState.isOn = false;
-      this.updateStateHomekitCharacteristic();
-      return;
-    }
+    //TODO: this is much too strict. If the device only appears offline, but is actually online, it will prevent proper useage.
+    //instead, a simple warning should be logged, and the command should be sent anyway.
+    //must ensure that the controller won't crash if the device is actually offline. Must test.
     mergeDeep(this.accessoryState, partialAccessoryCommand);
     try {
       const sanitizedAcessoryCommand = this.completeAccessoryCommand(partialAccessoryCommand);
@@ -281,10 +278,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   protected async sendCommand(deviceCommand: IDeviceCommand, commandOptions: ICommandOptions) {
-    // this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Outgoing Command:`, deviceCommand);
+    if (this.hbAccessory.context.isOnline === false) MHLogger.trace(`[${this.hbAccessory.context.displayName}] - Device is offline. Attempting to send command anyway.`);
 
     try {
-      const response:ICompleteResponse = await this.controller.setAllValues(deviceCommand, commandOptions);
+      const response: ICompleteResponse = await this.controller.setAllValues(deviceCommand, commandOptions);
       MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Response from Device:`, response);
     } catch (error) {
       MHLogger.trace(`[sendCommand][${this.hbAccessory.context.displayName}] - Error from device:`, error);
@@ -304,6 +301,8 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
   }
 
   public async fetchDeviceState(attempts = 1, restrictedToCharacteristics: string[] = []) {
+    //TODO: this is a bit too strict. If the device only appears offline, it will never be updated.
+    //instead, we should set the isOnline status to false only after a certain amount of failed attempts
     if (this.hbAccessory.context.isOnline === false) {
       this.accessoryState.isOn = false;
       this.updateStateHomekitCharacteristic();

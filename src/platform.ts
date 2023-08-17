@@ -2,9 +2,10 @@ import { join } from "path";
 import { loadJson } from "./misc/helpers/utils";
 import { MHLogger } from "./misc/helpers/MHLogger";
 import { API, APIEvent, DynamicPlatformPlugin, HAP, Logger, PlatformConfig, Service } from "homebridge";
-
+import { repairObjectShape } from "./misc/helpers/utils";
+import { EXPECTED_CONTEXT_STRUCTURE } from "./misc/types/constants";
 // import { AnimationGenerator } from './AnimationGenerator'
-import { AnimationAccessory, HomebridgeAccessory } from "./misc/types/types";
+import { AccessoryTypes, AnimationAccessory, HomebridgeAccessory } from "./misc/types/types";
 import { AccessoryGenerator } from "./AccessoryGenerator";
 import { HomebridgeMagichomeDynamicPlatformAccessory } from "./platformAccessory";
 import { MHConfig } from "./misc/helpers/MHConfig";
@@ -17,7 +18,7 @@ import { MHConfig } from "./misc/helpers/MHConfig";
 export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic = this.api.hap.Characteristic;
-
+  private repairFailedCount = 0;
   public count = 1;
 
   // public readonly logger: MHLogger;
@@ -48,17 +49,29 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     // accessory.context.scansSinceSeen++;
     // accessory.context.pendingRegistration = true;
     // // add the restored accessory to the accessories cache so we can track if it has already been registered
-    if (typeof accessory.context.protoDevice != "undefined") {
+    if (typeof accessory.context.protoDevice != "undefined" || accessory.context.accessoryType == AccessoryTypes.Light) {
       const homebridgeUUID = accessory.context.protoDevice?.uniqueId;
       this.hbAccessoriesFromDisk.set(homebridgeUUID, accessory);
-
       MHLogger.info(`${this.hbAccessoriesFromDisk.size} - Loading accessory from cache: ${accessory.context.displayName}`);
-    } else {
+    } else if (accessory.context.accessoryType == AccessoryTypes.Animation) {
       const homebridgeUUID = this.api.hap.uuid.generate(accessory.context.animationBlueprint.name);
-
       this.animationsFromDiskMap.set(homebridgeUUID, accessory);
-
-      // const homebridgeUUID = accessory.context.animationLoop;
+    } else {
+      //we need to fix the accessory
+      MHLogger.warn(`Accessory has outdated persistant data which is incompatible with the current version. Attempting to repair. This should be a one time operation.`);
+      try {
+        const updatedContext = repairObjectShape(accessory.context, EXPECTED_CONTEXT_STRUCTURE);
+        if (updatedContext.protoDevice.ipAddress && updatedContext.protoDevice.uniqueId) {
+          MHLogger.warn(`Successfully repaired accessory ${accessory.context.displayName}. Thank goodness...`);
+          accessory.context = updatedContext;
+          const homebridgeUUID = accessory.context.protoDevice?.uniqueId;
+          this.hbAccessoriesFromDisk.set(homebridgeUUID, accessory);
+        } else {
+          this.repairFailedCount++;
+        }
+      } catch (error) {
+        this.repairFailedCount++;
+      }
     }
   }
 
@@ -69,11 +82,13 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
    * Method Three: Cached devices that were not seen after scanning the network but are still added with a warning to the user
    */
   async initializePlatform() {
-    // const { isValidDeviceModel } = HomebridgeMagichomeDynamicPlatform;
-    // const pendingUpdate = new Set();
-    // const recentlyRegisteredDevices = new Set();
-
-    // let registeredDevices = 0, newDevices = 0, unseenDevices = 0, scans = 0;
+    if (this.repairFailedCount > 0) {
+      //a short poem for the user explaining that their data is lost. Will it soften the blow?
+      MHLogger.error("\n\nThree things in life are certain: death, taxes, and data loss.\nThe conversion was unsuccessful. \nLife's complexities continue.\n");
+      MHLogger.error(
+        `Failed to repair ${this.repairFailedCount} accessories. Please delete all old accessories and allow them to be re-scanned. \nAlternatively, please revert to a previous version of this plugin.`
+      );
+    }
 
     const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
     // accesssoryGenerator.removeAllAccessories();
@@ -81,7 +96,4 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     accesssoryGenerator.rescanDevices();
   }
 
-  // sanitizeConfig() {
-  //   //recursive config sanitation
-  // }
 } //ZackneticMagichomePlatform class
