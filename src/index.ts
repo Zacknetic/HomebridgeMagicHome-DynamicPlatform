@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import {
-  API,
-  HAP,
-  PlatformAccessory,
+	API,
+	HAP,
+	PlatformAccessory,
 } from 'homebridge';
 
 let hap: HAP;
@@ -11,8 +12,8 @@ import { HomebridgeMagichomeDynamicPlatform } from './platform';
 
 let Accessory: typeof PlatformAccessory;
 export = (api: API) => {
-  hap = api.hap;
-  Accessory = api.platformAccessory;
+	hap = api.hap;
+	Accessory = api.platformAccessory;
 
-  api.registerPlatform(PLATFORM_NAME, HomebridgeMagichomeDynamicPlatform);
+	api.registerPlatform(PLATFORM_NAME, HomebridgeMagichomeDynamicPlatform);
 };

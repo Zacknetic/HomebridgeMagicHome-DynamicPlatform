@@ -1,34 +1,32 @@
+/* eslint-disable prefer-const */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { existsSync, readFileSync } from 'fs';
-import { IColorCCT, IColorRGB, IDeviceCommand, IDeviceState } from 'magichome-platform';
-import { IAccessoryCommand, IAccessoryState, IColorHSV, IColorTB } from '../types/types';
+import { IColorCCT, IColorRGB } from 'magichome-platform';
+import { IColorHSV, IColorTB } from '../types/types';
 import { MHLogger } from './MHLogger';
 
-
 export function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
+	return Math.min(max, Math.max(min, value));
 }
-
 
 //=================================================
 // Start checksum //
-
-
 
 /**
  * @checksum
  * a checksum is needed at the end of the byte array otherwise the message is rejected by the device
  * add all bytes and chop off the beginning by & with 0xFF
- * @param buffer 
+ * @param buffer
  * @returns checksum number
  */
 export function checksum(buffer: Uint8Array) {
-  let chk = 0;
+	let chk = 0;
 
-  for (const byte of buffer) {
-    chk += byte;
-  }
+	for (const byte of buffer) {
+		chk += byte;
+	}
 
-  return chk & 0xff;
+	return chk & 0xff;
 }
 
 //=================================================
@@ -36,7 +34,6 @@ export function checksum(buffer: Uint8Array) {
 // export function convertRGBtoHSL(RGB: IColorRGB) {
 
 //   const { red, green, blue } = RGB;
-
 
 //   const r = red / 255;
 //   const g = green / 255;
@@ -76,7 +73,6 @@ export function checksum(buffer: Uint8Array) {
 
 //=================================================
 // End Convert RGBtoHSL //
-
 
 //=================================================
 // Start Convert HSLtoRGB //
@@ -133,18 +129,18 @@ export function checksum(buffer: Uint8Array) {
 // End Convert HSLtoRGB //
 
 export function parseJson<T>(value: string, replacement: T): T {
-  try {
-    return <T>JSON.parse(value);
-  } catch (_error) {
-    return replacement;
-  }
+	try {
+		return <T>JSON.parse(value);
+	} catch (_error) {
+		return replacement;
+	}
 }
 
 export function loadJson<T>(file: string, replacement: T): T {
-  if (!existsSync(file)) {
-    return replacement;
-  }
-  return parseJson<T>(readFileSync(file).toString(), replacement);
+	if (!existsSync(file)) {
+		return replacement;
+	}
+	return parseJson<T>(readFileSync(file).toString(), replacement);
 }
 
 /**
@@ -155,55 +151,63 @@ export function loadJson<T>(file: string, replacement: T): T {
  *  the closer to 90/270 the stronger both warmWhite and coldWhite become simultaniously
  */
 export function TBtoCCT(TB: IColorTB): IColorCCT {
-  let multiplier = 1;
-  let warmWhite = 0, coldWhite = 0;
-  let { temperature, brightness } = TB;
-  temperature -= 140;
+	let multiplier = 1;
+	let warmWhite = 0,
+		coldWhite = 0;
+	let { temperature, brightness } = TB;
+	temperature -= 140;
 
-  if (temperature <= 90) {        //if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
-    multiplier = ((temperature / 90));
-    coldWhite = Math.round((255 * multiplier));
-    warmWhite = 255;
-  } else if (temperature > 270) { //if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
-    multiplier = (1 - (temperature - 270) / 90);
-    coldWhite = Math.round((255 * multiplier));
-    warmWhite = 255;
-  } else if (temperature > 180 && temperature <= 270) { //if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
-    multiplier = ((temperature - 180) / 90);
-    warmWhite = Math.round((255 * multiplier));
-    coldWhite = 255;
-
-  } else if (temperature > 90 && temperature <= 180) {//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
-    multiplier = (1 - (temperature - 90) / 90);
-    warmWhite = Math.round((255 * multiplier));
-    coldWhite = 255;
-  }
-  const CCT = { warmWhite: Math.round((warmWhite * brightness) / 100), coldWhite: Math.round((coldWhite * brightness) / 100) }
-  return CCT
+	if (temperature <= 90) {
+		//if hue is <= 90, warmWhite value is full and we determine the coldWhite value based on Hue
+		multiplier = temperature / 90;
+		coldWhite = Math.round(255 * multiplier);
+		warmWhite = 255;
+	} else if (temperature > 270) {
+		//if hue is >270, warmWhite value is full and we determine the coldWhite value based on Hue
+		multiplier = 1 - (temperature - 270) / 90;
+		coldWhite = Math.round(255 * multiplier);
+		warmWhite = 255;
+	} else if (temperature > 180 && temperature <= 270) {
+		//if hue is > 180 and <= 270, coldWhite value is full and we determine the warmWhite value based on Hue
+		multiplier = (temperature - 180) / 90;
+		warmWhite = Math.round(255 * multiplier);
+		coldWhite = 255;
+	} else if (temperature > 90 && temperature <= 180) {
+		//if hue is > 90 and <= 180, coldWhite value is full and we determine the warmWhite value based on Hue
+		multiplier = 1 - (temperature - 90) / 90;
+		warmWhite = Math.round(255 * multiplier);
+		coldWhite = 255;
+	}
+	const CCT = {
+		warmWhite: Math.round((warmWhite * brightness) / 100),
+		coldWhite: Math.round((coldWhite * brightness) / 100),
+	};
+	return CCT;
 } //TBtoCCT
 
 export function CCTtoTB(CCT: IColorCCT): IColorTB {
-  const { warmWhite, coldWhite } = CCT;
-  let temperature = 0;
-  let brightness = 0;
+	const { warmWhite, coldWhite } = CCT;
+	let temperature = 0;
+	let brightness = 0;
 
-  // Calculate the total CCT value
-  const totalCCT = warmWhite + coldWhite;
+	// Calculate the total CCT value
+	const totalCCT = warmWhite + coldWhite;
 
-  // Calculate the temperature based on the total CCT value
-  if (totalCCT <= 255) {
-    temperature = 90 + Math.round((totalCCT / 255) * 90);
-  } else if (totalCCT > 255 && totalCCT <= 510) {
-    temperature = 180 + Math.round(((totalCCT - 255) / 255) * 90);
-  }
+	// Calculate the temperature based on the total CCT value
+	if (totalCCT <= 255) {
+		temperature = 90 + Math.round((totalCCT / 255) * 90);
+	} else if (totalCCT > 255 && totalCCT <= 510) {
+		temperature = 180 + Math.round(((totalCCT - 255) / 255) * 90);
+	}
 
-  // Calculate the brightness based on the coldWhite value
-  brightness = Math.round(Math.max((coldWhite / 255) * 100, (warmWhite / 255) * 100));
+	// Calculate the brightness based on the coldWhite value
+	brightness = Math.round(
+		Math.max((coldWhite / 255) * 100, (warmWhite / 255) * 100)
+	);
 
-  // Return the temperature and brightness as a TB value
-  return { temperature, brightness };
+	// Return the temperature and brightness as a TB value
+	return { temperature, brightness };
 }
-
 
 /*
 HSV to RGB conversion formula
@@ -215,65 +219,66 @@ m = V - C
 */
 
 export function HSVtoRGB(HSV: IColorHSV): IColorRGB {
-  const { hue, saturation, value }: IColorHSV = HSV;
-  let [H, S, V] = [hue, saturation, value];
-  H = clamp(H, 0, 360)
-  S = clamp(S, 0, 100)
-  V = clamp(V, 0, 100)
+	const { hue, saturation, value }: IColorHSV = HSV;
+	let [H, S, V] = [hue, saturation, value];
+	H = clamp(H, 0, 360);
+	S = clamp(S, 0, 100);
+	V = clamp(V, 0, 100);
 
-  // console.log("-- SENDING -- H: ", H, "S: ", S, "V: ", V)
-  S /= 100.0
-  V /= 100.0
-  const C = V * S;
-  const X = C * (1 - Math.abs(((H / 60) % 2) - 1));
-  const m = V - C;
+	// console.log("-- SENDING -- H: ", H, "S: ", S, "V: ", V)
+	S /= 100.0;
+	V /= 100.0;
+	const C = V * S;
+	const X = C * (1 - Math.abs(((H / 60) % 2) - 1));
+	const m = V - C;
 
+	let order;
+	if (H < 60) order = [C, X, 0];
+	else if (H < 120) order = [X, C, 0];
+	else if (H < 180) order = [0, C, X];
+	else if (H < 240) order = [0, X, C];
+	else if (H < 300) order = [X, 0, C];
+	else if (H <= 360) order = [C, 0, X];
 
-  let order;
-  if (H < 60) order = [C, X, 0];
-  else if (H < 120) order = [X, C, 0];
-  else if (H < 180) order = [0, C, X];
-  else if (H < 240) order = [0, X, C];
-  else if (H < 300) order = [X, 0, C];
-  else if (H <= 360) order = [C, 0, X];
+	const [dR, dG, dB] = order;
+	const [red, green, blue] = [
+		Math.round((dR + m) * 255),
+		Math.round((dG + m) * 255),
+		Math.round((dB + m) * 255),
+	];
 
-  const [dR, dG, dB] = order;
-  const [red, green, blue] = [Math.round((dR + m) * 255), Math.round((dG + m) * 255), Math.round((dB + m) * 255)]
-
-  // console.log(`--SENDING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
-  return { red, green, blue };
+	// console.log(`--SENDING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
+	return { red, green, blue };
 }
 
 export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
+	const { red, green, blue }: IColorRGB = RGB;
 
-  const { red, green, blue }: IColorRGB = RGB;
+	// console.log(`--RECEIVING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
 
-  // console.log(`--RECEIVING-- RED: ${red} GREEN: ${green} BLUE: ${blue}`)
+	const [R, G, B] = [red, green, blue];
+	const [dR, dG, dB] = [R / 255, G / 255, B / 255];
 
-  const [R, G, B] = [red, green, blue];
-  const [dR, dG, dB] = [R / 255, G / 255, B / 255];
+	const Dmax = Math.max(dR, dG, dB);
+	const Dmin = Math.min(dR, dG, dB);
+	const D = Dmax - Dmin;
 
-  const Dmax = Math.max(dR, dG, dB);
-  const Dmin = Math.min(dR, dG, dB);
-  const D = Dmax - Dmin;
+	let H, S, V;
+	if (D === 0) H = 0;
+	else if (Dmax === dR) H = ((dG - dB) / D) % 6;
+	else if (Dmax === dG) H = (dB - dR) / D + 2;
+	else H = (dR - dG) / D + 4;
+	H *= 60;
+	if (H < 0) H += 360;
+	V = Dmax;
+	if (V === 0) S = 0;
+	else S = D / V;
 
-  let H, S, V;
-  if (D === 0) H = 0;
-  else if (Dmax === dR) H = ((dG - dB) / D) % 6;
-  else if (Dmax === dG) H = ((dB - dR) / D) + 2;
-  else H = ((dR - dG) / D) + 4
-  H *= 60;
-  if (H < 0) H += 360;
-  V = Dmax;
-  if (V === 0) S = 0;
-  else S = D / V;
+	S *= 100;
+	V *= 100;
+	// console.log("-- RECEIVED -- H: ", H, "S: ", S, "V: ", V)
 
-
-  S *= 100;
-  V *= 100;
-  // console.log("-- RECEIVED -- H: ", H, "S: ", S, "V: ", V)
-
-  return { hue: H, saturation: S, value: V };
+	return { hue: H, saturation: S, value: V };
 }
 
 // export function TBtoCCT(tb: { temperature: number, brightness: number }): { warmWhite: number, coldWhite: number } {
@@ -292,7 +297,6 @@ export function RGBtoHSV(RGB: IColorRGB): IColorHSV {
 
 //   return { warmWhite: warmWhite, coldWhite: coldWhite };
 // }
-
 
 // export function CCTtoTB(cct: { warmWhite: number, coldWhite: number }): { temperature: number, brightness: number } {
 //   const minCCT = 0;
@@ -392,195 +396,215 @@ export function speedToDelay(speed: never) {
 //   return [hsv[0], hsv[1]];
 // }
 
-function convertMiredColorTemperatureToXY(temperature: number): [number, number] {
-  // Based on MiredColorTemperatureToXY from:
-  // https://github.com/dresden-elektronik/deconz-rest-plugin/blob/78939ac4ee4b0646fbf542a0f6e83ee995f1a875/colorspace.cpp
-  const TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD = 4000;
+// function convertMiredColorTemperatureToXY(temperature: number): [number, number] {
+// 	// Based on MiredColorTemperatureToXY from:
+// 	// https://github.com/dresden-elektronik/deconz-rest-plugin/blob/78939ac4ee4b0646fbf542a0f6e83ee995f1a875/colorspace.cpp
+// 	const TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD = 4000;
 
-  const TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD = 2222;
-  const TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD = 4000;
+// 	const TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD = 2222;
+// 	const TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD = 4000;
 
-  const TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION = 17440695910400;
-  const TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION = 15358885888;
-  const TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION = 57520658;
-  const TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION = 11790;
+// 	const TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION = 17440695910400;
+// 	const TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION = 15358885888;
+// 	const TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION = 57520658;
+// 	const TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION = 11790;
 
-  const TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION = 198301902438400;
-  const TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION = 138086835814;
-  const TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION = 14590587;
-  const TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION = 15754;
+// 	const TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION = 198301902438400;
+// 	const TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION = 138086835814;
+// 	const TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION = 14590587;
+// 	const TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION = 15754;
 
-  const TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION = 18126;
-  const TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION = 22087;
-  const TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION = 35808;
-  const TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION = 3312;
+// 	const TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION = 18126;
+// 	const TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION = 22087;
+// 	const TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION = 35808;
+// 	const TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION = 3312;
 
-  const TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION = 15645;
-  const TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION = 22514;
-  const TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION = 34265;
-  const TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION = 2744;
+// 	const TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION = 15645;
+// 	const TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION = 22514;
+// 	const TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION = 34265;
+// 	const TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION = 2744;
 
-  const TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION = 50491;
-  const TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION = 96229;
-  const TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION = 61458;
-  const TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION = 6062;
+// 	const TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION = 50491;
+// 	const TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION = 96229;
+// 	const TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION = 61458;
+// 	const TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION = 6062;
 
-  let localX = 0;
-  let localY = 0;
-  const temp = 1000000 / temperature;
+// 	let localX = 0;
+// 	let localY = 0;
+// 	const temp = 1000000 / temperature;
 
-  if (TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD > temp) {
-    localX = TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION / temp +
-      TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION -
-      TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION / temp / temp -
-      TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION / temp / temp / temp;
-  } else {
-    localX = TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION / temp / temp +
-      TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION / temp +
-      TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION -
-      TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION / temp / temp / temp;
-  }
+// 	if (TEMPERATURE_TO_X_TEMPERATURE_THRESHOLD > temp) {
+// 		localX = TEMPERATURE_TO_X_THIRD_FACTOR_FIRST_EQUATION / temp +
+//       TEMPERATURE_TO_X_FOURTH_FACTOR_FIRST_EQUATION -
+//       TEMPERATURE_TO_X_SECOND_FACTOR_FIRST_EQUATION / temp / temp -
+//       TEMPERATURE_TO_X_FIRST_FACTOR_FIRST_EQUATION / temp / temp / temp;
+// 	} else {
+// 		localX = TEMPERATURE_TO_X_SECOND_FACTOR_SECOND_EQUATION / temp / temp +
+//       TEMPERATURE_TO_X_THIRD_FACTOR_SECOND_EQUATION / temp +
+//       TEMPERATURE_TO_X_FOURTH_FACTOR_SECOND_EQUATION -
+//       TEMPERATURE_TO_X_FIRST_FACTOR_SECOND_EQUATION / temp / temp / temp;
+// 	}
 
-  if (TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD > temp) {
-    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION * localX / 65536 -
-      TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION * localX * localX * localX / 281474976710656 -
-      TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION * localX * localX / 4294967296 -
-      TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION;
-  } else if (TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD > temp) {
-    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION * localX / 65536 -
-      TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION * localX * localX * localX / 281474976710656 -
-      TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION * localX * localX / 4294967296 -
-      TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION;
-  } else {
-    localY = TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION * localX / 65536 +
-      TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION * localX * localX * localX / 281474976710656 -
-      TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION * localX * localX / 4294967296 -
-      TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION;
-  }
+// 	if (TEMPERATURE_TO_Y_FIRST_TEMPERATURE_THRESHOLD > temp) {
+// 		localY = TEMPERATURE_TO_Y_THIRD_FACTOR_FIRST_EQUATION * localX / 65536 -
+//       TEMPERATURE_TO_Y_FIRST_FACTOR_FIRST_EQUATION * localX * localX * localX / 281474976710656 -
+//       TEMPERATURE_TO_Y_SECOND_FACTOR_FIRST_EQUATION * localX * localX / 4294967296 -
+//       TEMPERATURE_TO_Y_FOURTH_FACTOR_FIRST_EQUATION;
+// 	} else if (TEMPERATURE_TO_Y_SECOND_TEMPERATURE_THRESHOLD > temp) {
+// 		localY = TEMPERATURE_TO_Y_THIRD_FACTOR_SECOND_EQUATION * localX / 65536 -
+//       TEMPERATURE_TO_Y_FIRST_FACTOR_SECOND_EQUATION * localX * localX * localX / 281474976710656 -
+//       TEMPERATURE_TO_Y_SECOND_FACTOR_SECOND_EQUATION * localX * localX / 4294967296 -
+//       TEMPERATURE_TO_Y_FOURTH_FACTOR_SECOND_EQUATION;
+// 	} else {
+// 		localY = TEMPERATURE_TO_Y_THIRD_FACTOR_THIRD_EQUATION * localX / 65536 +
+//       TEMPERATURE_TO_Y_FIRST_FACTOR_THIRD_EQUATION * localX * localX * localX / 281474976710656 -
+//       TEMPERATURE_TO_Y_SECOND_FACTOR_THIRD_EQUATION * localX * localX / 4294967296 -
+//       TEMPERATURE_TO_Y_FOURTH_FACTOR_THIRD_EQUATION;
+// 	}
 
-  localY *= 4;
+// 	localY *= 4;
 
-  localX /= 0xFFFF;
-  localY /= 0xFFFF;
+// 	localX /= 0xFFFF;
+// 	localY /= 0xFFFF;
 
-  return [Math.round(localX * 10000) / 10000, Math.round(localY * 10000) / 10000];
-}
+// 	return [Math.round(localX * 10000) / 10000, Math.round(localY * 10000) / 10000];
+// }
 
-function reverseGammaCorrection(v: number): number {
-  return (v <= 0.0031308) ? 12.92 * v : (1.0 + 0.055) * Math.pow(v, (1.0 / 2.4)) - 0.055;
-}
+// function reverseGammaCorrection(v: number): number {
+// 	return (v <= 0.0031308) ? 12.92 * v : (1.0 + 0.055) * Math.pow(v, (1.0 / 2.4)) - 0.055;
+// }
 
 export function repairObjectShape(targetObject: any, expectedKeys: any): any {
-  const correctedObject: any = {};
+	const correctedObject: any = {};
 
-  // Function to create a deep copy of an object
-  function deepCopy(obj: any): any {
-    if (obj === null || typeof obj !== 'object') {
-      return obj;
-    }
-    const copy: any = Array.isArray(obj) ? [] : {};
-    for (const key in obj) {
-      copy[key] = deepCopy(obj[key]);
-    }
-    return copy;
-  }
-  // Initialize correctedObject with a deep copy of expectedKeys
-  for (const key in expectedKeys) {
-    correctedObject[key] = deepCopy(expectedKeys[key]);
-  }
+	// Function to create a deep copy of an object
+	function deepCopy(obj: any): any {
+		if (obj === null || typeof obj !== 'object') {
+			return obj;
+		}
+		const copy: any = Array.isArray(obj) ? [] : {};
+		for (const key in obj) {
+			copy[key] = deepCopy(obj[key]);
+		}
+		return copy;
+	}
+	// Initialize correctedObject with a deep copy of expectedKeys
+	for (const key in expectedKeys) {
+		correctedObject[key] = deepCopy(expectedKeys[key]);
+	}
 
-function findAndCorrectKey(key: string, value: any, expectedObject: any, correctedObject: any) {
-  let closestKey: string | null = null;
-  let minDistance = Infinity;
-  let closestSection: string |string[]| null = null;
+	function findAndCorrectKey(
+		key: string,
+		value: any,
+		expectedObject: any,
+		correctedObject: any
+	) {
+		let closestKey: string | null = null;
+		let minDistance = Infinity;
+		let closestSection: string | string[] | null = null;
 
-  function searchKeys(obj: any, path: string[] = []) {
-    for (const k in obj) {
-      const newPath = [...path, k];
-      if (typeof obj[k] === 'object') {
-        searchKeys(obj[k], newPath);
-      } else {
-        const distance = levenshteinDistance(key, k);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestKey = k;
-          closestSection = newPath.slice(0, -1)
-        }
-      }
-    }
-  }
+		function searchKeys(obj: any, path: string[] = []) {
+			for (const k in obj) {
+				const newPath = [...path, k];
+				if (typeof obj[k] === 'object') {
+					searchKeys(obj[k], newPath);
+				} else {
+					const distance = levenshteinDistance(key, k);
+					if (distance < minDistance) {
+						minDistance = distance;
+						closestKey = k;
+						closestSection = newPath.slice(0, -1);
+					}
+				}
+			}
+		}
 
-  searchKeys(expectedObject);
+		searchKeys(expectedObject);
 
-  if (minDistance < 5 && closestKey !== null && closestSection !== null) { // Threshold of 5, adjust as needed
-    let target = correctedObject;
-    for (const section of closestSection) {
-      target = target[section];
-    }
-    target[closestKey] = value;
-  } else {
-    MHLogger.warn(`Unexpected key: ${key}`);
-    // Handle the misplaced or misspelled key as needed
-  }
+		if (minDistance < 5 && closestKey !== null && closestSection !== null) {
+			// Threshold of 5, adjust as needed
+			let target = correctedObject;
+			for (const section of closestSection) {
+				target = target[section];
+			}
+			target[closestKey] = value;
+		} else {
+			MHLogger.warn(`Unexpected key: ${key}`);
+			// Handle the misplaced or misspelled key as needed
+		}
+	}
+
+	function correctSection(
+		targetSection: any,
+		expectedSection: any,
+		correctedSection: any
+	) {
+		if (!targetSection || !expectedSection) return; // Return if targetSection or expectedSection is null
+
+		for (const key in targetSection) {
+			if (Object.prototype.hasOwnProperty.call(expectedSection, key)) {
+				if (expectedSection[key] === null) {
+					correctedSection[key] = targetSection[key]; // Use value from target object if expected value is null
+				} else if (typeof expectedSection[key] === 'object') {
+					correctedSection[key] = correctedSection[key] || {};
+					correctSection(
+						targetSection[key],
+						expectedSection[key],
+						correctedSection[key]
+					); // Recursively correct nested objects
+				} else {
+					correctedSection[key] = targetSection[key]; // Correct key, use value from target object
+				}
+			} else {
+				findAndCorrectKey(
+					key,
+					targetSection[key],
+					expectedKeys,
+					correctedObject
+				); // Potentially misplaced key, find correct place
+			}
+		}
+
+		// Recursively search for misplaced keys in nested objects
+		for (const key in targetSection) {
+			if (typeof targetSection[key] === 'object') {
+				correctSection(targetSection[key], expectedSection, correctedSection);
+			}
+		}
+	}
+
+	correctSection(targetObject, expectedKeys, correctedObject);
+
+	return correctedObject;
 }
-
-
-  function correctSection(targetSection: any, expectedSection: any, correctedSection: any) {
-    if (!targetSection || !expectedSection) return; // Return if targetSection or expectedSection is null
-
-    for (const key in targetSection) {
-      if (expectedSection.hasOwnProperty(key)) {
-        if (expectedSection[key] === null) {
-          correctedSection[key] = targetSection[key]; // Use value from target object if expected value is null
-        } else if (typeof expectedSection[key] === 'object') {
-          correctedSection[key] = correctedSection[key] || {};
-          correctSection(targetSection[key], expectedSection[key], correctedSection[key]); // Recursively correct nested objects
-        } else {
-          correctedSection[key] = targetSection[key]; // Correct key, use value from target object
-        }
-      } else {
-        findAndCorrectKey(key, targetSection[key], expectedKeys, correctedObject); // Potentially misplaced key, find correct place
-      }
-    }
-
-    // Recursively search for misplaced keys in nested objects
-    for (const key in targetSection) {
-      if (typeof targetSection[key] === 'object') {
-        correctSection(targetSection[key], expectedSection, correctedSection);
-      }
-    }
-  }
-
-  correctSection(targetObject, expectedKeys, correctedObject);
-
-  return correctedObject;
-}
-
 
 function levenshteinDistance(a: string, b: string) {
-  const matrix = [];
-  let i, j;
+	const matrix = [];
+	let i, j;
 
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
+	if (a.length === 0) return b.length;
+	if (b.length === 0) return a.length;
 
-  for (i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
+	for (i = 0; i <= b.length; i++) {
+		matrix[i] = [i];
+	}
 
-  for (j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
+	for (j = 0; j <= a.length; j++) {
+		matrix[0][j] = j;
+	}
 
-  for (i = 1; i <= b.length; i++) {
-    for (j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
-      }
-    }
-  }
+	for (i = 1; i <= b.length; i++) {
+		for (j = 1; j <= a.length; j++) {
+			if (b.charAt(i - 1) === a.charAt(j - 1)) {
+				matrix[i][j] = matrix[i - 1][j - 1];
+			} else {
+				matrix[i][j] = Math.min(
+					matrix[i - 1][j - 1] + 1,
+					Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+				);
+			}
+		}
+	}
 
-  return matrix[b.length][a.length];
+	return matrix[b.length][a.length];
 }

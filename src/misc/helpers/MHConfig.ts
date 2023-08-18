@@ -1,16 +1,16 @@
-import { PlatformConfig } from "homebridge";
-import { EXPECTED_CONFIG_STRUCTURE } from "../types/constants";
-import { repairObjectShape } from "./utils";
+import { PlatformConfig } from 'homebridge';
+import { EXPECTED_CONFIG_STRUCTURE } from '../types/constants';
+import { repairObjectShape } from './utils';
 interface AdvancedOptions {
   periodicDiscovery: boolean;
   namesWithMacAddress: boolean;
   logLevel: number;
-  additionalSubnets: any[];
+  additionalSubnets: string[];
 }
 
 interface DeviceManagement {
   blacklistOrWhitelist: string;
-  blacklistedUniqueIDs: any[];
+  blacklistedUniqueIDs: string[];
 }
 
 interface WhiteEffects {
@@ -34,25 +34,25 @@ export interface CorrectedMHConfig {
 }
 
 export class MHConfig {
-  private static instance: MHConfig;
+	private static instance: MHConfig;
 
-  public static pruning: Pruning;
-  public static whiteEffects: WhiteEffects;
-  public static deviceManagement: DeviceManagement;
-  public static advancedOptions: AdvancedOptions;
+	public static pruning: Pruning;
+	public static whiteEffects: WhiteEffects;
+	public static deviceManagement: DeviceManagement;
+	public static advancedOptions: AdvancedOptions;
 
-  constructor(private hbConfig: PlatformConfig) {
-    if (MHConfig.instance) {
-      return;
-    }
+	constructor(private hbConfig: PlatformConfig) {
+		if (MHConfig.instance) {
+			return;
+		}
 
-    const correctedConfig = repairObjectShape(hbConfig, EXPECTED_CONFIG_STRUCTURE) as CorrectedMHConfig;
+		const correctedConfig = repairObjectShape(hbConfig, EXPECTED_CONFIG_STRUCTURE) as CorrectedMHConfig;
 
-    MHConfig.pruning = correctedConfig.pruning;
-    MHConfig.whiteEffects = correctedConfig.whiteEffects;
-    MHConfig.deviceManagement = correctedConfig.deviceManagement;
-    MHConfig.advancedOptions = correctedConfig.advancedOptions;
+		MHConfig.pruning = correctedConfig.pruning;
+		MHConfig.whiteEffects = correctedConfig.whiteEffects;
+		MHConfig.deviceManagement = correctedConfig.deviceManagement;
+		MHConfig.advancedOptions = correctedConfig.advancedOptions;
 
-    MHConfig.instance = this;
-  }
+		MHConfig.instance = this;
+	}
 }
