@@ -4,7 +4,7 @@ import { repairObjectShape } from './misc/helpers/utils';
 import { EXPECTED_CONTEXT_STRUCTURE } from './misc/types/constants';
 // import { AnimationGenerator } from './AnimationGenerator'
 import { AccessoryTypes, AnimationAccessory, HomebridgeAccessory } from './misc/types/types';
-import { AccessoryGenerator } from './AccessoryGenerator';
+import { AccessoryGenerator } from './Generators/AccessoryGenerator';
 import { MHConfig } from './misc/helpers/MHConfig';
 
 /**
@@ -87,11 +87,11 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
 			);
 		}
 
-		const accesssoryGenerator = new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
+		new AccessoryGenerator(this, this.hbAccessoriesFromDisk);
 		// accesssoryGenerator.removeAllAccessories();
-		await accesssoryGenerator.discoverAccessories();
+		await AccessoryGenerator.discoverAccessories();
 		try {
-			AccessoryGenerator.rescanDevices();
+			AccessoryGenerator.rescanAccessories();
 		} catch (error) {
 			MHLogger.error(error);
 		}

@@ -5,12 +5,12 @@ import {
 	ICompleteDeviceInfo,
 	mergeDeep,
 } from 'magichome-platform';
-import { HomebridgeAccessory, AccessoryTypes } from './misc/types/types';
-import { HomebridgeMagichomeDynamicPlatform } from './platform';
-import { MHLogger } from './misc/helpers/MHLogger';
-import { MHConfig } from './misc/helpers/MHConfig';
-
-import { HomebridgeMagichomeDynamicPlatformAccessory } from './platformAccessory';
+import { HomebridgeAccessory, AccessoryTypes } from '../misc/types/types';
+import { HomebridgeMagichomeDynamicPlatform } from '../platform';
+import { MHLogger } from '../misc/helpers/MHLogger';
+import { MHConfig } from '../misc/helpers/MHConfig';
+import { rescanAccessories } from './AccessoryRepair';
+import { HomebridgeMagichomeDynamicPlatformAccessory } from '../platformAccessory';
 
 const PLATFORM_NAME = 'homebridge-magichome-dynamic-platform';
 const PLUGIN_NAME = 'homebridge-magichome-dynamic-platform';
@@ -19,29 +19,28 @@ const controllerGenerator: ControllerGenerator = new ControllerGenerator();
 
 export class AccessoryGenerator {
 	private static instance: AccessoryGenerator;
-	public static onlineMHAccessories: Map<
+	private static onlineMHAccessories: Map<
 		string,
 		HomebridgeMagichomeDynamicPlatformAccessory
 	> = new Map();
-	public static offlineMHAccessories: Map<
+	private static offlineMHAccessories: Map<
 		string,
 		HomebridgeMagichomeDynamicPlatformAccessory
 	> = new Map();
 
 	constructor(
 		private readonly platform: HomebridgeMagichomeDynamicPlatform,
-		private readonly hbAccessoriesFromDisk: Map<string, HomebridgeAccessory>
+		public readonly hbAccessoriesFromDisk: Map<string, HomebridgeAccessory>
 	) {
 		if (AccessoryGenerator.instance) {
 			return AccessoryGenerator.instance;
 		}
 		this.platform = platform;
-		this.hbAccessoriesFromDisk = hbAccessoriesFromDisk;
 		MHLogger.info('Accessory Generator Initialized');
 		AccessoryGenerator.instance = this;
 	}
 
-	public async discoverAccessories() {
+	public static async discoverAccessories() {
 		// : Promise<Map<string, HomebridgeMagichomeDynamicPlatformAccessory>>
 		MHLogger.info('Scanning network for MagicHome accessories...');
 
@@ -53,7 +52,7 @@ export class AccessoryGenerator {
 			const { onlineHBAccessories, offlineHBAccessories, newHBAccessories } =
 				AccessoryGenerator.filterHBAccessories(
 					baseControllers,
-					this.hbAccessoriesFromDisk
+					AccessoryGenerator.instance.hbAccessoriesFromDisk
 				);
 			AccessoryGenerator.onlineMHAccessories =
 				await AccessoryGenerator.generateActiveAccessories(
@@ -71,7 +70,16 @@ export class AccessoryGenerator {
 		}
 	}
 
-	private static filterHBAccessories(
+	public static async rescanAccessories() {
+		await rescanAccessories(
+			controllerGenerator,
+			AccessoryGenerator.instance.hbAccessoriesFromDisk,
+			AccessoryGenerator.offlineMHAccessories,
+			AccessoryGenerator.onlineMHAccessories
+		);
+	}
+
+	public static filterHBAccessories(
 		baseControllers: Map<string, BaseController>,
 		hbAccessories: Map<string, HomebridgeAccessory>
 	): {
@@ -103,58 +111,6 @@ export class AccessoryGenerator {
 		});
 
 		return { onlineHBAccessories, offlineHBAccessories, newHBAccessories };
-	}
-
-	public static async rescanDevices() {
-		const scanInterval = 60000; // 1 minute
-		const shouldScan = true;
-		const scan = async () => {
-			while (shouldScan) {
-				// Adding a loop to keep scanning
-				try {
-					MHLogger.trace('Scanning network for MagicHome accessories...');
-					MHLogger.trace(
-						'Offline devices: ',
-						AccessoryGenerator.offlineMHAccessories.keys()
-					);
-					const completeDevices: ICompleteDevice[] =
-						await controllerGenerator.discoverCompleteDevices();
-					const baseControllers: Map<string, BaseController> =
-						controllerGenerator.generateControllers(completeDevices);
-
-					AccessoryGenerator.repairAccessory(
-						AccessoryGenerator.offlineMHAccessories,
-						baseControllers,
-						false
-					);
-					AccessoryGenerator.repairAccessory(
-						AccessoryGenerator.onlineMHAccessories,
-						baseControllers,
-						true
-					);
-					const { newHBAccessories } = AccessoryGenerator.filterHBAccessories(
-						baseControllers,
-						AccessoryGenerator.instance.hbAccessoriesFromDisk
-					);
-					AccessoryGenerator.generateActiveAccessories(
-						[],
-						newHBAccessories,
-						baseControllers
-					);
-				} catch (error) {
-					MHLogger.error('Rescan Error: ', error);
-				} finally {
-					await new Promise((resolve) => setTimeout(resolve, scanInterval)); // Wait for scanInterval before next iteration
-				}
-			}
-		};
-
-		MHLogger.trace('Starting device rescan...');
-		try {
-			await scan();
-		} catch (error) {
-			MHLogger.error('Rescan Error Outer: ', error);
-		}
 	}
 
 	private static generateMHAccessories(
@@ -189,7 +145,7 @@ export class AccessoryGenerator {
 		}
 	}
 
-	private static generateActiveAccessories(
+	public static generateActiveAccessories(
 		onlineHBAccessories: HomebridgeAccessory[],
 		newHBAccessories: HomebridgeAccessory[],
 		baseControllers: Map<string, BaseController>
@@ -290,54 +246,7 @@ export class AccessoryGenerator {
 		return newHBAccessory;
 	}
 
-	private static repairAccessory(
-		mhAccessories: Map<string, HomebridgeMagichomeDynamicPlatformAccessory>,
-		baseControllers: Map<string, BaseController>,
-		repairOnline: boolean
-	) {
-		for (let mhAccessory of mhAccessories.values()) {
-			const {
-				protoDevice: { uniqueId, ipAddress },
-				displayName,
-				isOnline,
-			} = mhAccessory.hbAccessory.context;
-			try {
-				if (baseControllers.has(uniqueId)) {
-					//if the device is now online
-					const baseController = baseControllers.get(uniqueId);
-					const currHBAccessory = mhAccessory.hbAccessory;
-					if (!isOnline)
-						MHLogger.trace(
-							`${displayName}] [UID: ${uniqueId}] [IP: ${ipAddress}] - Found existing accessory whos device was reported offline. Testing...`
-						);
-					if (
-						baseController.getCachedDeviceInformation().protoDevice
-							.ipAddress !== ipAddress
-					) {
-						MHLogger.warn(
-							`[${currHBAccessory.context.displayName}] - IP address has changed. Updating...`
-						);
-						mhAccessory = AccessoryGenerator.processMHAccessory(
-							baseControllers.get(uniqueId),
-							currHBAccessory
-						);
-					}
-					if (!repairOnline) {
-						mhAccessories.delete(uniqueId);
-						AccessoryGenerator.onlineMHAccessories.set(uniqueId, mhAccessory);
-						mhAccessory.hbAccessory.context.isOnline = true;
-					}
-				}
-			} catch (error) {
-				MHLogger.error(
-					`Error repairing accessory for [${displayName}] [UID: ${uniqueId}] [IP: ${ipAddress}] `,
-					error
-				);
-			}
-		}
-	}
-
-	private static processMHAccessory(
+	public static processMHAccessory(
 		controller: BaseController,
 		hbAccessory: HomebridgeAccessory,
 		updateOnline: boolean = true

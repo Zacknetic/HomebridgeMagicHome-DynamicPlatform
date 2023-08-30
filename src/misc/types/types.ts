@@ -45,14 +45,6 @@ export interface IAnimationState {
 	isOn: boolean;
 }
 
-export interface IPartialAccessoryCommand {
-	isOn?: boolean;
-	HSV?: IPartialColorHSV;
-	TB?: IPartialColorTB;
-	colorTemperature?: number;
-	isPowerCommand?: boolean;
-}
-
 export interface IAccessoryCommand {
 	isOn: boolean;
 	HSV: IColorHSV;

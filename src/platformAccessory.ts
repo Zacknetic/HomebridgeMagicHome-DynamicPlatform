@@ -7,7 +7,6 @@ import type {
 	IAccessoryState,
 	IColorHSV,
 	IColorTB,
-	IPartialAccessoryCommand,
 	HomebridgeAccessory,
 } from './misc/types/types';
 
@@ -21,10 +20,11 @@ import {
 	mergeDeep,
 	COMMAND_TYPE,
 	COLOR_MASKS,
-	ICompleteResponse,
+	cloneDeep,
+	combineDeep,
+	IDeviceInformation,
 } from 'magichome-platform';
 import { MHLogger } from './misc/helpers/MHLogger';
-import { AccessoryGenerator } from './AccessoryGenerator';
 
 export class HomebridgeMagichomeDynamicPlatformAccessory {
 	protected service: Service;
@@ -63,7 +63,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 		public controller: BaseController
 	) {
 		this.setupMisc();
-		this.accessoryState = mergeDeep({}, DEFAULT_ACCESSORY_STATE);
+		this.accessoryState = cloneDeep(DEFAULT_ACCESSORY_STATE);
 		this.initializeCharacteristics();
 		this.fetchDeviceState(2);
 		this.lastValue = this.accessoryState.HSV.value;
@@ -79,18 +79,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 	async resistOff() {
 		// this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Resisting Off`);
 		this.resistOffFromBrightness = true;
-
-		await sleep(500);
+		await sleep(100);
 		this.resistOffFromBrightness = false;
 	}
 
 	setHue(value: CharacteristicValue) {
 		this.accessoryState.HSV.hue = value as number;
+		this.resistOff();
 		this.scheduleAccessoryCommand();
 	}
 
 	setSaturation(value: CharacteristicValue) {
 		this.accessoryState.HSV.saturation = value as number;
+		this.resistOff();
 		this.scheduleAccessoryCommand();
 	}
 
@@ -111,11 +112,10 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 		}
 
 		this.sendStateDebounce = setTimeout(() => {
-			const partialAccessoryCommand: IPartialAccessoryCommand = mergeDeep(
-				{},
-				this.accessoryState,
-				{ isPowerCommand }
-			);
+			if (this.resistOffFromBrightness) isPowerCommand = false;
+			const partialAccessoryCommand: Partial<IAccessoryCommand> = combineDeep<
+				Partial<IAccessoryCommand>
+			>(this.accessoryState, { isPowerCommand });
 			this.processAccessoryCommand(partialAccessoryCommand);
 		}, 100); // 100 milliseconds debounce time
 	}
@@ -187,22 +187,16 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 	} //flashEffect
 
 	protected async processAccessoryCommand(
-		partialAccessoryCommand: IPartialAccessoryCommand
+		partialAccessoryCommand: Partial<IAccessoryCommand>
 	) {
-		this.accessoryState = mergeDeep<IAccessoryState>(
-			{},
-			{
-				...this.accessoryState,
-				...partialAccessoryCommand.HSV,
-				...partialAccessoryCommand.TB,
-				...{ partialAccessoryCommand },
-			}
-		);
 		try {
 			const sanitizedAcessoryCommand = this.completeAccessoryCommand(
 				partialAccessoryCommand
 			);
-			if (partialAccessoryCommand.isPowerCommand) {
+			if (
+				partialAccessoryCommand.isPowerCommand &&
+				!this.resistOffFromBrightness
+			) {
 				const response = await this.controller.setOn(
 					sanitizedAcessoryCommand.isOn
 				);
@@ -215,6 +209,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 					this.accessoryCommandToDeviceCommand(sanitizedAcessoryCommand);
 				await this.sendCommand(deviceCommand, commandOptions);
 			}
+			mergeDeep<IAccessoryState>(this.accessoryState, partialAccessoryCommand);
 		} catch (error) {
 			MHLogger.trace(
 				`[${this.hbAccessory.context.displayName}] - Error processing accessory command:`,
@@ -224,7 +219,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 	}
 
 	public setBackupAccessoryState() {
-		this.backupAccessoryState = mergeDeep({}, this.accessoryState);
+		this.backupAccessoryState = cloneDeep(this.accessoryState);
 	}
 
 	public restoreBackupAccessoryState() {
@@ -235,7 +230,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 	}
 
 	protected completeAccessoryCommand(
-		partialAccessoryCommand: IPartialAccessoryCommand
+		partialAccessoryCommand: Partial<IAccessoryCommand>
 	): IAccessoryCommand {
 		// this.logs.debug(this.accessory.context.displayName, '\n Current State:', this.accessoryState, '\n Received Command', this.newAccessoryCommand);
 		const sanitizedAcessoryCommand: IAccessoryCommand = mergeDeep<any>(
@@ -356,11 +351,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 			);
 
 		try {
-			const response: ICompleteResponse = await this.controller.setAllValues(
-				deviceCommand,
-				commandOptions
-			);
-			this.handleResponse(response);
+			await this.controller.setAllValues(deviceCommand, commandOptions);
 		} catch (error) {
 			this.hbAccessory.context.isOnline = false;
 			this.resetBadResponseCounter();
@@ -369,38 +360,6 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 				error
 			);
 			throw error;
-		}
-	}
-
-	private handleResponse(response: ICompleteResponse) {
-		MHLogger.trace(
-			`[sendCommand][${this.hbAccessory.context.displayName}] - Response from Device:`,
-			response
-		);
-
-		const {
-			context: {
-				protoDevice: { uniqueId },
-			},
-		} = this.hbAccessory;
-		if (response.responseCode > 0) {
-			if (!this.hbAccessory.context.isOnline) {
-				AccessoryGenerator.onlineMHAccessories.set(uniqueId, this);
-				AccessoryGenerator.offlineMHAccessories.delete(uniqueId);
-			}
-			this.hbAccessory.context.isOnline = true;
-			this.resetBadResponseCounter();
-		} else {
-			if (this.hbAccessory.context.isOnline) {
-				AccessoryGenerator.offlineMHAccessories.set(uniqueId, this);
-				AccessoryGenerator.onlineMHAccessories.delete(uniqueId);
-			}
-			this.badResponseCounter++;
-			if (this.badResponseCounter >= 50) {
-				// TODO, need a better way to handle this. Perhaps ping the device for state with retries and once that fails, mark it as offline.
-				this.hbAccessory.context.isOnline = false;
-			}
-			this.startBadResponseTimeout();
 		}
 	}
 
@@ -514,11 +473,15 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 	}
 
 	initializeCharacteristics() {
+		const deviceInformation = this.controller.getCachedDeviceInformation();
 		const {
 			deviceAPI: { hasBrightness, hasColor },
-		} = this.controller.getCachedDeviceInformation();
-
-		this.addAccessoryInformationCharacteristic();
+		} = deviceInformation;
+		this.addAccessoryInformationCharacteristic(
+			deviceInformation,
+			this.hbAccessory,
+			this.platform
+		);
 
 		// this.logs.trace(`[Trace] [${this.accessory.context.displayName}] - Adding Lightbulb service to accessory.`);
 		this.service =
@@ -629,36 +592,40 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
 		// this.accessory.configureController(this.adaptiveLightingService);
 	}
 
-	addAccessoryInformationCharacteristic() {
+	addAccessoryInformationCharacteristic(
+		deviceInformation: IDeviceInformation,
+		hbAccessory: HomebridgeAccessory,
+		platform: HomebridgeMagichomeDynamicPlatform
+	) {
 		const {
 			protoDevice: { uniqueId, modelNumber },
 			deviceMetaData: { controllerFirmwareVersion, controllerHardwareVersion },
-		} = this.controller.getCachedDeviceInformation();
+		} = deviceInformation;
 		// set accessory information
-		this.hbAccessory
-			.getService(this.platform.Service.AccessoryInformation)!
-			.setCharacteristic(this.platform.Characteristic.Manufacturer, 'MagicHome')
-			.setCharacteristic(this.platform.Characteristic.SerialNumber, uniqueId)
-			.setCharacteristic(this.platform.Characteristic.Model, modelNumber)
+		hbAccessory
+			.getService(platform.Service.AccessoryInformation)!
+			.setCharacteristic(platform.Characteristic.Manufacturer, 'MagicHome')
+			.setCharacteristic(platform.Characteristic.SerialNumber, uniqueId)
+			.setCharacteristic(platform.Characteristic.Model, modelNumber)
 			.setCharacteristic(
-				this.platform.Characteristic.HardwareRevision,
+				platform.Characteristic.HardwareRevision,
 				controllerHardwareVersion?.toString(16) ?? 'unknown'
 			)
 			.setCharacteristic(
-				this.platform.Characteristic.FirmwareRevision,
+				platform.Characteristic.FirmwareRevision,
 				controllerFirmwareVersion?.toString(16) ?? 'unknown '
 			)
-			.getCharacteristic(this.platform.Characteristic.Identify)
-			.removeAllListeners(this.platform.api.hap.CharacteristicEventTypes.SET)
-			.removeAllListeners(this.platform.api.hap.CharacteristicEventTypes.GET)
+			.getCharacteristic(platform.Characteristic.Identify)
+			.removeAllListeners(platform.api.hap.CharacteristicEventTypes.SET)
+			.removeAllListeners(platform.api.hap.CharacteristicEventTypes.GET)
 			.on(
-				this.platform.api.hap.CharacteristicEventTypes.SET,
+				platform.api.hap.CharacteristicEventTypes.SET,
 				this.identifyLight.bind(this)
 			); // SET - bind to the 'Identify` method below
 
-		this.hbAccessory
-			.getService(this.platform.Service.AccessoryInformation)!
-			.addOptionalCharacteristic(this.platform.Characteristic.ConfiguredName);
+		hbAccessory
+			.getService(platform.Service.AccessoryInformation)!
+			.addOptionalCharacteristic(platform.Characteristic.ConfiguredName);
 	}
 
 	addConfiguredNameCharacteristic() {
