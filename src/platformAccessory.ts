@@ -3,7 +3,13 @@ import type {
   Service, PlatformConfig, PlatformAccessory, CharacteristicValue,
   CharacteristicSetCallback, CharacteristicGetCallback,
 } from 'homebridge';
-import { clamp, convertHSLtoRGB, convertRGBtoHSL } from './magichome-interface/utils';
+import {
+  clamp,
+  convertHSLtoRGB,
+  convertRGBtoHSL,
+  convertTempInKelvinToMired,
+  convertWhiteValuesToTempInKelvinAndBrightness,
+} from './magichome-interface/utils';
 import { HomebridgeMagichomeDynamicPlatform } from './platform';
 import { Transport } from './magichome-interface/Transport';
 import { getLogs } from './logs';
@@ -249,7 +255,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     const CCT = this.lightState.CCT;
 
     //update state with actual values asynchronously
-    this.logs.debug('Get Characteristic Hue -> %o for device: %o ', CCT, this.myDevice.displayName);
+    this.logs.debug('Get Characteristic Color Temperature -> %o for device: %o ', CCT, this.myDevice.displayName);
     if(this.setColortemp){
       this.updateLocalState();
     }
@@ -323,6 +329,7 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
       this.updateLocalHSL(convertRGBtoHSL(this.lightState.RGB));
       this.updateLocalWhiteValues(state.whiteValues);
       this.updateLocalIsOn(state.isOn);
+      this.updateLocalColorTemperature(state.whiteValues);
       this.updateHomekitState();
 
     } catch (error) {
@@ -340,10 +347,20 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.service.updateCharacteristic(this.platform.Characteristic.On,  this.lightState.isOn);
     this.service.updateCharacteristic(this.platform.Characteristic.Hue, this.lightState.HSL.hue);
     this.service.updateCharacteristic(this.platform.Characteristic.Saturation, this.lightState.HSL.saturation);
-    if(this.lightState.HSL.luminance > 0 && this.lightState.isOn){
+    if (
+      !this.myDevice.lightParameters.hasCCT &&
+      this.lightState.HSL.luminance > 0 &&
+      this.lightState.isOn
+    ) {
       this.updateLocalBrightness(this.lightState.HSL.luminance * 2);
     }
     this.service.updateCharacteristic(this.platform.Characteristic.Brightness,  this.lightState.brightness);
+    if (this.myDevice.lightParameters.hasCCT) {
+      this.service.updateCharacteristic(
+        this.platform.Characteristic.ColorTemperature,
+        this.lightState.CCT,
+      );
+    }
   }
 
   updateLocalHSL(_hsl){
@@ -366,6 +383,19 @@ export class HomebridgeMagichomeDynamicPlatformAccessory {
     this.lightState.brightness = _brightness;
   }
 
+  updateLocalColorTemperature(_whiteValues: {
+    warmWhite: number;
+    coldWhite: number;
+  }) {
+    const tempKelvinAndBrightness =
+      convertWhiteValuesToTempInKelvinAndBrightness(_whiteValues);
+
+    // convert to mired (micro-reciprocal degrees)
+    this.lightState.CCT = convertTempInKelvinToMired(
+      tempKelvinAndBrightness.temperature,
+    );
+    this.lightState.brightness = tempKelvinAndBrightness.brightnessPercentage;
+  }
 
   /**
    ** @updateDeviceState
