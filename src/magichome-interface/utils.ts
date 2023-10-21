@@ -137,6 +137,63 @@ export function convertHSLtoRGB ({hue, saturation, luminance}) {
 //=================================================
 // End Convert HSLtoRGB //
 
+const MIN_TEMPERATURE_IN_KELVIN = 2000;
+const MAX_TEMPERATURE_IN_KELVIN = 7200;
+
+/**
+ * Converts white values to temperature in degrees Kelvin and associated brightness percentage.
+ * @param whiteValues byte values for warm white and cold white
+ * @returns temperature in degrees Kelvin and brightness percentage
+ */
+export function convertWhiteValuesToTempInKelvinAndBrightness(
+  whiteValues: { warmWhite: number; coldWhite: number },
+  minTemp = MIN_TEMPERATURE_IN_KELVIN,
+  maxTemp = MAX_TEMPERATURE_IN_KELVIN,
+): { temperature: number; brightnessPercentage: number } {
+  let temperature = minTemp;
+  const warm = whiteValues.warmWhite / 255;
+  const cold = whiteValues.coldWhite / 255;
+  const brightness = cold + warm;
+  if (brightness !== 0) {
+    temperature = (cold / brightness) * (maxTemp - minTemp) + minTemp;
+  }
+  return { temperature: temperature, brightnessPercentage: brightness * 100 };
+}
+
+/**
+ * Converts temperature in degrees Kelvin and associated brightness percentage to byte values for warm white and cold white
+ * @param kelvin temperature in degrees Kelvin
+ * @param brightnessPercentage brightness as a percentage value
+ * @returns byte values for warm white and cold white
+ */
+export function convertTempInKelvinToWhiteValues(
+  kelvin: number,
+  brightnessPercentage: number,
+  minTemp = MIN_TEMPERATURE_IN_KELVIN,
+  maxTemp = MAX_TEMPERATURE_IN_KELVIN,
+): { warmWhite: number; coldWhite: number } {
+  const warm =
+    ((maxTemp - kelvin) / (maxTemp - minTemp)) * brightnessPercentage;
+  const cold = brightnessPercentage - warm;
+  const ww = Math.round(255 * warm);
+  const cw = Math.round(255 * cold);
+  return { warmWhite: ww, coldWhite: cw };
+}
+
+/**
+ * Converts from temperature in Kelvin (ex. 6500) to mired (micro-reciprocal degrees), as used by HomeKit
+ */
+export function convertTempInKelvinToMired(kelvin: number): number {
+  return 1000000 / kelvin;
+}
+
+/**
+ * Converts from mired (micro-reciprocal degrees), as used by HomeKit, to temperature in Kelvin (ex. 6500)
+ */
+export function convertMiredToTempInKelvin(mired: number) {
+  return 1000000 / mired;
+}
+
 export function parseJson<T>(value: string, replacement: T): T {
   try {
     return <T>JSON.parse(value);

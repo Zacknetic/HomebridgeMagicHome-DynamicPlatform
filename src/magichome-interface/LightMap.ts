@@ -46,6 +46,17 @@ const lightTypesMap: Map<number, ILightParameters> = new Map([
     },
   ],
   [
+    0x0e,
+    {
+      controllerLogicType: ControllerTypes.RGBCWBulb,
+      convenientName: 'RGBCW Bulb',
+      simultaneousCCT: false,
+      hasColor: true,
+      hasCCT: true,
+      hasBrightness: true,
+    },
+  ],
+  [
     0x21,
     {
       controllerLogicType: ControllerTypes.DimmerStrip,

@@ -9,6 +9,7 @@ import { RGBStrip } from './accessories/RGBStrip';
 import { GRBStrip } from './accessories/GRBStrip';
 import { RGBWBulb } from './accessories/RGBWBulb';
 import { RGBWWBulb } from './accessories/RGBWWBulb';
+import { RGBCWBulb } from './accessories/RGBCWBulb';
 import { RGBWStrip } from './accessories/RGBWStrip';
 import { RGBWWStrip } from './accessories/RGBWWStrip';
 import { CCTStrip } from './accessories/CCTStrip';
@@ -30,6 +31,7 @@ const accessoryType = {
   RGBStrip,
   RGBWBulb,
   RGBWWBulb,
+  RGBCWBulb,
   RGBWStrip,
   RGBWWStrip,
   CCTStrip,
