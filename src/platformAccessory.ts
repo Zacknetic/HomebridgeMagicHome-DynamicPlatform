@@ -44,9 +44,6 @@ export class MagichomePlatformAccessory {
 
     this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
 
-    this.service.getCharacteristic(this.platform.Characteristic.ConfiguredName)
-      .onSet(this.setConfiguredName.bind(this));
-
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this)) // SET - bind to the `setOn` method below

@@ -2,7 +2,7 @@
   "name": "homebridge-magichome-platform",
   "displayName": "Homebridge MagicHome Platform",
   "type": "module",
-  "version": "0.0.1-alpha.2",
+  "version": "2.0.0-alpha.3",
   "private": false,
   "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "contributors": [

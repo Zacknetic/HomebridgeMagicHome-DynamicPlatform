@@ -1,7 +1,7 @@
 {
   "bridge": {
     "name": "PluginTemplate",
-    "username": "AA:BB:CC:DD:EE:FF",
+    "username": "88:BB:CC:DD:EE:FF",
     "port": 51826,
     "pin": "888-88-888"
   },
@@ -11,11 +11,17 @@
     "homebridge-config-ui-x"
   ],
   "platforms": [
-
     {
-      "name": "homebridge-magichome-platform",
-      "platform": "homebridge-magichome-platform",
-      "subnets": []
+      "name": "homebridge-magichome-dynamic-platform",
+      "platform": "homebridge-magichome-dynamic-platform",
+      "discovery_management": {
+        "additional_subnets": [],
+        "device_discovery_interval": 30000
+      },
+      "device_management": {
+        "whitelist": [],
+        "blacklist": []
+      }
     }
   ],
   "accessories": []

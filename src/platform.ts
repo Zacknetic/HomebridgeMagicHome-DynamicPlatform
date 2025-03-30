@@ -64,11 +64,12 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       this.log.debug('Executed didFinishLaunching callback');
 
-      // run the method to discover / register your devices as accessories
+      // // run the method to discover / register your devices as accessories
       this.discoverDevices();
 
-      // Optionally run periodic scans:
-      this.periodicScanForDevices();
+      // // Optionally run periodic scans:
+      // this.periodicScanForDevices();
+      // this.purgeAllAccessories();
     });
   }
 
@@ -127,7 +128,7 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
 
     // A real plugin you would discover accessories from the local network, cloud services,
     // or a user-defined array in the platform config.
-    const devices = await this.controllerGenerator.getDevices(this.config.subnets);
+    const devices = await this.controllerGenerator.getDevices(this.config.additional_subnets);
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const [id, device] of devices) {
@@ -143,7 +144,6 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
       const currentIP = device.fullDeviceInformation.protoDevice.ipAddress;
       
       if (existingAccessory) {
-        existingAccessory.displayName = existingAccessory.UUID;
         // the accessory already exists
         this.log.info('Found existing accessory in cache:', existingAccessory.context.configuredName);
 
