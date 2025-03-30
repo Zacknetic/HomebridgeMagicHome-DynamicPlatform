@@ -1,7 +1,16 @@
-import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, Service } from 'homebridge';
+import type {
+  API,
+  Characteristic,
+  DynamicPlatformPlugin,
+  Logging,
+  PlatformAccessory,
+  PlatformConfig,
+  Service,
+} from 'homebridge';
 
-import { ExamplePlatformAccessory } from './platformAccessory.js';
+import { MagichomePlatformAccessory } from './platformAccessory.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
+import { ControllerGenerator } from 'magichome-platform';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -11,19 +20,26 @@ import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
  * This class is the main constructor for your plugin, this is where you should
  * parse the user config and discover/register accessories with Homebridge.
  */
-export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
+export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
 
   // this is used to track restored cached accessories
   public readonly accessories: Map<string, PlatformAccessory> = new Map();
-  public readonly discoveredCacheUUIDs: string[] = [];
 
   // This is only required when using Custom Services and Characteristics not support by HomeKit
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public readonly CustomServices: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public readonly CustomCharacteristics: any;
+
+  private controllerGenerator: ControllerGenerator;
+
+  // store UUIDs we see when scanning to detect offline accessories
+  public readonly discoveredCacheUUIDs: string[] = [];
+
+  // optional offline accessories store (if you need to reference them)
+  private offlineAccessories: PlatformAccessory[] = [];
 
   constructor(
     public readonly log: Logging,
@@ -37,6 +53,8 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     this.CustomServices = new EveHomeKitTypes(this.api).Services;
     this.CustomCharacteristics = new EveHomeKitTypes(this.api).Characteristics;
 
+    this.controllerGenerator = new ControllerGenerator();
+
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
@@ -44,9 +62,13 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
     // in order to ensure they weren't added to homebridge already. This event can also be used
     // to start discovery of new accessories.
     this.api.on('didFinishLaunching', () => {
-      log.debug('Executed didFinishLaunching callback');
+      this.log.debug('Executed didFinishLaunching callback');
+
       // run the method to discover / register your devices as accessories
       this.discoverDevices();
+
+      // Optionally run periodic scans:
+      this.periodicScanForDevices();
     });
   }
 
@@ -55,7 +77,15 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
    * It should be used to set up event handlers for characteristics and update respective values.
    */
   configureAccessory(accessory: PlatformAccessory) {
-    this.log.info('Loading accessory from cache:', accessory.displayName);
+    this.log.info('Loading accessory from cache:', accessory.context.configuredName);
+
+    // ensure necessary context properties exist
+    if (typeof accessory.context.missedScans !== 'number') {
+      accessory.context.missedScans = 0;
+    }
+    if (typeof accessory.context.isOnline !== 'boolean') {
+      accessory.context.isOnline = false;
+    }
 
     // add the restored accessory to the accessories cache, so we can track if it has already been registered
     this.accessories.set(accessory.UUID, accessory);
@@ -63,88 +93,153 @@ export class ExampleHomebridgePlatform implements DynamicPlatformPlugin {
 
   /**
    * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
+   * EXAMPLE ONLY
+   *
+   * A real plugin you would discover accessories from the local network, cloud services
+   * or a user-defined array in the platform config.
    */
-  discoverDevices() {
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
+  async discoverDevices() {
+    this.log.debug('Starting initial discovery of MagicHome devices...');
+    await this.scanAndSyncDevices();
+  }
+
+  /**
+   * Periodically scan the network to keep accessory states updated.
+   * You can call this in didFinishLaunching or wherever fits your use case.
+   */
+  periodicScanForDevices() {
+    setInterval( () => {
+      this.log.debug('Periodic scan triggered...');
+      this.scanAndSyncDevices();
+    }, 60_000); // example: every 30 seconds
+  }
+
+  /**
+   * DRY method to:
+   * 1) Discover all devices on the network.
+   * 2) Add new accessories if they've never been seen before.
+   * 3) Update existing accessories if their IP changed (re-run constructor).
+   * 4) Mark accessories offline only if they are missed in 5 consecutive scans.
+   */
+  private async scanAndSyncDevices() {
+    // clear the discovered UUIDs from any previous run
+    this.discoveredCacheUUIDs.length = 0;
+
+    // A real plugin you would discover accessories from the local network, cloud services,
     // or a user-defined array in the platform config.
-    const exampleDevices = [
-      {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
-      },
-      {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
-      },
-      {
-        // This is an example of a device which uses a Custom Service
-        exampleUniqueId: 'IJKL',
-        exampleDisplayName: 'Backyard',
-        CustomService: 'AirPressureSensor',
-      },
-    ];
+    const devices = await this.controllerGenerator.getDevices(this.config.subnets);
 
     // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
-      // generate a unique id for the accessory this should be generated from
+    for (const [id, device] of devices) {
+      // generate a unique id for the accessory; this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
+      const uuid = this.api.hap.uuid.generate(id);
 
-      // see if an accessory with the same uuid has already been registered and restored from
-      // the cached devices we stored in the `configureAccessory` method above
+      // see if an accessory with the same uuid has already been registered
+      // and restored from the cached devices we stored in the
+      // `configureAccessory` method above
       const existingAccessory = this.accessories.get(uuid);
-
+      const currentIP = device.fullDeviceInformation.protoDevice.ipAddress;
+      
       if (existingAccessory) {
+        existingAccessory.displayName = existingAccessory.UUID;
         // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+        this.log.info('Found existing accessory in cache:', existingAccessory.context.configuredName);
 
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. e.g.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
+        // track that we've seen this accessory during the current scan
+        this.discoveredCacheUUIDs.push(uuid);
 
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, existingAccessory);
+        // reset missed scans and mark it online
+        existingAccessory.context.missedScans = 0;
+        existingAccessory.context.isOnline = true;
 
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, e.g.:
-        // remove platform accessories when no longer present
+        // if IP changed, update it and re-run the platform accessory constructor
+        if (existingAccessory.context.ipAddress !== currentIP) {
+          this.log.info(
+            `IP changed for ${existingAccessory.context.configuredName} (was: ` +
+            `${existingAccessory.context.ipAddress}, now: ${currentIP}). Re-initializing device.`,
+          );
+
+          existingAccessory.context.ipAddress = currentIP;
+          this.api.updatePlatformAccessories([existingAccessory]);
+
+          // re-run the accessory handler for the updated IP
+          new MagichomePlatformAccessory(this, existingAccessory, device);
+        } else {
+          // IP didn't change; just ensure accessory is up to date
+          // re-run the constructor to refresh event handlers, etc.
+          this.api.updatePlatformAccessories([existingAccessory]);
+          new MagichomePlatformAccessory(this, existingAccessory, device);
+        }
+
+        // it is possible to remove platform accessories at any time using
+        // `api.unregisterPlatformAccessories`, e.g.:
         // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+        // this.log.info('Removing existing accessory from cache:', existingAccessory.context.configuredName);
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.exampleDisplayName);
+        const configuredName = device.fullDeviceInformation.deviceAPI.description + ' ' + id.slice(-4);
+        this.log.info('Adding new accessory:', configuredName);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.exampleDisplayName, uuid);
+        const accessory = new this.api.platformAccessory(configuredName, uuid);
 
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
-
-        // create the accessory handler for the newly create accessory
+        // store only minimal info: IP, online status, and missed scans
+        accessory.context.ipAddress = currentIP;
+        accessory.context.isOnline = true;
+        accessory.context.missedScans = 0;
+        accessory.context.configuredName = configuredName;
+        // create the accessory handler for the newly created accessory
         // this is imported from `platformAccessory.ts`
-        new ExamplePlatformAccessory(this, accessory);
+        new MagichomePlatformAccessory(this, accessory, device);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-      }
 
-      // push into discoveredCacheUUIDs
-      this.discoveredCacheUUIDs.push(uuid);
+        // track that we've seen it during the current scan
+        this.accessories.set(uuid, accessory);
+        this.discoveredCacheUUIDs.push(uuid);
+      }
     }
 
-    // you can also deal with accessories from the cache which are no longer present by removing them from Homebridge
-    // for example, if your plugin logs into a cloud account to retrieve a device list, and a user has previously removed a device
-    // from this cloud account, then this device will no longer be present in the device list but will still be in the Homebridge cache
+    // handle accessories from the cache which are not found in this scan
     for (const [uuid, accessory] of this.accessories) {
       if (!this.discoveredCacheUUIDs.includes(uuid)) {
-        this.log.info('Removing existing accessory from cache:', accessory.displayName);
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        // increment missed scans
+        accessory.context.missedScans = (accessory.context.missedScans ?? 0) + 1;
+        
+        // only mark offline if missed for 5 or more scans
+        if (accessory.context.missedScans >= 5) {
+          if (accessory.context.isOnline) {
+            this.log.info(
+              `Accessory ${accessory.context.configuredName} has been missed for ` +
+              `${accessory.context.missedScans} consecutive scans. Marking offline.`,
+            );
+          }
+          accessory.context.isOnline = false;
+
+          // push it to offline array if you want to track offline
+          this.offlineAccessories.push(accessory);
+
+          this.api.updatePlatformAccessories([accessory]);
+          // optionally, remove it if desired:
+          // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+          // this.accessories.delete(uuid);
+        }
       }
     }
+  }
+
+  /**
+   * Example of a function to purge all accessories (be cautious using this in production).
+   */
+  purgeAllAccessories() {
+    this.api.unregisterPlatformAccessories(
+      PLUGIN_NAME,
+      PLATFORM_NAME,
+      Array.from(this.accessories.values()),
+    );
+    this.accessories.clear();
   }
 }

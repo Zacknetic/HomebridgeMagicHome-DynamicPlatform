@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "homebridge-magichome-platform",
   "pluginType": "platform",
   "singular": true,
   "strictValidation": false,

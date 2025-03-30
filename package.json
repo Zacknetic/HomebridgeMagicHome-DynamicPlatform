@@ -1,22 +1,46 @@
 {
-  "name": "homebridge-plugin-name",
-  "displayName": "Plugin Name",
+  "name": "homebridge-magichome-platform",
+  "displayName": "Homebridge MagicHome Platform",
   "type": "module",
-  "version": "1.0.0",
-  "private": true,
-  "description": "A short description about what your plugin does.",
-  "author": "Your Name",
+  "version": "0.0.1-alpha.2",
+  "private": false,
+  "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
+  "contributors": [
+    "Zachary Avino ZackAvino@Zacknetic.org",
+    "Igor Ramos"
+  ],
   "license": "Apache-2.0",
   "homepage": "https://github.com/USERNAME/GITHUB_PROJECT_NAME#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform/issues"
   },
+  "funding": [
+    {
+      "type": "paypal",
+      "url": "https://www.paypal.com/paypalme/ZacharyAvino"
+    }
+  ],
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "magichome",
+    "magic",
+    "home",
+    "lednet",
+    "Magic Home",
+    "magic home",
+    "outlet",
+    "dimmer",
+    "rgb",
+    "rgbw",
+    "rgbww",
+    "rgbcct",
+    "LEDnet",
+    "flux_led",
+    "smart lights"
   ],
   "main": "dist/index.js",
   "engines": {
@@ -25,9 +49,10 @@
   },
   "scripts": {
     "build": "rimraf ./dist && tsc",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --max-warnings=0 --fix",
     "prepublishOnly": "npm run lint && npm run build",
-    "watch": "npm run build && npm link && nodemon"
+    "watch": "npm run build && npm link && nodemon",
+    "local-package": "npm run build && npm pack"
   },
   "dependencies": {
     "homebridge-lib": "^7.1.4"
