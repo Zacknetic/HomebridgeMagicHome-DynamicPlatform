@@ -1,13 +1,13 @@
 {
   "bridge": {
     "name": "PluginTemplate",
-    "username": "88:BB:CC:DD:EE:FF",
+    "username": "88:88:88:DD:EE:FF",
     "port": 51826,
     "pin": "888-88-888"
   },
   "description": "HomeBridge HTTP Status Control",
   "plugins": [
-    "homebridge-magichome-platform",
+    "homebridge-magichome-dynamic-platform",
     "homebridge-config-ui-x"
   ],
   "platforms": [
@@ -16,11 +16,14 @@
       "platform": "homebridge-magichome-dynamic-platform",
       "discovery_management": {
         "additional_subnets": [],
-        "device_discovery_interval": 30000
+        "device_discovery": true,
+        "periodic_scan": true,
+        "device_discovery_interval": 60000
       },
       "device_management": {
         "whitelist": [],
-        "blacklist": []
+        "blacklist": [],
+        "purge_all_accessories": false
       }
     }
   ],

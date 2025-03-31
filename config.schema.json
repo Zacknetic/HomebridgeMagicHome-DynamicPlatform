@@ -1,17 +1,187 @@
 {
-  "pluginAlias": "homebridge-magichome-platform",
+  "pluginAlias": "homebridge-magichome-dynamic-platform",
   "pluginType": "platform",
   "singular": true,
-  "strictValidation": false,
+  "headerDisplay": "This platform dynamically discovers and manages MagicHome devices.\n\nFor more information, please visit the [documentation](https://github.com/ZackAvino/homebridge-magichome-dynamic-platform).",
+  "footerDisplay": "Ensure your network supports device discovery and communication with MagicHome devices.",
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+      "discovery_management": {
+        "type": "object",
+        "properties": {
+          "additional_subnets": { 
+            "type": "array",
+            "items": {
+              "type": "string",
+              "placeholder": "example: 192.168.1.0"
+            },
+            "minItems": 0,
+            "default": [],
+            "description": "Add additional subnets for device discovery."
+          },
+          "device_discovery": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically discover devices on the network."
+          },
+          "periodic_scan": {
+            "type": "boolean",
+            "default": true,
+            "description": "Periodically scan the network for devices."
+          },
+          "device_discovery_interval": {
+            "type": "integer",
+            "minimum": 10000,
+            "maximum": 120000,
+            "default": 30000,
+            "placeholder": 30000,
+            "description": "Interval in milliseconds between discovery scans."
+          }
+        }
+      },
+      "device_management": {
+        "type": "object",
+        "properties": {
+          "whitelist": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "placeholder": "example: 1234abcd5678"
+            },
+            "minItems": 0,
+            "default": [],
+            "description": "Add MagicHome device IDs to whitelist."
+          },
+          "blacklist": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "placeholder": "example: 1234abcd5678"
+            },
+            "minItems": 0,
+            "default": [],
+            "description": "Add MagicHome device IDs to blacklist."
+          },
+          "purge_all_accessories": {
+            "type": "boolean",
+            "default": false,
+            "description": "\u26a0\ufe0f **WARNING: Enabling this option will remove all existing accessories and cannot be undone. Proceed with caution.**"
+          }
+        }
       }
+    },
+    "required": []
+  },
+  "layout": [
+    {
+      "type": "fieldset",
+      "title": "MagicHome Configuration",
+      "items": [
+        {
+          "type": "tabs",
+          "tabs": [
+            {
+              "title": "Discovery Management",
+              "items": [
+                {
+                  "key": "discovery_management.additional_subnets",
+                  "type": "array",
+                  "items": [
+                    {
+                      "key": "discovery_management.additional_subnets[]",
+                      "type": "string",
+                      "placeholder": "example: 192.168.1.0"
+                    }
+                  ],
+                  "listItems": 1,
+                  "add": "Add Subnet",
+                  "style": {
+                    "btnStyle": "btn-success",
+                    "margin": "5px"
+                  }
+                },
+                "discovery_management.device_discovery",
+                "discovery_management.periodic_scan",
+                "discovery_management.device_discovery_interval"
+              ]
+            },
+            {
+              "title": "Device Management",
+              "items": [
+                {
+                  "key": "device_management.whitelist",
+                  "type": "array",
+                  "items": [
+                    {
+                      "key": "device_management.whitelist[]",
+                      "type": "string",
+                      "placeholder": "example: 1234abcd5678"
+                    }
+                  ],
+                  "listItems": 1,
+                  "add": "Add Whitelisted Device",
+                  "style": {
+                    "btnStyle": "btn-primary",
+                    "margin": "5px"
+                  }
+                },
+                {
+                  "key": "device_management.blacklist",
+                  "type": "array",
+                  "items": [
+                    {
+                      "key": "device_management.blacklist[]",
+                      "type": "string",
+                      "placeholder": "example: 1234abcd5678"
+                    }
+                  ],
+                  "listItems": 1,
+                  "add": "Add Blacklisted Device",
+                  "style": {
+                    "btnStyle": "btn-danger",
+                    "margin": "5px"
+                  }
+                },
+                "device_management.purge_all_accessories"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "help",
+      "helpvalue": "<hr>"
+    },
+    {
+      "type": "actions",
+      "items": [
+        {
+          "type": "submit",
+          "style": "btn-info",
+          "title": "Save Configuration"
+        },
+        {
+          "type": "button",
+          "style": "btn-danger",
+          "title": "Reset",
+          "onClick": "resetConfiguration()"
+        }
+      ]
+    }
+  ],
+  "data": {
+    "discovery_management": {
+      "additional_subnets": [],
+      "device_discovery": true,
+      "periodic_scan": true,
+      "device_discovery_interval": 30000
+    },
+    "device_management": {
+      "whitelist": [],
+      "blacklist": [],
+      "purge_all_accessories": false
     }
   }
-}
+} 

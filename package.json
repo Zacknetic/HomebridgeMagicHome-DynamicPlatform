@@ -1,8 +1,8 @@
 {
-  "name": "homebridge-magichome-platform",
+  "name": "homebridge-magichome-dynamic-platform",
   "displayName": "Homebridge MagicHome Platform",
   "type": "module",
-  "version": "2.0.0-alpha.3",
+  "version": "2.1.0-alpha.3",
   "private": false,
   "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "contributors": [
@@ -10,7 +10,7 @@
     "Igor Ramos"
   ],
   "license": "Apache-2.0",
-  "homepage": "https://github.com/USERNAME/GITHUB_PROJECT_NAME#readme",
+  "homepage": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform",
   "repository": {
     "type": "git",
     "url": "https://github.com/Zacknetic/HomebridgeMagicHome-DynamicPlatform"
@@ -50,12 +50,14 @@
   "scripts": {
     "build": "rimraf ./dist && tsc",
     "lint": "eslint . --max-warnings=0 --fix",
+    "clean": "rimraf ./dist ./node_modules",
     "prepublishOnly": "npm run lint && npm run build",
     "watch": "npm run build && npm link && nodemon",
     "local-package": "npm run build && npm pack"
   },
   "dependencies": {
-    "homebridge-lib": "^7.1.4"
+    "homebridge-lib": "^7.1.4",
+    "magichome-platform": "^0.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

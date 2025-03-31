@@ -11,7 +11,7 @@ import type {
 import { MagichomePlatformAccessory } from './platformAccessory.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { ControllerGenerator } from 'magichome-platform';
-
+import { ConfigLoader } from './utils/ConfigLoader.js';
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
 
@@ -54,8 +54,9 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
     this.CustomCharacteristics = new EveHomeKitTypes(this.api).Characteristics;
 
     this.controllerGenerator = new ControllerGenerator();
+    ConfigLoader.initialize(config, log);
 
-    this.log.debug('Finished initializing platform:', this.config.name);
+    this.log.debug('Finished initializing platform:', ConfigLoader('name'));
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -65,11 +66,9 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
       this.log.debug('Executed didFinishLaunching callback');
 
       // // run the method to discover / register your devices as accessories
-      this.discoverDevices();
-
-      // // Optionally run periodic scans:
-      // this.periodicScanForDevices();
-      // this.purgeAllAccessories();
+      if (ConfigLoader('purge_all_accessories')) this.purgeAllAccessories();
+      if (ConfigLoader('periodic_scan')) this.periodicScanForDevices();
+      if (ConfigLoader('device_discovery')) this.discoverDevices();
     });
   }
 
@@ -109,10 +108,10 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
    * You can call this in didFinishLaunching or wherever fits your use case.
    */
   periodicScanForDevices() {
-    setInterval( () => {
+    setInterval(() => {
       this.log.debug('Periodic scan triggered...');
-      this.scanAndSyncDevices();
-    }, 60_000); // example: every 30 seconds
+      this.scanAndSyncDevices(true);
+    }, ConfigLoader('device_discovery_interval')); // example: every 30 seconds
   }
 
   /**
@@ -122,14 +121,16 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
    * 3) Update existing accessories if their IP changed (re-run constructor).
    * 4) Mark accessories offline only if they are missed in 5 consecutive scans.
    */
-  private async scanAndSyncDevices() {
+  private async scanAndSyncDevices(periodicScan = false) {
+   
     // clear the discovered UUIDs from any previous run
     this.discoveredCacheUUIDs.length = 0;
 
     // A real plugin you would discover accessories from the local network, cloud services,
     // or a user-defined array in the platform config.
-    const devices = await this.controllerGenerator.getDevices(this.config.additional_subnets);
-
+    const devices = await this.controllerGenerator.getDevices(ConfigLoader('additional_subnets'));
+    console.log(`Discovered devices: ${devices.size}`);
+    console.log(`Number of accessories: ${this.accessories.size}`);
     // loop over the discovered devices and register each one if it has not already been registered
     for (const [id, device] of devices) {
       // generate a unique id for the accessory; this should be generated from
@@ -142,7 +143,7 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
       // `configureAccessory` method above
       const existingAccessory = this.accessories.get(uuid);
       const currentIP = device.fullDeviceInformation.protoDevice.ipAddress;
-      
+      if (!this.isAccessoryAllowed(id)) continue;
       if (existingAccessory) {
         // the accessory already exists
         this.log.info('Found existing accessory in cache:', existingAccessory.context.configuredName);
@@ -166,7 +167,7 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
 
           // re-run the accessory handler for the updated IP
           new MagichomePlatformAccessory(this, existingAccessory, device);
-        } else {
+        } else if (!periodicScan) {
           // IP didn't change; just ensure accessory is up to date
           // re-run the constructor to refresh event handlers, etc.
           this.api.updatePlatformAccessories([existingAccessory]);
@@ -208,7 +209,7 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
       if (!this.discoveredCacheUUIDs.includes(uuid)) {
         // increment missed scans
         accessory.context.missedScans = (accessory.context.missedScans ?? 0) + 1;
-        
+
         // only mark offline if missed for 5 or more scans
         if (accessory.context.missedScans >= 5) {
           if (accessory.context.isOnline) {
@@ -241,5 +242,17 @@ export class HomebridgeMagicHomePlatform implements DynamicPlatformPlugin {
       Array.from(this.accessories.values()),
     );
     this.accessories.clear();
+  }
+
+  isAccessoryAllowed(id: string): boolean {
+    const whitelist = ConfigLoader('whitelist');
+    const blacklist = ConfigLoader('blacklist');
+    if (whitelist.length > 0) {
+      return whitelist.includes(id);
+    }
+    if (blacklist.length > 0) {
+      return !blacklist.includes(id);
+    }
+    return true;
   }
 }
