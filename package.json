@@ -6,7 +6,7 @@
     "Zachary Avino ZackAvino@Zacknetic.org",
     "Igor Ramos"
   ],
-  "version": "1.9.7",
+  "version": "1.9.12",
   "description": "Dynamically Discover and Add MagicHome Bulbs and Controllers to Homebrige.",
   "license": "Apache-2.0",
   "repository": {
@@ -27,8 +27,8 @@
     }
   ],
   "engines": {
-    "node": ">=10.17.0",
-    "homebridge": ">0.4.53"
+    "node": "^18.20.4 || ^20.18.0 || ^22.10.0 || ^24.0.0 || ^26.0.0",
+    "homebridge": "^1.6.0 || ^2.0.0"
   },
   "main": "dist/index.js",
   "scripts": {
