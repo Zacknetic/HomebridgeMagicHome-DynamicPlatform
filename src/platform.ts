@@ -56,6 +56,28 @@ export class HomebridgeMagichomeDynamicPlatform implements DynamicPlatformPlugin
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+    // Fill in any config section that is missing (e.g. a minimal config written by hand
+    // instead of through the Homebridge UI) so the plugin doesn't crash at runtime.
+    this.config.pruning = {
+      pruneMissingCachedAccessories: false,
+      restartsBeforeMissingAccessoriesPruned: 3,
+      pruneAllAccessoriesNextRestart: false,
+      ...(this.config.pruning ?? {}),
+    };
+    this.config.whiteEffects = {
+      simultaniousDevicesColorWhite: true,
+      colorWhiteThreshold: 10,
+      colorWhiteThresholdSimultaniousDevices: 50,
+      colorOffThresholdSimultaniousDevices: 5,
+      ...(this.config.whiteEffects ?? {}),
+    };
+    this.config.deviceManagement = {
+      blacklistOrWhitelist: 'blacklist',
+      blacklistedUniqueIDs: [],
+      ...(this.config.deviceManagement ?? {}),
+    };
+    this.config.advancedOptions = this.config.advancedOptions ?? {};
+
     if (this.config.advancedOptions.logLevel) {
       this.logs = new Logs(hbLogger, this.config.advancedOptions.logLevel);
     } else {
